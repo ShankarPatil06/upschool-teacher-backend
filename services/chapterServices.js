@@ -83,6 +83,84 @@ exports.chapterUnlockService = async function (request, callback) {
     })
 }
 
+// exports.chapterUnlockService = async(request) => {
+//     console.log("request : ", request);
+  
+//     const individual_teacher_response = await teacherRepository.fetchTeacherByID(request);
+  
+//     if (!individual_teacher_response || individual_teacher_response.Items.length === 0) {
+//       return { statusCode: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
+//     }
+  
+//     let teacher_info = individual_teacher_response.Items[0].teacher_info.filter((e) =>
+//       e.client_class_id == request.data.client_class_id &&
+//       e.section_id == request.data.section_id &&
+//       e.subject_id == request.data.subject_id
+//     );
+  
+//     if (teacher_info.length === 0) {
+//       return { statusCode: 400, message: constant.messages.CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST };
+//     }
+  
+//     let chapter_data = teacher_info[0].chapter_data.filter(e => e.chapter_id == request.data.chapter_id);
+  
+//     let tempObj;
+//     if (chapter_data.length === 0) {
+//       // If chapter data doesn't exist, create a new one
+//       tempObj = {
+//         chapter_id: request.data.chapter_id,
+//         chapter_locked: request.data.chapter_locked,
+//         pre_learning: {
+//           due_date: {
+//             yyyy_mm_dd: request.data.chapter_locked == "Yes" ? "yyyy_mm_dd" : request.data.due_date,
+//             dd_mm_yyyy: request.data.chapter_locked == "Yes" ? "dd_mm_yyyy" : helper.change_dd_mm_yyyy(request.data.due_date),
+//           },
+//           topic_details: []
+//         },
+//         post_learning: {
+//           topic_details: []
+//         }
+//       };
+//       teacher_info[0].chapter_data.push(tempObj);
+  
+//     } else {
+//       // If chapter data exists, update the existing one
+//       teacher_info[0].chapter_data.forEach((ele, i) => {
+//         if (ele.chapter_id == request.data.chapter_id) {
+//           teacher_info[0].chapter_data[i].chapter_locked = request.data.chapter_locked;
+//           teacher_info[0].chapter_data[i].pre_learning = {
+//             due_date: {
+//               yyyy_mm_dd: request.data.chapter_locked == "Yes" ? "yyyy_mm_dd" : request.data.due_date,
+//               dd_mm_yyyy: request.data.chapter_locked == "Yes" ? "dd_mm_yyyy" : helper.change_dd_mm_yyyy(request.data.due_date),
+//             },
+//             topic_details: teacher_info[0].chapter_data[i].pre_learning.topic_details
+//           };
+//           teacher_info[0].chapter_data[i].post_learning = {
+//             topic_details: teacher_info[0].chapter_data[i].post_learning.topic_details
+//           };
+//         }
+//       });
+//     }
+  
+//     individual_teacher_response.Items[0].teacher_info.forEach((ele, i) => {
+//       if (ele.client_class_id == request.data.client_class_id &&
+//         ele.section_id == request.data.section_id &&
+//         ele.subject_id == request.data.subject_id) {
+//         individual_teacher_response.Items[0].teacher_info[i] = teacher_info[0];
+//       }
+//     });
+  
+//     // Update teacher info
+//     const teacher_info_response = await teacherRepository.updateTeacherInfo({
+//       teacher_info: individual_teacher_response.Items[0].teacher_info,
+//       teacher_id: request.data.teacher_id
+//     });
+  
+//     console.log("Success");
+//     return teacher_info_response;
+//   };
+  
+
 exports.fetchTopicsBasedonChapter = function (request, callback) {
 
     request === undefined || request.data === undefined || request.data.client_class_id === undefined || request.data.client_class_id === "" || request.data.section_id === undefined || request.data.section_id === "" || request.data.subject_id === undefined || request.data.subject_id === "" || request.data.teacher_id === undefined || request.data.teacher_id === "" || request.data.chapter_id === undefined || request.data.chapter_id === "" ? callback(400, constant.messages.INVALID_REQUEST) : 
@@ -243,6 +321,79 @@ exports.fetchTopicsBasedonChapter = function (request, callback) {
         }
     })
 }
+
+// exports.fetchTopicsBasedonChapterNew = async(request)=> {
+//     if (!request?.data?.client_class_id || !request.data.section_id || !request.data.subject_id || !request.data.teacher_id || !request.data.chapter_id) {
+//       return { status: 400, message: constant.messages.INVALID_REQUEST };
+//     }
+  
+//     const individualTeacherRes = await teacherRepository.fetchTeacherByID(request);
+    
+//     let teacher_info = individualTeacherRes.Items[0].teacher_info.filter((e) => 
+//       e.client_class_id == request.data.client_class_id &&
+//       e.section_id == request.data.section_id &&
+//       e.subject_id == request.data.subject_id
+//     );
+  
+//     if (teacher_info.length === 0) {
+//       return { status: 400, message: constant.messages.SUBJECT_ISNOT_ALLOCATE_TO_TEACHER };
+//     }
+  
+//     const teacher_activity_details_res = await teachingActivityRepository.fetchTeachingActivity(request);
+//     const single_chapter_response = await chapterRepository.fetchChapterByID(request);
+  
+//     if (single_chapter_response.length === 0) {
+//       return { status: 400, message: constant.messages.CHAPTER_COMBO_DOESNT_EXISTS };
+//     }
+  
+//     const pre_topic_response = await topicRepository.fetchPreTopicData(single_chapter_response.Items[0]);
+//     const post_topic_response = await topicRepository.fetchPostTopicData(single_chapter_response.Items[0]);
+  
+//     const finalPreTopicData = await exports.appendPreTopicsArchivedStatus(request, teacher_activity_details_res, pre_topic_response, constant.prePostConstans.preLearning);
+//     const finalPostTopicData = await exports.appendPostTopicsArchivedStatus(request, teacher_activity_details_res, post_topic_response, constant.prePostConstans.postLearning);
+  
+//     request.data.learningType = constant.prePostConstans.preLearningVal;
+//     const quizData_res = await quizRepository.fetchQuizData(request);
+  
+//     request.data.school_id = individualTeacherRes.Items[0].school_id;
+//     const SchoolDataRes = await schoolRepository.getSchoolDetailsById(request);
+  
+//     let response = {
+//       preLearning: {
+//         topic_archive: SchoolDataRes.Items[0].pre_quiz_config ? SchoolDataRes.Items[0].pre_quiz_config.topic_archive : "N.A.",
+//         quizExist: quizData_res.Items.length > 0 ? "Yes" : "No",
+//         digicard_locked: "Yes"
+//       },
+//       postLearning: {
+//         topic_archive: SchoolDataRes.Items[0].post_quiz_config ? SchoolDataRes.Items[0].post_quiz_config.topic_archive : "N.A.",
+//         choose_topic: SchoolDataRes.Items[0].post_quiz_config ? SchoolDataRes.Items[0].post_quiz_config.choose_topic : "N.A.",
+//         digicard_locked: "Yes"
+//       },
+//       pre_topic_items: finalPreTopicData,
+//       post_topic_items: finalPostTopicData
+//     };
+  
+//     if (teacher_activity_details_res.Items.length > 0 && teacher_activity_details_res.Items[0].chapter_data.length > 0) {
+//       let chapter_activity = teacher_activity_details_res.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id);
+  
+//       if (chapter_activity.length > 0) {
+//         response.preLearning.digicard_locked = (chapter_activity[0].pre_learning.unlocked_digicard?.topics !== undefined) ? "No" : "Yes";
+//         response.postLearning.digicard_locked = (chapter_activity[0].post_learning.unlocked_digicard?.length > 0) ? "No" : "Yes";
+  
+//         if (response.postLearning.choose_topic === "Yes" && chapter_activity[0].post_learning.unlocked_digicard?.length > 0) {
+//           let topics = chapter_activity[0].post_learning.unlocked_digicard.map(e => [...e.topics]);
+//           finalPostTopicData.map(e => topics.some(a => a.topic_id === e.topic_id) ? e.topic_locked = 'No' : e.topic_locked = 'Yes');
+//         } else {
+//           finalPostTopicData.map(e => e.topic_locked = "Yes");
+//         }
+  
+//         response.post_topic_items = finalPostTopicData;
+//       }
+//     }
+  
+//     return { status: 200, data: response };
+//   };
+  
 
 exports.appendPreTopicsArchivedStatus = async function (request, teacherActivityData, preTopicData, prePostType, callback) {
     let newPreTopic = [];

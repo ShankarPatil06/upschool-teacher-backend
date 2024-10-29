@@ -3,11 +3,14 @@ const {getS3SignedUrl,formatDate} = require("../helper/helper");
 
 exports.getAssessmentDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
-  const classPercentagePre =
-    schoolDataRes.Items[0].pre_quiz_config.class_percentage_for_report;
-  const classPercentagePost =
-    schoolDataRes.Items[0].post_quiz_config.class_percentage_for_report;
 
+  if(!schoolDataRes.Items[0] || !schoolDataRes.Items[0].pre_quiz_config || !schoolDataRes.Items[0].post_quiz_config)
+  return {};
+  const classPercentagePre =
+    schoolDataRes.Items[0].pre_quiz_config.class_percentage;
+  const classPercentagePost =
+    schoolDataRes.Items[0].post_quiz_config.class_percentage;
+;
   const fetch_teacher_section_students_response =
     await studentRepository.getStudentsData2(request);
   const studentsCount = fetch_teacher_section_students_response.Items.length;
@@ -50,6 +53,8 @@ exports.getAssessmentDetails = async (request) => {
     const studentsAttendedQuiz = quizResultDataRes
       ? quizResultDataRes.filter((res) => res.quiz_id === val.quiz_id).length
       : 0;
+
+      console.log("studentsAttendedQuiz - ",studentsAttendedQuiz);
 
     if (val.learningType === "preLearning") {
       if (val.not_considered_topics)
@@ -114,6 +119,8 @@ exports.getTargetedLearningExpectation = async (request) => {
   let totalTopics = 0;
   let reachedTopics = 0;
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+  if(!schoolDataRes.Items[0] || !schoolDataRes.Items[0].pre_quiz_config || !schoolDataRes.Items[0].post_quiz_config)
+    return {};
   const classPercentagePre =
     schoolDataRes.Items[0].pre_quiz_config.class_percentage;
   const classPercentagePost =
@@ -163,6 +170,9 @@ exports.getTargetedLearningExpectation = async (request) => {
 
 exports.getTargetedLearningExpectationDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+
+  if(!schoolDataRes.Items[0] || !schoolDataRes.Items[0].pre_quiz_config || !schoolDataRes.Items[0].post_quiz_config)
+  return {};
   const classPercentagePre =
     schoolDataRes.Items[0].pre_quiz_config.class_percentage;
   const classPercentagePost =
@@ -276,13 +286,15 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
 exports.preLearningSummaryDetails = async (request) => {
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
-
+console.log("--------1----------");
   const subjectDataRes = await subjectRepository.getSubjetById2(request);
+  console.log("--------2----------");
 
   if (!subjectDataRes.Items?.length) return;
 
   const subject_unit_id = subjectDataRes.Items[0].subject_unit_id;
   const unitDataRes = await unitRepository.fetchUnitData2({ subject_unit_id });
+  console.log("--------33----------");
 
   if (!unitDataRes?.length) return;
 
@@ -292,9 +304,12 @@ exports.preLearningSummaryDetails = async (request) => {
   const chapterDataRes = await chapterRepository.fetchBulkChaptersIDName2({
     unit_chapter_id,
   });
+  console.log("--------4----------",chapterDataRes);
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
+  console.log("--------5----------");
 
+   console.log("quizDataRes - ",quizDataRes); 
   const quizIds = [];
   quizDataRes.Items.forEach((quiz) => {
     if (quiz.learningType === request.data.type) {
@@ -312,6 +327,7 @@ exports.preLearningSummaryDetails = async (request) => {
     }
   });
 
+  console.log("--------6----------",quizIds);
   const quizResultDataRes =
     await quizResultRepository.fetchBulkQuizResultsByID2({
       unit_Quiz_id: quizIds,
@@ -326,6 +342,9 @@ exports.preLearningSummaryDetails = async (request) => {
       const quizResults = quizResultDataRes.filter(
         (result) => result.quiz_id === val.quiz_id
       );
+      console.log("+=============================================");
+      console.log("quizResults - ", quizResults[0].marks_details);
+      console.log("quizResults - ", quizResults[1].marks_details);
       val.student_attendance = quizResults.length;
       val.avgMarks = quizResults.length
         ? quizResults.reduce(
@@ -1131,6 +1150,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
     }));
 
   const performance = {};
+  if(!quizResultDataRes)return {};
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
     if (!acc[result.student_id]) acc[result.student_id] = [];
     acc[result.student_id].push(result);
@@ -1190,7 +1210,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   });
 
   // if(!chapterIds.length)return [];
-  const chapterData = await chapterRepository.fetchBulkChaptersIDName2({
+  const chapterData = chapterIds.length >0 && await chapterRepository.fetchBulkChaptersIDName2({
     unit_chapter_id: [...chapterIds],
   });
 
@@ -1230,7 +1250,9 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
 
   const performance = {};
 
-  const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
+  console.log("+++++++++++++++",quizResultDataRes);
+  if(!quizResultDataRes) return {};
+  const quizResultsByStudent = quizResultDataRes?.reduce((acc, result) => {
     if (!acc[result.student_id]) acc[result.student_id] = [];
     acc[result.student_id].push(result);
     return acc;
@@ -1438,7 +1460,6 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
 exports.getActionsAndRecommendations = async (request) => {
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
   const studentDataRes = await studentRepository.getStudentsData2(request);
@@ -1466,7 +1487,7 @@ exports.getActionsAndRecommendations = async (request) => {
   const questionIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.question_id))];
 
   const questions = await new Promise((resolve, reject) => {
-    questionRepository.fetchBulkQuestionsNameById(
+    questionIdsSetA.length >0 && questionRepository.fetchBulkQuestionsNameById(
       { question_id: questionIdsSetA },
       (err, res) => {
         if (err) {
@@ -1483,6 +1504,7 @@ exports.getActionsAndRecommendations = async (request) => {
     unit_chapter_id: chapterIds,
   });
 
+
   const topicIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({
     unit_Topic_id: topicIdsSetA,
@@ -1494,6 +1516,7 @@ exports.getActionsAndRecommendations = async (request) => {
     (await quizResultRepository.fetchBulkQuizResultsByID2({
       unit_Quiz_id: quizIds,
     }));
+
 
   const quizResultMarksData = quizResultsRes.map((item) => {
     return {

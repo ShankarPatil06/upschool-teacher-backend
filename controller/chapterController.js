@@ -13,6 +13,28 @@ exports.chapterUnlock = (req, res, next) => {
         }
     });
 };
+
+exports.comprehensivePerformanceConceptWise = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await reportServices.comprehensivePerformanceConceptWise(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
+
+// exports.fetchTopicsBasedonChapter = async (req, res, next) => {
+//     try {
+//         const request = req.body;
+//         const reportData = await chapterServices.fetchTopicsBasedonChapter(request);
+//         return formatResponse(res, reportData);
+//     } catch (error) {
+//         next(error)
+//     }
+// }
+
+
 exports.fetchTopicsBasedonChapter = (req, res, next) => {
     let request = req.body;
     request["token"] = req.header('Authorization');
