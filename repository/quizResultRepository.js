@@ -80,6 +80,30 @@ exports.insertQuizDataOfStudent = function (request, callback) {
     });
 }
 
+exports.insertQuizDataOfStudent2 = async (request) => {
+ 
+        const insertQuizResultsParams = {
+            TableName: TABLE_NAMES.upschool_quiz_result,
+            Item: {
+                "result_id": helper.getRandomString(),
+                "student_id": request.data.student_id,
+                "quiz_id": request.data.quiz_id,
+                "answer_metadata": request.data.answer_metadata,
+                "common_id": constant.constValues.common_id,
+                "evaluated": "No",
+                "quiz_set": request.data.quiz_set,
+                "created_ts": helper.getCurrentTimestamp(),
+                "updated_ts": helper.getCurrentTimestamp(),
+            }
+        };
+
+        const result = await DATABASE_TABLE2.putItem(insertQuizResultsParams);
+        return result;
+
+};
+
+
+
 exports.updateQuizDataOfStudent = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -111,6 +135,27 @@ exports.updateQuizDataOfStudent = function (request, callback) {
         }
     });
 }
+
+exports.updateQuizDataOfStudent2 = async (request) => {
+
+        const updateParams = {
+            TableName: TABLE_NAMES.upschool_quiz_result,
+            Key: {
+                "result_id": request.data.result_id
+            },
+            UpdateExpression: "SET answer_metadata = :answer_metadata, updated_ts = :updated_ts, evaluated = :evaluated, quiz_set = :quiz_set",
+            ExpressionAttributeValues: {
+                ":answer_metadata": request.data.answer_metadata,
+                ":evaluated": "No",
+                ":updated_ts": helper.getCurrentTimestamp(),
+                ":quiz_set": request.data.quiz_set
+            },
+        };
+
+        const result = await DATABASE_TABLE2.updateService(updateParams);
+        return result;
+
+};
 
 
 exports.resetQuizEvaluationStatus = function (request, callback) {
