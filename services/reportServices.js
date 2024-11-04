@@ -865,12 +865,11 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
   const quizids = quizDataRes.Items.map(q => q.quiz_id)
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     let overallMarks = 0;
-    
     // Get all unique question IDs from question_track_details
     const uniqueArray = [...new Set(Object.values(quizData.question_track_details).flat())];
     const questionIds = uniqueArray.map(item => item.question_id);
-
-    // Fetch question content and cognitive skill IDs
+    console.log("questionsids",questionIds.length)
+    // Fetch question
     const questions = await new Promise((resolve, reject) => {
         questionRepository.fetchBulkQuestionsNameById({ question_id: questionIds }, (err, res) => {
             if (err) {
@@ -880,50 +879,74 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
             resolve(res);
         });
     });
-
     // Calculate overall marks
-    overallMarks = questions.Items.reduce((total, question) => total + question.marks, 0);
+    // console.log("considered",questions.Items.length);
+    
+    // overallMarks = questions.Items.reduce((total, question) => total + question.marks, 0);
 
-    return { quizId: quizData.quiz_id, overallMarks };
+    return { quizId: quizData.quiz_id, overallMarks:questions.Items };
 }));
   const quizResultDataRes = quizids.length && await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizids })
   const totalStudentsforAllChapters = quizResultDataRes.length
   const totalStudentsforeachChapter = chapter_ids.map(chapter => {
-    let studentCount = 0;
+    let AvgDataSummary = [];
     let marksTotal = 0;
     let Avgpercentage = 0;
     let possiblemarks = 0;
+    let increAvg = 0;
+    let quizCount = 0;
+    let marksinTotal = 0;
     quizDataRes.Items.map(quiz => {
       if (chapter === quiz.chapter_id) {
+        marksTotal =0;
+        possiblemarks=0
+        quizCount++;
         quizResultDataRes.map(result => {
           if (quiz.quiz_id === result.quiz_id) {
-            studentCount++;
             //marks in each chapter
             result.marks_details[0].qa_details.map(marks => {
+              // console.log(quiz.quiz_id)
               String(marks.modified_marks) === 'N.A.' ? marksTotal = marksTotal + Number(marks.obtained_marks) : marksTotal = marksTotal + Number(marks.modified_marks)
-
+              questionMarksforeachQuiz.map(marksForEachQuiz=>{
+                if(quiz.quiz_id===marksForEachQuiz.quizId) 
+                {
+                  marksForEachQuiz.overallMarks.map(marking=>{
+                    if (marks.question_id === marking.question_id) {
+                      possiblemarks = possiblemarks+marking.marks
+                    }
+                  })
+                }
+              })
             })
           }
         })
-        questionMarksforeachQuiz.map(marksForEachQuiz=>{
-          if(quiz.quiz_id===marksForEachQuiz.quizId) possiblemarks = marksForEachQuiz.overallMarks;
+        marksinTotal = marksinTotal + marksTotal
+        Avgpercentage = (marksTotal/(possiblemarks))
+        increAvg = increAvg + Avgpercentage
+        //Data for post and prelearning summary page avg
+        let summaryAverage = (Avgpercentage*100).toFixed(2)
+        AvgDataSummary.push({
+          quiz:quiz.quiz_id,
+          average : summaryAverage
         })
+        
       }
+      
     })
-    
-    const marksinTotal = possiblemarks*studentCount
-    Avgpercentage = (marksTotal/marksinTotal)*100
-    return { chapterId: chapter, averagePercentage: Avgpercentage.toFixed(2)}
+    let finalAverage =( increAvg/quizCount)*100 //all pre and pos quiz avg for each chapterS
+   
+    return { chapterId: chapter, averagePercentage: finalAverage.toFixed(2),SummaryData :AvgDataSummary}
   })
   chapter_res.map(chapter=>{
     totalStudentsforeachChapter.map(student=>{
       if (chapter.chapter_id === student.chapterId) {
         chapter.averagePercentage = student.averagePercentage
+        chapter.SummaryData = student.SummaryData
       }
     })
   })
 
-  return { chapter_res }
+  return {chapter_res }
 }
 
 exports.preLearningBlueprintDetails = async (request) => {
