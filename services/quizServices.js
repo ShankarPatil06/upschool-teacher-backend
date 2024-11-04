@@ -118,6 +118,8 @@ exports.editStudentQuizMarks = async (request) => {
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 
         const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage);
+        console.log("-----------------------------------------------------");
+        console.log("overallResult.studentResult - ",overallResult.studentResult);
         request.data.marks_details[0].totalMark = overallResult.studentResult;
         request.data.passStatus = overallResult.isPassed;
 
@@ -521,7 +523,9 @@ const knowPassOrFail = (marks_details, quesAndAns, individualPassPercentage) => 
             return quesAndAns.some(question => question?.question_id === studentProgress?.question_id);
         }).reduce((acc, item) => {
             console.log(item?.obtained_marks);
+            if(typeof item?.obtained_marks === 'number')
             return acc + item?.obtained_marks
+        return acc;
         }, 0);
 
         const isPassed = studentResult >= individualPassPercentage;

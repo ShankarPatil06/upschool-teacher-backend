@@ -267,6 +267,19 @@ exports.fetchClassTestDataById = function (request, callback) {
     });
 }
 
+exports.fetchClassTestDataById2 = async (request) => {
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_class_test_table,
+            Key: {
+                "class_test_id": request.data.class_test_id
+            }
+        };
+
+        const result = await DATABASE_TABLE2.getItem(readParams);
+        return result;
+};
+
+
 
 exports.updateClassTestStatus = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
