@@ -71,6 +71,7 @@ exports.fetchConceptData2 = async (request) => {
       throw error;
     }
   };
+
 exports.fetchConceptIDDisplayName = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -127,6 +128,54 @@ exports.fetchConceptIDDisplayName = function (request, callback) {
         }
     });
 }
+
+exports.fetchConceptIDDisplayName2 = async (request) => {
+    const conceptArray = request.concept_array;
+
+    if (!Array.isArray(conceptArray) || conceptArray.length === 0) {
+        throw new Error(constant.messages.INVALID_REQUEST);
+    }
+
+    let readParams;
+
+    if (conceptArray.length === 1) {
+        readParams = {
+            TableName: TABLE_NAMES.upschool_concept_blocks_table,
+            KeyConditionExpression: "concept_id = :concept_id",
+            FilterExpression: "concept_status = :concept_status",
+            ExpressionAttributeValues: {
+                ":concept_id": conceptArray[0],
+                ":concept_status": "Active",
+            },
+            ProjectionExpression: "concept_id, concept_title, display_name",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result.Items;
+    } else {
+        const keys = conceptArray.map(id => ({
+            concept_id: id,
+        }));
+
+        readParams = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_concept_blocks_table]: {
+                    Keys: keys,
+                    ProjectionExpression: "concept_id, concept_title, display_name, concept_status",
+                },
+            },
+        };
+
+        const data = await DATABASE_TABLE2.getByObjects(readParams);
+
+        const filteredData = data.Responses[TABLE_NAMES.upschool_concept_blocks_table].filter(
+            item => item.concept_status === "Active"
+        );
+
+        return filteredData;
+    }
+};
+
 
 exports.fetchBulkConceptsIDName = function (request, callback) {
 

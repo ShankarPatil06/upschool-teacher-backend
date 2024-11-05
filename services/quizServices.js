@@ -9,6 +9,7 @@ const { TABLE_NAMES } = require('../constants/tables');
 const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
+const { getS3SignedUrl } = require("./s3Service");
 
 exports.checkDuplicateQuizName = async (request) => {
     const quizData_response = await quizRepository.checkDuplicateQuizName2(request)
@@ -71,7 +72,7 @@ exports.getQuizResult = async (request) => {
                 contentURL = "";
                 if (((JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("quiz_uploads/")) && (JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("student_answered_sheets/"))) && result_response.Items[0].answer_metadata[index].url != "" && result_response.Items[0].answer_metadata[index].url != "N.A.") {
 
-                    contentURL = await helper.getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
+                    contentURL = await getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
                     console.log("contentURL", contentURL);
                     result_response.Items[0].answer_metadata[index]["content_url"] = contentURL;
 
@@ -118,6 +119,8 @@ exports.editStudentQuizMarks = async (request) => {
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 
         const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage);
+        console.log("-----------------------------------------------------");
+        console.log("overallResult.studentResult - ",overallResult.studentResult);
         request.data.marks_details[0].totalMark = overallResult.studentResult;
         request.data.passStatus = overallResult.isPassed;
 
@@ -213,13 +216,13 @@ exports.fetchQuizTemplates = async (request) => {
                 const questionTemp = quizTemplate.question_sheet || "N.A.";
                 const questionUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.question_sheet_url = questionTemp.includes(questionUrlCheck)
-                    ? await helper.getS3SignedUrl(questionTemp)
+                    ? await getS3SignedUrl(questionTemp)
                     : "N.A.";
 
                 const answerTemp = quizTemplate.answer_sheet || "N.A.";
                 const answerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.answer_sheet_url = answerTemp.includes(answerUrlCheck)
-                    ? await helper.getS3SignedUrl(answerTemp)
+                    ? await getS3SignedUrl(answerTemp)
                     : "N.A.";
             }
         } else {
@@ -521,7 +524,9 @@ const knowPassOrFail = (marks_details, quesAndAns, individualPassPercentage) => 
             return quesAndAns.some(question => question?.question_id === studentProgress?.question_id);
         }).reduce((acc, item) => {
             console.log(item?.obtained_marks);
+            if(typeof item?.obtained_marks === 'number')
             return acc + item?.obtained_marks
+        return acc;
         }, 0);
 
         const isPassed = studentResult >= individualPassPercentage;
