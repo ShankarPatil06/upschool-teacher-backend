@@ -1,5 +1,6 @@
 const { schoolRepository,studentRepository,subjectRepository,unitRepository,quizRepository,settingsRepository,questionRepository,quizResultRepository,classTestRepository,chapterRepository,topicRepository,conceptRepository} = require("../repository");
-const {getS3SignedUrl,formatDate} = require("../helper/helper");
+const {formatDate} = require("../helper/helper");
+const { getS3SignedUrl } = require("./s3Service");
 
 exports.getAssessmentDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
@@ -1208,9 +1209,9 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
       performance: studentPerformance,
     };
   });
-
-  // if(!chapterIds.length)return [];
-  const chapterData = chapterIds.length >0 && await chapterRepository.fetchBulkChaptersIDName2({
+console.log("***",chapterIds.length ,chapterIds.size );
+  if(!chapterIds.size)return [];
+  const chapterData = chapterIds.size > 0 && await chapterRepository.fetchBulkChaptersIDName2({
     unit_chapter_id: [...chapterIds],
   });
 
