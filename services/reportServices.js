@@ -562,7 +562,6 @@ exports.viewClassReportQuestions = async (request) => {
   const questionIds = uniqueArray.map((item) => item.question_id);
   const conceptIds = uniqueArray.map((item) => item.concept_id);
   const topicIds = uniqueArray.map((item) => item.topic_id);
-
   //to get question_content and cognitive skillid
   const questions = await new Promise((resolve, reject) => {
     questionRepository.fetchBulkQuestionsNameById({ question_id: questionIds }, (err, res) => {
@@ -573,17 +572,12 @@ exports.viewClassReportQuestions = async (request) => {
       resolve(res);
     });
   });
-  console.log("QUESTIONS",questions.Items)
   //concept,topic from conceptid,topicid and cognitiveskillid changed to its name and correctansweer
   const cognitive_id = questions.Items.map((que) => que.cognitive_skill);
-  const conceptNames =
-    conceptIds.length &&
-    (await conceptRepository.fetchBulkConceptsIDName2({
-      unit_Concept_id: conceptIds,
-    }));
-  const topicNames =
-    topicIds.length &&
-    (await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIds }));
+  console.log({cognitive_id});
+  
+  const conceptNames =conceptIds.length && (await conceptRepository.fetchBulkConceptsIDName2({unit_Concept_id: conceptIds}));
+  const topicNames =topicIds.length &&(await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIds }));
   const cognitiveSkillNames = await new Promise((resolve, reject) => {
     settingsRepository.fetchBulkCognitiveSkillNameById({ cognitive_id: cognitive_id }, (err, res) => {
       if (err) {
@@ -597,9 +591,9 @@ exports.viewClassReportQuestions = async (request) => {
   questions.Items.map((question, i) => {
     possiblemarks = possiblemarks + question.marks
     question.questionNo = (i + 1)
-    question.set = questionSet.find((q) => q.id == question.id).sets
+    question.set = questionSet.find((q) => q.question_id == question.question_id).sets
     const allAnswers = quizResultMarksData.flat().filter(ans => ans.question_id === question.question_id)
-    question.cognitive_skill = cognitiveSkillNames.Items.find(e => e.cognitive_id).cognitive_name;
+    question.cognitive_skill = cognitiveSkillNames.Items.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;  
     //% of most common answer for objective (descriptive we wont show anything)
     question.answers_of_question.map((answer, i) => {
       let count = 0;
@@ -641,10 +635,12 @@ exports.viewClassReportQuestions = async (request) => {
       question.correctAnswerPercentage =
         totalStudents > 0 ? (correct / totalStudents) * 100 : 0;
     }
-    uniqueArray.map((item) => {
-      question.concept = conceptNames.find((e) => item.concept_id).display_name;
-      question.topic = topicNames.find((e) => item.topic_id).display_name;
-    });
+    // uniqueArray.map((item) => {
+      let conceptID = uniqueArray.find((e) => question.question_id===e.question_id).concept_id;
+      let topicID = uniqueArray.find((e) => question.question_id===e.question_id).topic_id;
+      question.concept = conceptNames.find((e) => e.concept_id == conceptID).display_name;
+      question.topic = topicNames.find((e) => e.topic_id == topicID).display_name;
+    // });
   });
   //cognitive table and difficulty table data
   const averageData = questions.Items.map((question) => ({
