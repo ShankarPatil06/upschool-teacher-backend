@@ -9,6 +9,7 @@ const axios = require('axios');
 const ocrServices = require('./ocrServices');
 const { resolve } = require('bluebird');
 const { postAPICall } = require('../apiHelper/httpCommon');
+const { getS3SignedUrl } = require('./s3Service');
 
 exports.addClassTest = async (request) => {
 
@@ -45,8 +46,8 @@ exports.getClassTestbyId = async (request) => {
     let questionUrlCheck = constant.testFolder.questionPapers.split("/")[0];
     let answerUrlCheck = constant.testFolder.answerSheets.split("/")[0];
 
-    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await helper.getS3SignedUrl(questionPaperTEmp) : "N.A.";
-    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await helper.getS3SignedUrl(answerSheetTemp) : "N.A.";
+    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await getS3SignedUrl(questionPaperTEmp) : "N.A.";
+    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await getS3SignedUrl(answerSheetTemp) : "N.A.";
 
     return classTestRes
 
@@ -335,7 +336,7 @@ exports.getResult = async (request) => {
             if (index < result_response.Items[0].answer_metadata.length) {
                 contentURL = "";
                 if (((JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("test_uploads/")) && (JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("student_answered_sheets/"))) && result_response.Items[0].answer_metadata[index].url != "" && result_response.Items[0].answer_metadata[index].url != "N.A.") {
-                    contentURL = await helper.getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
+                    contentURL = await getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
                     result_response.Items[0].answer_metadata[index]["content_url"] = contentURL;
                     index++;
                     setContentURL(index);

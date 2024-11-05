@@ -37,25 +37,29 @@ exports.fetchTestQuestionPapersBasedonStatus = (request, callback) => {
     }
   })
 }
-// exports.fetchTestQuestionPapersBasedonStatus = async (request) => {
-//   try {
-//     const testQuestionPaperRes = await testQuestionPaperRepository.getTestQuestionPapersBasedonStatus2(request);    
-//     const blueprintArray = testQuestionPaperRes.map((val) => ({ "blueprint_id": val.blueprint_id }));
-//     const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData2({ items: blueprintArray, condition: "OR" });
-//     testQuestionPaperRes.forEach((testPaper) => {
-//       const blueprint = fetchBluePrintRes.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
-//       if (blueprint) {
-//         testPaper.blueprint_name = blueprint.blueprint_name;
-//         delete testPaper.blueprint_id;
-//       }
-//     });
-//     return testQuestionPaperRes;
-//   } catch (error) {
-//     console.error(error);
-//     throw error; 
-//   }
-// };
 
+exports.fetchTestQuestionPapersBasedonStatus2 = async (request) => {
+
+    const testQuestionPaperRes = await testQuestionPaperRepository.getTestQuestionPapersBasedonStatus2(request);
+
+    if (!testQuestionPaperRes.Items || testQuestionPaperRes.Items.length === 0) {
+      return  [];
+    }
+
+    const blueprintArray = testQuestionPaperRes.Items.map((e) => e.blueprint_id);
+
+    const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData2({ blueprint_array: blueprintArray });
+
+    testQuestionPaperRes.Items.forEach((testPaper) => {
+      const bluePrint = fetchBluePrintRes.Items.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
+      if (bluePrint) {
+        testPaper.blueprint_name = bluePrint.blueprint_name;
+        delete testPaper.blueprint_id;
+      }
+    });
+
+    return testQuestionPaperRes.Items ;
+};
 
 exports.addTestQuestionPaper = (request, callback) => {
 
@@ -81,6 +85,25 @@ exports.addTestQuestionPaper = (request, callback) => {
   })
 }
 
+exports.addTestQuestionPaper2 = async (request) => {
+
+    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
+
+    if (fetchQuestionPaperRes.Items.length > 0) {
+      return {
+        statusCode: 400,
+        message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
+      };
+    }
+    const addQuestionPaperRes = await testQuestionPaperRepository.insertTestQuestionPaper2(request);
+
+    return {
+      statusCode: 200,
+      data: addQuestionPaperRes,
+    };
+
+};
+
 exports.validateQuestionPaperName = (request, callback) => {
 
   testQuestionPaperRepository.fetchTestQuestionPaperbyName(request, function (fetch_question_paper_err, fetch_question_paper_res) {
@@ -96,6 +119,21 @@ exports.validateQuestionPaperName = (request, callback) => {
     }
   })
 }
+
+exports.validateQuestionPaperName2 = async (request) => {
+
+    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
+
+    if (fetchQuestionPaperRes.Items.length === 0) {
+      return { statusCode: 200 };
+    } else {
+      return {
+        statusCode: 400,
+        message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
+      };
+    }
+
+};
 
 exports.viewTestQuestionPaper = (request, callback) => {
 
@@ -162,6 +200,41 @@ exports.viewTestQuestionPaper = (request, callback) => {
   })
 }
 
+exports.viewTestQuestionPaper2 = async (request) => {
+
+    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
+    
+    if (!fetchQuestionPaperRes.Items || fetchQuestionPaperRes.Items.length === 0) {
+      console.log(constant.messages.NO_DATA);
+      return { statusCode: 400, message: constant.messages.NO_DATA };
+    }
+
+    const questionsData = JSON.parse(JSON.stringify(fetchQuestionPaperRes.Items[0].questions));
+    let questionIDs = [];
+
+    questionsData.forEach(questionSet => {
+      questionIDs = questionIDs.concat(questionSet.question_id);
+    });
+    
+    questionIDs = helper.removeDuplicates(questionIDs);
+
+    const fetchBulkCatReq = {
+      IdArray: questionIDs,
+      fetchIdName: "question_id",
+      TableName: TABLE_NAMES.upschool_question_table,
+      projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+    };
+
+    const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection2(fetchBulkCatReq);
+    
+    const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes.Items);
+    
+    fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
+
+    return { statusCode: 200, data: fetchQuestionPaperRes.Items[0] };
+
+};
+
 exports.setQuestionPaperView = (questionsSectionData, questionData, callback) => {
 
   let tempQuestionArr = [];
@@ -208,6 +281,31 @@ exports.setQuestionPaperView = (questionsSectionData, questionData, callback) =>
 
 }
 
+exports.setQuestionPaperView2 = async (questionsSectionData, questionData) => {
+  const tempQuestionArr = [];
+
+  for (let i = 0; i < questionsSectionData.length; i++) {
+    const section = questionsSectionData[i];
+    const questionsPromises = section.question_id.map(async (questionId) => {
+      const individualQuestion = questionData.find(value => value.question_id === questionId) || {};
+
+      try {
+        const url = await helper.getAnswerContentFileUrl(individualQuestion.answers_of_question);
+        individualQuestion.answers_of_question = url;
+      } catch (err) {
+        individualQuestion.answers_of_question = "N.A.";
+      }
+
+      return individualQuestion;
+    });
+
+    const resolvedQuestions = await Promise.all(questionsPromises);
+    questionsSectionData[i].questions = resolvedQuestions;
+  }
+
+  return questionsSectionData;
+};
+
 exports.toggleQuestionPaperBasedOnId = function (request, callback) {
   testQuestionPaperRepository.getClassTestsBasedonIds(request, function (fetch_class_test_err, fetch_class_test_response) {
     if (fetch_class_test_err) {
@@ -228,3 +326,16 @@ exports.toggleQuestionPaperBasedOnId = function (request, callback) {
     }
   })
 }
+
+exports.toggleQuestionPaperBasedOnId2 = async (request) => {
+
+    const fetchClassTestResponse = await testQuestionPaperRepository.getClassTestsBasedonIds2(request);
+
+    if (fetchClassTestResponse.Items.length === 0) {
+      const updateQuestionResponse = await testQuestionPaperRepository.updateQuestionPaperStatus2(request);
+      console.log("update_question_response", updateQuestionResponse);
+      return { statusCode: 200, body: updateQuestionResponse };
+    } else {
+      return { statusCode: 400, body: fetchClassTestResponse };
+    }
+};
