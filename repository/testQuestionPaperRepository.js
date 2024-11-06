@@ -89,6 +89,23 @@ exports.fetchTestQuestionPaperbyName = function (request, callback) {
     });
 }
 
+exports.fetchTestQuestionPaperbyName2 = async (request)=> {
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: "lc_question_paper_name = :lc_question_paper_name",
+            ExpressionAttributeValues: {
+                ":lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
+                ":common_id": constant.constValues.common_id,
+            }
+        };
+
+        return await DATABASE_TABLE2.query(readParams);
+};
+
+
 exports.insertTestQuestionPaper = function (request, callback) {
 
     console.log("request : ", request);
@@ -124,6 +141,34 @@ exports.insertTestQuestionPaper = function (request, callback) {
         }
     });
 }
+
+exports.insertTestQuestionPaper2 = async (request)=> {
+   
+        const insertQuestionPaperParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            Item: {
+                "question_paper_id": await helper.getRandomString(),
+                "blueprint_id": request.data.blueprint_id,
+                "client_class_id": request.data.client_class_id,
+                "subject_id": request.data.subject_id,
+                "section_id": request.data.section_id,
+                "source_id": request.data.source_id,
+                "lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
+                "question_paper_name": request.data.question_paper_name,
+                "question_paper_status": "Active",
+                "chapter_id": request.data.chapter_id,
+                "questions": request.data.questions,
+                "common_id": constant.constValues.common_id,
+                "created_ts": helper.getCurrentTimestamp(),
+                "updated_ts": helper.getCurrentTimestamp(),
+                "blueprint_type": request.data.blueprint_type,
+            }
+        };
+
+        await DATABASE_TABLE2.putItem(insertQuestionPaperParams);
+        return { statusCode: 200, message: constant.messages.INSERT_SUCCESS };
+
+};
 
 exports.fetchTestQuestionPaperByID = function (request, callback) {
 
@@ -184,6 +229,25 @@ exports.getTestQuestionPaperById = function (request, callback) {
     });
 }
 
+exports.getTestQuestionPaperById2 = async (request)=> {
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            KeyConditionExpression: "question_paper_id = :question_paper_id",
+            ExpressionAttributeValues: {
+                ":question_paper_id": request.data.question_paper_id
+            }
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+
+     if (result.Items && result.Items.length > 0) {
+            return { statusCode: 200, data: result.Items };
+        } else {
+            return { statusCode: 404, message: "Question paper not found" };
+        }
+};
+
 exports.getClassTestsBasedonIds = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -212,6 +276,31 @@ exports.getClassTestsBasedonIds = function (request, callback) {
     });
 }
 
+exports.getClassTestsBasedonIds2 = async (request) => {
+  
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_class_test_table,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: "class_test_status = :class_test_status AND question_paper_id = :question_paper_id",
+            ExpressionAttributeValues: {
+                ":common_id": constant.constValues.common_id,
+                ":class_test_status": "Active",
+                ":question_paper_id": request.data.question_paper_id
+            },
+            ProjectionExpression: "class_test_name, question_paper_id",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+
+        if (result.Items && result.Items.length > 0) {
+            return { statusCode: 200, data: result.Items };
+        } else {
+            return { statusCode: 404, message: "No active class tests found" };
+        }
+};
+
+
 exports.updateQuestionPaperStatus = function (request, callback) {
     console.log("updateQuestionPaperStatus", request);
 
@@ -236,3 +325,20 @@ exports.updateQuestionPaperStatus = function (request, callback) {
         }
     });
 }
+
+exports.updateQuestionPaperStatus2 = async function (request) {
+
+        const updatedParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            Key: { "question_paper_id": request.data.question_paper_id },
+            UpdateExpression: "set question_paper_status = :question_paper_status, updated_ts = :updated_ts",
+            ExpressionAttributeValues: {
+                ":question_paper_status": request.data.question_paper_status,
+                ":updated_ts": helper.getCurrentTimestamp()
+            }
+        };
+
+        await DATABASE_TABLE2.updateService(updatedParams);
+
+        return { statusCode: 200, message: "Question paper status updated successfully" };
+};

@@ -6,6 +6,7 @@ const { TABLE_NAMES } = require('../constants/tables');
 const { nextTick } = require("process");
 const { response } = require("express");
 const { resolve } = require("path");
+const { getS3SignedUrl } = require("./s3Service");
 
 exports.fetchRelatedDigiCards = async function (request, callback) {
     /** FETCH USER BY EMAIL **/
@@ -66,13 +67,13 @@ exports.fetchIndividualDigiCard = async function (request) {
     const { digicard_image, digicard_voice_note, digicard_document } = singleDigicardResponse.Items[0];
   
     if (digicard_image && digicard_image.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_imageURL = await helper.getS3SignedUrl(digicard_image);
+      singleDigicardResponse.Items[0].digicard_imageURL = await getS3SignedUrl(digicard_image);
     }
     if (digicard_voice_note && digicard_voice_note.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_voice_noteURL = await helper.getS3SignedUrl(digicard_voice_note);
+      singleDigicardResponse.Items[0].digicard_voice_noteURL = await getS3SignedUrl(digicard_voice_note);
     }
     if (digicard_document && digicard_document.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_documentURL = await helper.getS3SignedUrl(digicard_document);
+      singleDigicardResponse.Items[0].digicard_documentURL = await getS3SignedUrl(digicard_document);
     }
   
     // Replace voice inputs
@@ -93,7 +94,34 @@ exports.fetchIndividualDigiCard = async function (request) {
   
     return singleDigicardResponse;
   };
-  
+
+  exports.fetchRelatedDigiCards = async function (request) {
+    let response = { data: [], statusCode: 400 };
+
+        const singleDigiCardResponse = await digicardRepository.fetchDigiCardByID2(request);
+        
+        if (singleDigiCardResponse.Items.length > 0) {
+            const relatedDigiCards = singleDigiCardResponse.Items[0].related_digi_cards;
+
+            if (relatedDigiCards && relatedDigiCards.length > 0) {
+                // Fetch related DigiCards data
+                const relatedDigiCardResponse = await digicardRepository.fetchRelatedDigiCardData2({ related_digi_cards: relatedDigiCards });
+
+                response.data = relatedDigiCardResponse.Items;
+                response.message = constant.messages.RELATED_DIGICARDS;
+                response.statusCode = 200;
+                return response;
+            } else {
+                response.message = constant.messages.NO_RELATED_DIGICARDS;
+                return response;
+            }
+        } else {
+            response.message = constant.messages.INVALID_DIGICARD;
+            response.statusCode = 401;
+            return response;
+        }
+};
+
 
 exports.fetchAllPreTopicsAndItsDigicards = async function (request, callback) { 
     schoolRepository.getSchoolDetailsById(request, (schoolDataErr, schoolDataRes) => {
@@ -732,7 +760,7 @@ exports.getExtensionOfDigicard = async function (request) {
       for (let i = 0; i < extensions.length; i++) {
         const extFile = extensions[i].ext_file;
         extensions[i].ext_file_url = extFile.includes("digicard_extension/")
-          ? await helper.getS3SignedUrl(extFile)
+          ? await getS3SignedUrl(extFile)
           : "N.A.";
       }
   
