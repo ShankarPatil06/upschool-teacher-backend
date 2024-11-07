@@ -102,10 +102,13 @@ exports.editStudentQuizMarks = async (request) => {
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
         let classPassPercentage = 0;
+        let passPassPercentage = 0;
         if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
             classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
+            passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
         } else {
             classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
+            passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
         }
 
         const questionIds = request.data.marks_details[0].qa_details.map(qDetails => qDetails.question_id);
@@ -118,10 +121,11 @@ exports.editStudentQuizMarks = async (request) => {
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 
-        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage);
+        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage , passPassPercentage);
         console.log("-----------------------------------------------------");
         console.log("overallResult.studentResult - ",overallResult.studentResult);
-        request.data.marks_details[0].totalMark = overallResult.studentResult;
+        request.data.marks_details[0].totalMark = overallResult.totalMarks;
+        request.data.marks_details[0].expectedMarks = overallResult.expectedMarks;
         request.data.passStatus = overallResult.isPassed;
 
         const fetchQuizDataRes = await quizRepository.modifyStudentMarks2(request);
@@ -203,9 +207,11 @@ exports.setQuestionPaperView = async (questionIDs, questionData) => {
 
 exports.fetchQuizTemplates = async (request) => {
     try {
-        request.data.quiz_status = "Active";
+        // if(!request.data.quiz_status)
+        // request.data.quiz_status = "Active";
+        console.log("request - ",request);
         const quizRes = await quizRepository.fetchQuizTemplates2(request);
-        console.log("QUIZ DATA:", quizRes);
+        console.log("quizRes", quizRes);
 
         if (quizRes.Items[0]?.quiz_template_details) {
             for (let k = 97; k <= 99; k++) {
@@ -512,10 +518,9 @@ exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack)
 };
 
 
-const knowPassOrFail = (marks_details, quesAndAns, individualPassPercentage) => {
+const knowPassOrFail = (marks_details, quesAndAns,classPercentage , individualPassPercentage =50) => {
 
     return new Promise((resolve, reject) => {
-        individualPassPercentage = 50;
         let totalMarks = quesAndAns?.reduce((acc, item) => {
             return item.marks ? acc + Number(item.marks) : acc;
         }, 0);
@@ -523,18 +528,20 @@ const knowPassOrFail = (marks_details, quesAndAns, individualPassPercentage) => 
         const studentResult = marks_details?.qa_details?.filter(studentProgress => {
             return quesAndAns.some(question => question?.question_id === studentProgress?.question_id);
         }).reduce((acc, item) => {
-            console.log(item?.obtained_marks);
-            if(typeof item?.obtained_marks === 'number')
-            return acc + item?.obtained_marks
+            if(item?.modified_marks != 'N.A.')
+            return acc + parseFloat(item?.modified_marks)
+            if(item?.obtained_marks != 'N.A.')
+            return acc + parseFloat(item?.obtained_marks)
         return acc;
         }, 0);
 
-        const isPassed = studentResult >= individualPassPercentage;
-        console.log(isPassed);
-        console.log({ totalMarks });
+        console.log("studentResult - ",studentResult);
+        const isPassed = (studentResult/totalMarks)*100 >= individualPassPercentage;
+        console.log("isPassed - ",isPassed);
+        console.log("-m marks - ",{ totalMarks });
         console.log({ studentResult });
 
-        resolve({ isPassed, studentResult });
+        resolve({ isPassed, studentResult,totalMarks : studentResult ,expectedMarks :totalMarks  });
     })
 };
 
