@@ -329,7 +329,7 @@ exports.fetchGetStudentData = async (request) => await classTestRepository.getSt
 exports.getResult = async (request) => {
     const result_response = await classRepository.getResult2(request)
     await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
-        result.content_url = await helper.getS3SignedUrl(result.url);
+        result.content_url = await getS3SignedUrl(result.url);
     }));
     return result_response;
 
