@@ -124,6 +124,40 @@ exports.fetchBluePrintData = function (request, callback) {
         }
     });
 }
+
+exports.fetchBluePrintData3 = async function (request) {
+    const blueprintArray = request.blueprint_array;
+    console.log("blueprint_array : ", blueprintArray);
+
+    if (blueprintArray.length === 1) {
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_blueprint_table,
+            KeyConditionExpression: "blueprint_id = :blueprint_id",
+            ExpressionAttributeValues: { 
+                ":blueprint_id": blueprintArray[0]
+            },
+            ProjectionExpression: "blueprint_id, blueprint_name",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result.Items;
+
+    } else {
+
+        const batchGetParams = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_blueprint_table]: {
+                    Keys: blueprintArray.map(id => ({ blueprint_id: id })),
+                    ProjectionExpression: "blueprint_id, blueprint_name",
+                }
+            }
+        };
+
+        const result = await DATABASE_TABLE2.getByObjects(batchGetParams);
+        return result.Responses[TABLE_NAMES.upschool_blueprint_table] || [];
+    }
+};
 exports.fetchBluePrintData2 = async (request) => {
     const fromatedRequest = await helper.getDataByFilterKey(request);
     let params = {
@@ -136,5 +170,6 @@ exports.fetchBluePrintData2 = async (request) => {
 
     };
     const data = await DATABASE_TABLE2.query(params);
+    console.log("data - ", data);
     return data.Items;
 }

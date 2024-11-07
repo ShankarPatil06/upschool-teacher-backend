@@ -407,4 +407,8 @@ functions:
       - http:
           path: /v1/getActionsAndRecommendationDetail
           method: POST
-          cors: true   
+          cors: true  
+      - http:
+          path: /v1/fetchSchoolDetails
+          method: POST
+          cors: true    

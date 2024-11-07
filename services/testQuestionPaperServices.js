@@ -42,23 +42,27 @@ exports.fetchTestQuestionPapersBasedonStatus2 = async (request) => {
 
     const testQuestionPaperRes = await testQuestionPaperRepository.getTestQuestionPapersBasedonStatus2(request);
 
-    if (!testQuestionPaperRes.Items || testQuestionPaperRes.Items.length === 0) {
+    console.log("testQuestionPaperRes - ", testQuestionPaperRes);
+    if (!testQuestionPaperRes || testQuestionPaperRes.length === 0) {
       return  [];
     }
 
-    const blueprintArray = testQuestionPaperRes.Items.map((e) => e.blueprint_id);
+    const blueprintArray = [...new Set(testQuestionPaperRes.map((e) => e.blueprint_id))];
 
-    const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData2({ blueprint_array: blueprintArray });
+    const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData3({ blueprint_array: blueprintArray });
 
-    testQuestionPaperRes.Items.forEach((testPaper) => {
-      const bluePrint = fetchBluePrintRes.Items.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
+    console.log("fetchBluePrintRes - ", fetchBluePrintRes);
+
+    testQuestionPaperRes.forEach((testPaper) => {
+      const bluePrint = fetchBluePrintRes.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
+      console.log("bluePrint - ",bluePrint);
       if (bluePrint) {
         testPaper.blueprint_name = bluePrint.blueprint_name;
         delete testPaper.blueprint_id;
       }
     });
 
-    return testQuestionPaperRes.Items ;
+    return testQuestionPaperRes ;
 };
 
 exports.addTestQuestionPaper = (request, callback) => {
@@ -87,9 +91,12 @@ exports.addTestQuestionPaper = (request, callback) => {
 
 exports.addTestQuestionPaper2 = async (request) => {
 
+  console.log("request - ",request);
+
     const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
 
-    if (fetchQuestionPaperRes.Items.length > 0) {
+    console.log("fetchQuestionPaperRes - ",fetchQuestionPaperRes);
+    if (fetchQuestionPaperRes.Items.length > 0 && request.section_id == fetchQuestionPaperRes.Items[0].section_id) {
       return {
         statusCode: 400,
         message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,

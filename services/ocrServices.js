@@ -23,6 +23,13 @@ exports.readScannedPage = async function (request, callback) {
             data: {
                 src: imageUrl,
                 formats: ["text"],
+                "data_options": {
+                "include_latex": true,
+                "include_mathml": true,
+                "include_asciimath": true,
+                "include_image_bbox": true,
+                "include_confidence": true
+                }
             },
         }).then(async function (response) {
             console.log("RESPONSE : ", response);
@@ -53,6 +60,13 @@ exports.readScannedPage2 = async (request) => {
             data: {
                 src: imageUrl,
                 formats: ["text"],
+                "data_options": {
+                "include_latex": true,
+                "include_mathml": true,
+                "include_asciimath": true,
+                "include_image_bbox": true,
+                "include_confidence": true
+                }
             },
         });
 

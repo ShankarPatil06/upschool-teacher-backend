@@ -533,7 +533,7 @@ exports.fetchBulkTopicsIDName2 = async (request) => {
             ExpressionAttributeValues: {
                 ":topic_id": unit_Topic_id[0]
             },
-            ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name",
+            ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name, chapter_id",
         };
 
         const result = await DATABASE_TABLE2.query(params);
