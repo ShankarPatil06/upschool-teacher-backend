@@ -328,31 +328,13 @@ exports.fetchGetStudentData = async (request) => await classTestRepository.getSt
 
 exports.getResult = async (request) => {
     const result_response = await classRepository.getResult2(request)
-
-    if (result_response.Items.length > 0) {
-
-        let contentURL;
-        async function setContentURL(index) {
-            if (index < result_response.Items[0].answer_metadata.length) {
-                contentURL = "";
-                if (((JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("test_uploads/")) && (JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("student_answered_sheets/"))) && result_response.Items[0].answer_metadata[index].url != "" && result_response.Items[0].answer_metadata[index].url != "N.A.") {
-                    contentURL = await getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
-                    result_response.Items[0].answer_metadata[index]["content_url"] = contentURL;
-                    index++;
-                    setContentURL(index);
-                } else {
-                    index++;
-                    setContentURL(index);
-                }
-
-            } else {
-                console.log("Loop ended!", result_response.Items[0].answer_metadata);
-            }
-        } setContentURL(0);
-    }
+    await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
+        result.content_url = await helper.getS3SignedUrl(result.url);
+    }));
     return result_response;
 
 }
+
 exports.changeStudentMarks = async (request) => await classRepository.modifyStudentMarks2(request)
 
 exports.resetResultEvaluateStatus = async (request) => await testResultRepository.changeTestEvaluationStatus2(request)
