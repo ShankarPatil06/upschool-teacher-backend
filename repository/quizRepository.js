@@ -431,10 +431,10 @@ exports.fetchQuizTemplates2 = async (request) => {
         TableName: TABLE_NAMES.upschool_quiz_table,
 
                 KeyConditionExpression: "quiz_id = :quiz_id",
-                FilterExpression: "quiz_status = :quiz_status",
+                // FilterExpression: "quiz_status = :quiz_status",
                 ExpressionAttributeValues: {
                     ":quiz_id": request.data.quiz_id,
-                    ":quiz_status": request.data.quiz_status,
+                    // ":quiz_status": request.data.quiz_status,
                 },
                 ProjectionExpression: "quiz_id, quiz_name, quiz_template_details",
     };
