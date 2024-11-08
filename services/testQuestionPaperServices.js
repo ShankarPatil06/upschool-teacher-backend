@@ -232,13 +232,13 @@ exports.viewTestQuestionPaper2 = async (request) => {
       projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
     };
 
-    const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection2(fetchBulkCatReq);
+    const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
     
-    const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes.Items);
+    const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
     
     fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
 
-    return { statusCode: 200, data: fetchQuestionPaperRes.Items[0] };
+    return fetchQuestionPaperRes ;
 
 };
 
@@ -338,7 +338,8 @@ exports.toggleQuestionPaperBasedOnId2 = async (request) => {
 
     const fetchClassTestResponse = await testQuestionPaperRepository.getClassTestsBasedonIds2(request);
 
-    if (fetchClassTestResponse.Items.length === 0) {
+    console.log("fetchClassTestResponse - ",fetchClassTestResponse);
+    if (fetchClassTestResponse.data.length === 0) {
       const updateQuestionResponse = await testQuestionPaperRepository.updateQuestionPaperStatus2(request);
       console.log("update_question_response", updateQuestionResponse);
       return { statusCode: 200, body: updateQuestionResponse };

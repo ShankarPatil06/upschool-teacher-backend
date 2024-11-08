@@ -74,6 +74,7 @@ exports.validateQuestionPaperName = async (req, res, next) => {
 //             res.status(view_test_question_paper_err).json(view_test_question_paper_response);
 //         } else {
 //             console.log("Fetched Questions Successfully"); 
+//             console.log(view_test_question_paper_response);
 //             res.json(view_test_question_paper_response);
 //         }
 //     });
@@ -84,7 +85,6 @@ exports.viewTestQuestionPaper = async (req, res, next) => {
     let request = req.body;    
 
     try{
-
         const view_test_question_paper_response = await testQuestionPaperServices.viewTestQuestionPaper2(request);
         formatResponse(res,view_test_question_paper_response );
     }catch(error)
@@ -105,15 +105,35 @@ exports.viewTestQuestionPaper = async (req, res, next) => {
 //     });
 // };
 
-exports.toggleQuestionPaper = async (req, res, next) => {
-    console.log("toggleQuestionPaper : ");
-    let request = req.body;   
-    try{
+// exports.toggleQuestionPaper = async (req, res, next) => {
+//     console.log("toggleQuestionPaper : ");
+//     let request = req.body;   
+//     try{
 
-       const toggle_question_paper_response = await testQuestionPaperServices.toggleQuestionPaperBasedOnId2(request);
-       formatResponse(res, toggle_question_paper_response );
-    } catch(error)
-    {
+//        const toggle_question_paper_response = await testQuestionPaperServices.toggleQuestionPaperBasedOnId2(request);
+//        formatResponse(res, toggle_question_paper_response );
+//     } catch(error)
+//     {
+//         next(error);
+//     }
+// };
+
+exports.toggleQuestionPaper = async (req, res, next) => {
+    try {
+        console.log("toggleQuestionPaper : ");
+        const request = req.body;
+   const toggleQuestionPaperResponse = await testQuestionPaperServices.toggleQuestionPaperBasedOnId2(request);
+        
+  if (toggleQuestionPaperResponse.statusCode == 200 ) {
+    console.log("coming");
+           formatResponse(res ,toggleQuestionPaperResponse); 
+        } else {
+    console.log("coming2");
+
+            formatResponse(res,constants.messages.CANNOT_DELETE_QUESTION_PAPER,toggleQuestionPaperResponse.statusCode);
+        }
+    } catch (error) {
+        console.log("error ");
         next(error);
     }
 };

@@ -29,7 +29,7 @@ exports.fetchAvailabeQuestions = function (request, callback) {
                     } else { 
                         console.log("single_chapter_response : ", single_chapter_response);
                         // Check if we have Chapter on the ID given : 
-                        if(single_chapter_response.length === 0){
+                        if(single_chapter_response.Items.length === 0){
                             callback(400, constant.messages.CHAPTER_COMBO_DOESNT_EXISTS)
                         }else{
                             if(request.data.test_stage === "Pre"){ 

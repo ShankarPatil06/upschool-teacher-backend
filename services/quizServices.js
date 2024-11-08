@@ -9,7 +9,7 @@ const { TABLE_NAMES } = require('../constants/tables');
 const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
-const { getS3SignedUrl } = require("./s3Service");
+const s3Services = require("./s3Service");
 
 exports.checkDuplicateQuizName = async (request) => {
     const quizData_response = await quizRepository.checkDuplicateQuizName2(request)
@@ -71,8 +71,7 @@ exports.getQuizResult = async (request) => {
             if (index < result_response.Items[0].answer_metadata.length) {
                 contentURL = "";
                 if (((JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("quiz_uploads/")) && (JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("student_answered_sheets/"))) && result_response.Items[0].answer_metadata[index].url != "" && result_response.Items[0].answer_metadata[index].url != "N.A.") {
-
-                    contentURL = await getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
+                    contentURL = await s3Services.getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
                     console.log("contentURL", contentURL);
                     result_response.Items[0].answer_metadata[index]["content_url"] = contentURL;
 
@@ -103,12 +102,15 @@ exports.editStudentQuizMarks = async (request) => {
 
         let classPassPercentage = 0;
         let passPassPercentage = 0;
+        let groupPassPercentage = {};
         if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
             classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
+            groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.test_matrix
         } else {
             classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
+            groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.test_matrix
         }
 
         const questionIds = request.data.marks_details[0].qa_details.map(qDetails => qDetails.question_id);
@@ -127,6 +129,74 @@ exports.editStudentQuizMarks = async (request) => {
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
         request.data.marks_details[0].expectedMarks = overallResult.expectedMarks;
         request.data.passStatus = overallResult.isPassed;
+
+        const basicThreshold = groupPassPercentage.Basic / 100;
+        const intermediateThreshold = groupPassPercentage.Intermediate / 100;
+        const advancedThreshold = groupPassPercentage.Advanced / 100;
+
+        let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
+        let intermediateQuestions = 0, intermediateMarks = 0, intermediateObtained = 0;
+        let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
+
+        const questionMarksMap = {};
+        questionDataRes?.Items?.forEach(question => {
+            console.log("question - ",question);
+            if (question.question_id && typeof question.marks === 'number') {
+                questionMarksMap[question.question_id] = question.marks;
+            }
+        });
+
+        request.data.marks_details.forEach(markDetail => {
+            markDetail.qa_details.forEach((question) => {
+                const marksPerQuestion = questionMarksMap[question.question_id] || 0;
+
+                console.log("question - ", question);
+                console.log("marksPerQuestion - ",marksPerQuestion );
+                console.log("question.obtained_marks - ",question.modified_marks ," - question.type - ",question.type);
+                switch (question.type) {
+                    case 'basic':
+                        basicQuestions += 1;
+                        basicMarks += marksPerQuestion;
+                        basicObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        break;
+                    case 'intermediate':
+                        intermediateQuestions += 1;
+                        intermediateMarks += marksPerQuestion;
+                        intermediateObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        break;
+                    case 'advanced':
+                        advancedQuestions += 1;
+                        advancedMarks += marksPerQuestion;
+                        advancedObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        break;
+                }
+            });
+        });
+
+        const individualGroupPerformance = {
+            Basic: {
+                Ispassed: basicObtained >= basicMarks * basicThreshold,
+                no_of_questions: basicQuestions,
+                total_mark: basicMarks,
+                total_obtained_mark: basicObtained
+            },
+            Intermediate: {
+                Ispassed: intermediateObtained >= intermediateMarks * intermediateThreshold,
+                no_of_questions: intermediateQuestions,
+                total_mark: intermediateMarks,
+                total_obtained_mark: intermediateObtained
+            },
+            Advanced: {
+                Ispassed: advancedObtained >= advancedMarks * advancedThreshold,
+                no_of_questions: advancedQuestions,
+                total_mark: advancedMarks,
+                total_obtained_mark: advancedObtained
+            }
+        };
+
+        console.log("individualGroupPerformance - ", individualGroupPerformance);
+        // Add the individualGroupPerformance object to the res object
+        request.data.individual_group_performance = individualGroupPerformance;
 
         const fetchQuizDataRes = await quizRepository.modifyStudentMarks2(request);
         return fetchQuizDataRes.Items;
@@ -222,13 +292,13 @@ exports.fetchQuizTemplates = async (request) => {
                 const questionTemp = quizTemplate.question_sheet || "N.A.";
                 const questionUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.question_sheet_url = questionTemp.includes(questionUrlCheck)
-                    ? await getS3SignedUrl(questionTemp)
+                    ? await s3Services.getS3SignedUrl(questionTemp)
                     : "N.A.";
 
                 const answerTemp = quizTemplate.answer_sheet || "N.A.";
                 const answerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.answer_sheet_url = answerTemp.includes(answerUrlCheck)
-                    ? await getS3SignedUrl(answerTemp)
+                    ? await s3Services.getS3SignedUrl(answerTemp)
                     : "N.A.";
             }
         } else {
