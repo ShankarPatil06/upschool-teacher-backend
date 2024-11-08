@@ -62,6 +62,7 @@ const checkDuplicateTopics = async (resTopics, checkTopics) => {
 exports.fetchQuizBasedonStatus = async (request) => await quizRepository.getQuizBasedonStatus2(request)
 
 exports.getQuizResult = async (request) => {
+
     const result_response = await quizRepository.getQuizResult2(request)
 
     if (result_response.Items.length > 0) {
