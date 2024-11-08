@@ -1,13 +1,13 @@
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 const axios = require('axios');
-const { getS3SignedUrl } = require('./s3Service');
+const s3Services = require("./s3Service");
 
 exports.readScannedPage = async function (request, callback) {
     try {
         const { Key } = request.data;
         // Get the URL of the image in S3
-        const imageUrl = await getS3SignedUrl(Key);
+        const imageUrl = await s3Services.getS3SignedUrl(Key);
 
         console.log("imageUrl", imageUrl);
         
@@ -22,14 +22,7 @@ exports.readScannedPage = async function (request, callback) {
             },
             data: {
                 src: imageUrl,
-                formats: ["text"],
-                "data_options": {
-                "include_latex": true,
-                "include_mathml": true,
-                "include_asciimath": true,
-                "include_image_bbox": true,
-                "include_confidence": true
-                }
+                formats: ["text"]
             },
         }).then(async function (response) {
             console.log("RESPONSE : ", response);
@@ -46,7 +39,7 @@ exports.readScannedPage2 = async (request) => {
 
         const { Key } = request.data;
 
-        const imageUrl = await getS3SignedUrl(Key);
+        const imageUrl = await s3Services.getS3SignedUrl(Key);
         console.log("imageUrl", imageUrl);
 
         const response = await axios({
@@ -60,17 +53,9 @@ exports.readScannedPage2 = async (request) => {
             data: {
                 src: imageUrl,
                 formats: ["text"],
-                "data_options": {
-                "include_latex": true,
-                "include_mathml": true,
-                "include_asciimath": true,
-                "include_image_bbox": true,
-                "include_confidence": true
-                }
             },
         });
 
         console.log("RESPONSE : ", response);
         return response;
-
 };

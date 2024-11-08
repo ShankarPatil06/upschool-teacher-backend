@@ -53,14 +53,14 @@ exports.getConceptsBasedonTopics = (request, callback) => {
         
         console.log("topic_res - ",topic_res);
 
-        if (topic_res.Items.length === 0) {
+        if (topic_res.length === 0) {
             return {
                 statusCode: 200,
-                body: topic_res.Items,
+                body: topic_res,
             };
         }
 
-        const concept_array = topic_res.Items.flatMap(e => e.topic_concept_id);
+        const concept_array = topic_res.flatMap(e => e.topic_concept_id);
 
         const concept_res = await conceptRepository.fetchConceptIDDisplayName2({ concept_array });
         

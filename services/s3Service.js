@@ -39,6 +39,7 @@ const getFile = async (Key) => await s3.getObject({ Bucket: process.env.BUCKET_N
 
 const getS3SignedUrl = async (fileKey) => 
 {
+    console.log("fileKey ------------------",fileKey);
     let Key = fileKey;
     let URL_EXPIRATION_SECONDS = 600;
 

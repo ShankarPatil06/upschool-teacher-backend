@@ -1,6 +1,6 @@
 const { schoolRepository,studentRepository,subjectRepository,unitRepository,quizRepository,settingsRepository,questionRepository,quizResultRepository,classTestRepository,chapterRepository,topicRepository,conceptRepository} = require("../repository");
 const {formatDate} = require("../helper/helper");
-const { getS3SignedUrl } = require("./s3Service");
+const s3Services = require("./s3Service");
 
 exports.getAssessmentDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
@@ -563,7 +563,13 @@ exports.postLearningSummaryDetails = async (request) => {
         const totalAttendance = quizResults.length;
 
         quiz.student_attendance = totalAttendance;
-        quiz.avgMarks = totalAttendance > 0 ? totalMarks / totalAttendance : 0;
+        quiz.avgMarks = quizResults.length
+        ? ((quizResults.reduce(
+            (total, result) =>
+              total + (result.marks_details[0]?.totalMark || 0),
+            0
+          ) / quizResults.length)/quizResults[0].marks_details[0]?.expectedMarks)*100
+        : 0;
       });
     }
   });
@@ -635,7 +641,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
               ans.answer_type === "Image" ||
               ans.answer_type === "Audio File"
             ) {
-              ans.answer_content = await getS3SignedUrl(ans.answer_content);
+              ans.answer_content = await s3Services.getS3SignedUrl(ans.answer_content);
             }
           })
         );
