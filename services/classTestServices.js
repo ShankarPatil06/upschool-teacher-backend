@@ -1,5 +1,5 @@
 const dynamoDbCon = require('../awsConfig');
-const { classTestRepository,testQuestionPaperRepository,commonRepository,classRepository,testResultRepository} = require("../repository")
+const { classTestRepository,testQuestionPaperRepository,commonRepository,classRepository,testResultRepository,} = require("../repository")
 const commonServices = require("../services/commonServices");
 const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
@@ -9,7 +9,7 @@ const axios = require('axios');
 const ocrServices = require('./ocrServices');
 const { resolve } = require('bluebird');
 const { postAPICall } = require('../apiHelper/httpCommon');
-const { getS3SignedUrl } = require('./s3Service');
+const s3Services = require("./s3Service");
 
 exports.addClassTest = async (request) => {
 
@@ -46,8 +46,8 @@ exports.getClassTestbyId = async (request) => {
     let questionUrlCheck = constant.testFolder.questionPapers.split("/")[0];
     let answerUrlCheck = constant.testFolder.answerSheets.split("/")[0];
 
-    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await getS3SignedUrl(questionPaperTEmp) : "N.A.";
-    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await getS3SignedUrl(answerSheetTemp) : "N.A.";
+    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await s3Services.getS3SignedUrl(questionPaperTEmp) : "N.A.";
+    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await s3Services.getS3SignedUrl(answerSheetTemp) : "N.A.";
 
     return classTestRes
 
@@ -327,9 +327,13 @@ exports.fetchGetStudentData = async (request) => await classTestRepository.getSt
 
 
 exports.getResult = async (request) => {
+    console.log("request - ", request);
     const result_response = await classRepository.getResult2(request)
+    console.log("result_response - ",result_response);
+    if(result_response.Items.length == 0)
+    return result_response;
     await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
-        result.content_url = await getS3SignedUrl(result.url);
+        result.content_url = await s3Services.getS3SignedUrl(result.url);
     }));
     return result_response;
 
@@ -338,6 +342,5 @@ exports.getResult = async (request) => {
 exports.changeStudentMarks = async (request) => await classRepository.modifyStudentMarks2(request)
 
 exports.resetResultEvaluateStatus = async (request) => await testResultRepository.changeTestEvaluationStatus2(request)
-
 
 exports.updateClassTestStatus = async (request) => await classTestRepository.updateClassTestStatus2(request)

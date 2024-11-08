@@ -243,23 +243,23 @@ exports.appendPostTopicsArchivedStatus2 = async (request, teacherActivityData, p
   
 
 
-exports.appendPreTopicsArchivedStatus = async function (request, teacherActivityData, preTopicData, prePostType) {
-    try {
-      const chapterId = request.data.chapter_id;
-      const chapterActivity = getChapterActivity(teacherActivityData, chapterId);
-      const preArchivedTopics = getArchivedTopics(chapterActivity, prePostType);
+// exports.appendPreTopicsArchivedStatus = async function (request, teacherActivityData, preTopicData, prePostType) {
+//     try {
+//       const chapterId = request.data.chapter_id;
+//       const chapterActivity = getChapterActivity(teacherActivityData, chapterId);
+//       const preArchivedTopics = getArchivedTopics(chapterActivity, prePostType);
   
-      const newPreTopic = preTopicData.Items.map((preTop) => ({
-        ...preTop,
-        isArchived: preArchivedTopics.includes(preTop.topic_id) ? "Yes" : "No",
-      }));
+//       const newPreTopic = preTopicData.Items.map((preTop) => ({
+//         ...preTop,
+//         isArchived: preArchivedTopics.includes(preTop.topic_id) ? "Yes" : "No",
+//       }));
   
-      return newPreTopic;
-    } catch (error) {
-      console.error("Error in appendPreTopicsArchivedStatus:", error);
-      return [];
-    }
-  };
+//       return newPreTopic;
+//     } catch (error) {
+//       console.error("Error in appendPreTopicsArchivedStatus:", error);
+//       return [];
+//     }
+//   };
   
   const getChapterActivity = (teacherActivityData, chapterId) => {
     if (teacherActivityData.Items.length === 0) return null;

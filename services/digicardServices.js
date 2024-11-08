@@ -6,7 +6,7 @@ const { TABLE_NAMES } = require('../constants/tables');
 const { nextTick } = require("process");
 const { response } = require("express");
 const { resolve } = require("path");
-const { getS3SignedUrl } = require("./s3Service");
+const s3Services = require("./s3Service");
 
 exports.fetchRelatedDigiCards = async function (request, callback) {
     /** FETCH USER BY EMAIL **/
@@ -67,13 +67,13 @@ exports.fetchIndividualDigiCard = async function (request) {
     const { digicard_image, digicard_voice_note, digicard_document } = singleDigicardResponse.Items[0];
   
     if (digicard_image && digicard_image.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_imageURL = await getS3SignedUrl(digicard_image);
+      singleDigicardResponse.Items[0].digicard_imageURL = await s3Services.getS3SignedUrl(digicard_image);
     }
     if (digicard_voice_note && digicard_voice_note.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_voice_noteURL = await getS3SignedUrl(digicard_voice_note);
+      singleDigicardResponse.Items[0].digicard_voice_noteURL = await s3Services.getS3SignedUrl(digicard_voice_note);
     }
     if (digicard_document && digicard_document.includes("uploads/")) {
-      singleDigicardResponse.Items[0].digicard_documentURL = await getS3SignedUrl(digicard_document);
+      singleDigicardResponse.Items[0].digicard_documentURL = await s3Services.getS3SignedUrl(digicard_document);
     }
   
     // Replace voice inputs
@@ -760,7 +760,7 @@ exports.getExtensionOfDigicard = async function (request) {
       for (let i = 0; i < extensions.length; i++) {
         const extFile = extensions[i].ext_file;
         extensions[i].ext_file_url = extFile.includes("digicard_extension/")
-          ? await getS3SignedUrl(extFile)
+          ? await s3Services.getS3SignedUrl(extFile)
           : "N.A.";
       }
   
