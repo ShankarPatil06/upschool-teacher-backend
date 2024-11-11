@@ -600,23 +600,26 @@ exports.setValues2 = async function (words) {
     let pageNo, testID, rollNo, quizID, quiz_set;
 
     for (const [index, word] of words.entries()) {
-        if (index <= 7) {
-            if (word.startsWith("pageno") && word.split(":")[1]) {
-                pageNo = word.split(":")[1].split("/")[0];
-            } 
-            else if (word.startsWith("testid") && word.split(":")[1]) {
-                testID = word.split(":")[1];
-            } else if (word.startsWith("rollno") && word.split(":")[1]) {
-                rollNo = word.split(":")[1];
+      console.log(index,word)
+        // if (index <= 7) {
+          if (word.startsWith("pageno")) {
+            const pagePart = word.slice(6);
+            pageNo = pagePart.split("/")[0];}
+          //  else if (word.startsWith("testid") && word.split(":")[1]) {
+          //       testID = word.split(":")[1];
+          //   } 
+            else if (word.startsWith("rollno")) {
+              rollNo = word.slice(6);
             }
-             else if (word.startsWith("quizid") && word.split(":")[1]) {
-                quizID = word.split(":")[1];
-            } else if (word.startsWith("set") && ["a", "b", "c"].includes(word.split(":")[1])) {
-                quiz_set = word.split(":")[1];
+             else if (word.startsWith("quizid")) {
+              quizID = word.slice(6);
+            } else if (word.startsWith("set")) {
+                quiz_set = word.slice(3);
             }
-        }
+        // }
     }
-
+    console.log( pageNo, testID, rollNo, quizID, quiz_set)
+  
     return { "page_no": pageNo, "test_id": testID, "roll_no": rollNo, "quiz_id": quizID, "set": quiz_set };
 }
 

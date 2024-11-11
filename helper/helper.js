@@ -444,31 +444,26 @@ exports.checkPriorityQuestions = async (quesDetails) => {
 }
 
 exports.formattingAnswer = async (answer) => {
-    answer = answer.split("\n");
-    // let regexp = /.*Ans: /;
-    let array;
-    await answer.forEach((words, i) => {
-        // answer[i] = words.replace(regexp, "");
-        answer[i] = answer[i].replace(/\\\(/g, "");
-        answer[i] = answer[i].replace(/\\\)/g, "");
-        answer[i] = answer[i].trim();
+    answer = answer.split("\n");  // Split by line
+  const formattedAnswer = answer.map((words) => {
+    // Remove LaTeX style parentheses (\\( and \\)) and \\qquad with surrounding spaces
+    words = words.replace(/\\\(\s*\\qquad\s*\\\)/g, ""); // Remove \\( \\qquad \\)
+    words = words.replace(/\s*\\qquad\s*/g, ""); // Remove \\qquad with spaces
+    // Remove all spaces
+    words = words.replace(/\s/g, "");
+    // Remove periods and other unwanted characters
+    words = words.replace(/\./g, "");  // Remove periods
+    words = words.replace(/\:/g, "");  // Remove colons
+    words = words.replace(/\;/g, "");  // Remove semicolons
 
-        array = answer[i].match(/[^\\]+/g);
+    // Convert to lowercase if needed
+    words = words.toLowerCase();
 
-        if (array && array.length === 1) {
-            answer[i] = answer[i].replace(/\s/g, "");
-            answer[i] = answer[i].replace(/\./g, "");
-            // answer[i] = answer[i].replace(/\,/g, "");
-            // answer[i] = answer[i].replace(/\:/g, "");
-            answer[i] = answer[i].replace(/\;/g, "");
-            answer[i] = answer[i].toLowerCase();
-        }
-    })
-    answer[0] = answer[0].replace(/\s/g, "");
+    return words;
+  });
 
-    console.log("AFTER FORMATIING : ", answer);
-
-    return answer;
+  console.log("AFTER FORMATTING : ", formattedAnswer);
+  return formattedAnswer;
 }
 
 exports.getAnswerBlanks = async (blankCount) => {
