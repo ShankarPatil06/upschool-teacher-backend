@@ -349,7 +349,7 @@ exports.uploadAnswerSheets = async function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS : ", pageDetailsRes);
+                        console.log("PAGE DETAILS in uploadanswersheets: ", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
 
@@ -492,7 +492,7 @@ exports.uploadAnswerSheets2 = async (request) => {
             const words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS in 2:", pageDetailsRes);
+            console.log("PAGE DETAILS in uploadanswersheets2:", pageDetailsRes);
 
             if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
                 pageMetadata = {
@@ -668,7 +668,7 @@ exports.uploadQuizAnswerSheets = function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS : ", pageDetailsRes);
+                        console.log("PAGE DETAILS in quizanswersheets: ", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no && pageDetailsRes.set && Number(pageDetailsRes.page_no)) {
 
@@ -810,7 +810,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             let words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS : ", pageDetailsRes);
+            console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
 
             if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
                 quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
