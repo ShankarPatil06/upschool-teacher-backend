@@ -494,7 +494,7 @@ exports.uploadAnswerSheets2 = async (request) => {
 
             console.log("PAGE DETAILS:", pageDetailsRes);
 
-            if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
+            if (pageDetailsRes.page_no && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
                 pageMetadata = {
                     class_test_id: pageDetailsRes.test_id,
                     roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
