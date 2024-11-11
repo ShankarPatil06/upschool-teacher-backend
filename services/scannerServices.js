@@ -330,7 +330,7 @@ exports.fetchSignedURLForAnswers = async (request) => {
         }];
 };
 
-exports.uploadAnswerSheets2 = async function (request, callback) {
+exports.uploadAnswerSheets = async function (request, callback) {
 
     let pageMetadata = {};
 
@@ -481,7 +481,7 @@ exports.uploadAnswerSheets2 = async function (request, callback) {
     })
 }
 
-exports.uploadAnswerSheets = async (request) => {
+exports.uploadAnswerSheets2 = async (request) => {
     let pageMetadata = {};
 
     try {
@@ -492,7 +492,7 @@ exports.uploadAnswerSheets = async (request) => {
             const words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS:", pageDetailsRes);
+            console.log("PAGE DETAILS in 2:", pageDetailsRes);
 
             if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
                 pageMetadata = {
