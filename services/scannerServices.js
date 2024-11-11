@@ -494,7 +494,8 @@ exports.uploadAnswerSheets2 = async (request) => {
 
             console.log("PAGE DETAILS:", pageDetailsRes);
 
-            if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
+            // if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
+                if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && Number(pageDetailsRes.page_no)) {
                 pageMetadata = {
                     class_test_id: pageDetailsRes.test_id,
                     roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
@@ -603,11 +604,13 @@ exports.setValues2 = async function (words) {
         if (index <= 7) {
             if (word.startsWith("pageno") && word.split(":")[1]) {
                 pageNo = word.split(":")[1].split("/")[0];
-            } else if (word.startsWith("testid") && word.split(":")[1]) {
-                testID = word.split(":")[1];
-            } else if (word.startsWith("rollno") && word.split(":")[1]) {
-                rollNo = word.split(":")[1];
-            } else if (word.startsWith("quizid") && word.split(":")[1]) {
+            } 
+            // else if (word.startsWith("testid") && word.split(":")[1]) {
+            //     testID = word.split(":")[1];
+            // } else if (word.startsWith("rollno") && word.split(":")[1]) {
+            //     rollNo = word.split(":")[1];
+            // }
+             else if (word.startsWith("quizid") && word.split(":")[1]) {
                 quizID = word.split(":")[1];
             } else if (word.startsWith("set") && ["a", "b", "c"].includes(word.split(":")[1])) {
                 quiz_set = word.split(":")[1];
