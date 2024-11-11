@@ -444,37 +444,32 @@ exports.checkPriorityQuestions = async (quesDetails) => {
 }
 
 exports.formattingAnswer = async (answer) => {
-    answer = answer.split("\n");  // Split the input into lines
-
-    // Iterate through each line of the answer
+    answer = answer.split("\n");
+    // let regexp = /.*Ans: /;
+    let array;
     await answer.forEach((words, i) => {
-        // Trim whitespace
+        // answer[i] = words.replace(regexp, "");
+        answer[i] = answer[i].replace(/\\\(/g, "");
+        answer[i] = answer[i].replace(/\\\)/g, "");
         answer[i] = answer[i].trim();
 
-        // If the line contains 'Ans:', remove 'Ans:' and clean the formatting
-        answer[i] = answer[i].replace(/\s*Ans:\s*/i, '').trim();
+        array = answer[i].match(/[^\\]+/g);
 
-        // Handle LaTeX-style math notation removal (if present)
-        answer[i] = answer[i].replace(/\\\(/g, "").replace(/\\\)/g, "");
-
-        // Replace punctuation that shouldn't be part of the key-value pair
-        answer[i] = answer[i].replace(/[^\w\s]/g, '').toLowerCase();
-
-        // If the line has a space (key-value pair like 'Set: B'), split by ':'
-        if (answer[i].includes(":")) {
-            let [key, value] = answer[i].split(":").map(part => part.trim().toLowerCase());
-            answer[i] = `${key}:${value}`;
+        if (array && array.length === 1) {
+            answer[i] = answer[i].replace(/\s/g, "");
+            answer[i] = answer[i].replace(/\./g, "");
+            // answer[i] = answer[i].replace(/\,/g, "");
+            // answer[i] = answer[i].replace(/\:/g, "");
+            answer[i] = answer[i].replace(/\;/g, "");
+            answer[i] = answer[i].toLowerCase();
         }
-    });
+    })
+    answer[0] = answer[0].replace(/\s/g, "");
 
-    // Handle the very first element 'Set: B' which should have 'set:b' format
-    answer[0] = answer[0].replace(/\s+/g, "").toLowerCase();  // Remove all spaces and convert to lowercase
+    console.log("AFTER FORMATIING : ", answer);
 
-    console.log("AFTER FORMATTING : ", answer);  // Log the result
-
-    return answer;  // Return the formatted answer array
+    return answer;
 }
-
 
 exports.getAnswerBlanks = async (blankCount) => {
 
