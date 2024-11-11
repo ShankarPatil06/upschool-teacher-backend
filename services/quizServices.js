@@ -64,29 +64,10 @@ exports.fetchQuizBasedonStatus = async (request) => await quizRepository.getQuiz
 exports.getQuizResult = async (request) => {
 
     const result_response = await quizRepository.getQuizResult2(request)
-
-    if (result_response.Items.length > 0) {
-        let contentURL;
-        async function setContentURL(index) {
-
-            if (index < result_response.Items[0].answer_metadata.length) {
-                contentURL = "";
-                if (((JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("quiz_uploads/")) && (JSON.stringify(result_response.Items[0].answer_metadata[index].url).includes("student_answered_sheets/"))) && result_response.Items[0].answer_metadata[index].url != "" && result_response.Items[0].answer_metadata[index].url != "N.A.") {
-                    contentURL = await s3Services.getS3SignedUrl(result_response.Items[0].answer_metadata[index].url);
-                    console.log("contentURL", contentURL);
-                    result_response.Items[0].answer_metadata[index]["content_url"] = contentURL;
-
-                    index++;
-                    setContentURL(index);
-                } else {
-                    index++;
-                    setContentURL(index);
-                }
-            } else {
-                console.log("Loop ended!", result_response.Items[0].answer_metadata);
-            }
-        } setContentURL(0);
-    }
+    await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
+        result.content_url = await s3Services.getS3SignedUrl(result.url);
+        console.log(result.content_url)
+    }));
     return result_response;
 }
 
