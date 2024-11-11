@@ -60,6 +60,44 @@ exports.fetchBulkData = function (request, callback) {
   });
 };
 
+exports.fetchBulkData2 = async function (request) {
+    const { IdArray, fetchIdName, TableName } = request;
+
+    if (!IdArray || IdArray.length === 0) {
+      throw new Error(constant.messages.INVALID_PARAMETERS);
+    }
+
+    let response = { data: [] };
+
+    if (IdArray.length === 1) {
+      const readParams = {
+        TableName,
+        KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: {
+          [`:${fetchIdName}`]: IdArray[0]
+        }
+      };
+
+      const result = await DATABASE_TABLE2.query(readParams);
+      response.data = result.Items || [];
+    } else {
+      const keys = IdArray.map(id => ({ [fetchIdName]: id }));
+      const readParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys
+          }
+        }
+      };
+
+      const result = await DATABASE_TABLE2.getByObjects(readParams);
+      response.data = result.Responses ? result.Responses[TableName] : [];
+    }
+
+    return response;
+};
+
+
 exports.BulkInsert = function (final_data, userTable, callback) {
   if (final_data.length > 0) {
     dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
@@ -227,6 +265,53 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
   });
 };
 
+exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
+
+    const { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
+
+    let FilterExpressionDynamic = "";
+    let ExpressionAttributeValuesDynamic = {};
+
+    if (IdArray.length === 1) {
+      ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
+      ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+      const readParams = {
+        TableName: TableName,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+      };
+
+      return await DATABASE_TABLE2.query(readParams);
+    } else {
+      IdArray.forEach((element, index) => {
+        FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
+        ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
+
+        if (index < IdArray.length - 1) {
+          FilterExpressionDynamic += " OR ";
+        }
+      });
+
+      FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
+      ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
+      ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+      const readParams = {
+        TableName: TableName,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: FilterExpressionDynamic,
+        ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+      };
+
+      return await DATABASE_TABLE2.query(readParams);
+    }
+};
+
+
 exports.fetchBulkDataWithProjection = function (request, callback) {
   dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
     if (DBErr) {
@@ -310,6 +395,57 @@ exports.fetchBulkDataWithProjection2 = async (request) => {
     throw error;
   }
 };
+
+
+exports.fetchBulkDataWithProjection3 = async function (request) {
+  try {
+    let { IdArray, fetchIdName, TableName, projectionExp } = request;
+
+    IdArray = [...new Set(IdArray)];
+    console.log("IdArray : ", IdArray);
+
+    if (IdArray.length === 0) {
+      console.log("EMPTY BULK ID");
+      return { Items: [] };
+    } else if (IdArray.length === 1) {
+      let expAttributeVal = {};
+      expAttributeVal[`:${fetchIdName}`] = IdArray[0];
+
+      let read_params = {
+        TableName: TableName,
+        KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: expAttributeVal,
+        ProjectionExpression: projectionExp,
+      };
+
+      console.log("READ PARAMS : ", read_params);
+      return await DATABASE_TABLE2.query(read_params);
+    } else {
+      const keys = IdArray.map((id) => ({
+        [fetchIdName]: id,
+      }));
+
+      let batchParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys,
+            ProjectionExpression: projectionExp.join(", "),
+          },
+        },
+      };
+
+      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+
+      const response = await DATABASE_TABLE2.getByObjects(batchParams);
+      return response.Responses ? response.Responses[TableName] : [];
+    }
+  } catch (error) {
+    console.error("DATABASE ERROR", error);
+    throw new Error('DATABASE_ERROR');
+  }
+};
+
+
 
 exports.bulkBatchWrite = async (itemsToWrite, userTable) => {
   if (itemsToWrite.length > 0) {

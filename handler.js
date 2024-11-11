@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController } = require('./controller')
+const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController, schoolController } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -40,7 +40,7 @@ app.post("/v1/changePassword", validator.validUser, commonController.changePassw
 /** SYLLABUS (SUBJECT) **/
 app.post("/v1/fetchUnitsandChaptersBasedonSubjects", validator.validUser, subjectController.fetchUnitsandChaptersBasedonSubjects);
 app.post("/v1/fetchTopicsBasedonChapter", validator.validUser, chapterController.fetchTopicsBasedonChapter);
-// app.post("/v1/fetchDigicardsBasedonTopic", validator.validUser, topicController.fetchDigicardsBasedonTopic);
+app.post("/v1/fetchDigicardsBasedonTopic", validator.validUser, topicController.fetchDigicardsBasedonTopic);
 app.post("/v1/fetchIndividualDigiCard", validator.validUser, digicardController.fetchIndividualDigiCard);
 app.post("/v1/fetchRelatedDigiCards", validator.validUser, digicardController.fetchRelatedDigiCards);
 app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectController.fetchTopicAndNoOfQuestions);
@@ -48,12 +48,11 @@ app.post("/v1/fetchAllStudents",  studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
 
-app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning);
-app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock);
+// app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning); 
+// app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock); // removed beacuse of not used
 app.post("/v1/topicUnlock", validator.validUser, topicController.topicUnlock);
 app.post("/v1/digicardUnlock", validator.validUser, digicardController.digicardUnlock);
 app.post("/v1/fetchAvailableNumOfQuestions", validator.validUser, questionController.fetchAvailableNumOfQuestions);
-
 
 app.post("/v1/fetchTeacherClasses", validator.validUser, teacherController.fetchTeacherClasses);
 app.post("/v1/fetchTeacherSectionsBasedonClass", validator.validUser, teacherController.fetchTeacherSectionsBasedonClass);
@@ -145,6 +144,7 @@ app.post("/v1/viewClassReportFocusArea",reportController.viewClassReportFocusAre
 app.post("/v1/viewChapterwisePerformanceTracking",reportController.viewChapterwisePerformanceTracking);
 app.post("/v1/getActionsAndRecommendations",reportController.getActionsAndRecommendations);
 app.post("/v1/getActionsAndRecommendationDetail",reportController.getActionsAndRecommendationDetail);
+app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 
 
 function haltOnTimedout(req, res, next) {

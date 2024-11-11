@@ -1,5 +1,6 @@
 
-const { dynamoDbCon, s3 } = require('../../awsConfig');
+const { dynamoDbCon, s3 } = require('../awsConfig');
+
 
 const deleteFile = async (fileName) => {
     const params = {
@@ -36,7 +37,22 @@ const download = async (key, location) => {
 
 const getFile = async (Key) => await s3.getObject({ Bucket: process.env.BUCKET_NAME, Key }).promise();
 
-const getSignedUrl = async (params) => await s3.getSignedUrlPromise("putObject", params);
+const getS3SignedUrl = async (fileKey) => 
+{
+    console.log("fileKey ------------------",fileKey);
+    let Key = fileKey;
+    let URL_EXPIRATION_SECONDS = 600;
+
+    let s3Params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key,
+        Expires: URL_EXPIRATION_SECONDS,
+    }
+    let signedS3URL = await s3.getSignedUrlPromise('getObject', s3Params)
+
+    return signedS3URL;
+
+}
 
 const upload = async (files) => {
     for (const file of files) {
@@ -74,7 +90,7 @@ module.exports = {
     deleteFile,
     download,
     getFile,
-    getSignedUrl,
+    getS3SignedUrl,
     upload,
     getFileByPartialKey
 }

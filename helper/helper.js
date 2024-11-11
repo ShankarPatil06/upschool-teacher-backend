@@ -8,6 +8,9 @@ const {groupTypes } = require('../constants/constant');
 const { constants } = require("buffer");
 const { StatusCodes } = require('http-status-codes');
 const fs = require("fs");
+// const { getS3SignedUrl } = require("../services/s3Service");
+const {s3Services} = require("../services");
+
 
 const excelEpoc = new Date(1900, 0, 0).getTime();
 const msDay = 86400000;
@@ -67,21 +70,6 @@ exports.change_dd_mm_yyyy = function (givenDate) {
     }
 }
 
-exports.getS3SignedUrl = async function (fileKey) {
-
-    let Key = fileKey;
-    let URL_EXPIRATION_SECONDS = 600;
-    // Get signed URL from S3
-    let s3Params = {
-        Bucket: process.env.BUCKET_NAME,
-        Key,
-        Expires: URL_EXPIRATION_SECONDS,
-    }
-
-    let signedS3URL = await dynamoDbCon.s3.getSignedUrlPromise('getObject', s3Params)
-
-    return signedS3URL;
-}
 
 exports.sortDataBasedOnTimestamp = function (j, data) {
     let orderedData = data;
@@ -415,7 +403,7 @@ exports.getAnswerContentFileUrl = async (answerArr) => {
 
         async function contentUrl(i) {
             if (i < answerArr.length) {
-                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await exports.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
+                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await s3Services.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
                 i++;
                 contentUrl(i);
             }

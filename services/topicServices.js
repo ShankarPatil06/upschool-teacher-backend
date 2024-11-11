@@ -1,10 +1,8 @@
-const fs = require("fs");
-const dynamoDbCon = require("../awsConfig");
 const {topicRepository,chapterRepository,teacherRepository,conceptRepository,digicardRepository,teachingActivityRepository} = require("../repository")
 const teacherServices = require("../services/teacherServices");
 const constant = require("../constants/constant");
 const helper = require("../helper/helper");
-const { nextTick } = require("process");
+const s3Services = require("./s3Service");
 
 exports.topicUnlockService = async function (request, callback) {
   /** FETCH USER BY EMAIL **/
@@ -144,7 +142,7 @@ exports.getDigicardsBasedonTopic = async function (request, callback) {
                       if (j < digicardResponse.length) {
 
                         if (digicardResponse[j].digicard_image && digicardResponse[j].digicard_image !== "" && digicardResponse[j].digicard_image !== "N.A." && digicardResponse[j].digicard_image.includes("uploads/")) {
-                          digicardResponse[j].digicard_imageURL = await helper.getS3SignedUrl(digicardResponse[j].digicard_image);
+                          digicardResponse[j].digicard_imageURL = await s3Services.getS3SignedUrl(digicardResponse[j].digicard_image);
                         }
 
                         delete digicardResponse[j].digicard_image;
