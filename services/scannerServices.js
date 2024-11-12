@@ -349,7 +349,7 @@ exports.uploadAnswerSheets = async function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS : ", pageDetailsRes);
+                        console.log("PAGE DETAILS", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
 
@@ -486,15 +486,15 @@ exports.uploadAnswerSheets2 = async (request) => {
 
     try {
         const scannedRes = await ocrServices.readScannedPage2(request);
-        console.log("BEFORE FORMATTING:", scannedRes.data.text);
+        console.log("BEFORE FORMATTING2:", scannedRes.data.text);
 
         if (scannedRes.data.text) {
             const words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS:", pageDetailsRes);
+            console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
 
-            if (pageDetailsRes.page_no && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
+            if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
                 pageMetadata = {
                     class_test_id: pageDetailsRes.test_id,
                     roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
@@ -668,7 +668,7 @@ exports.uploadQuizAnswerSheets = function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS : ", pageDetailsRes);
+                        console.log("PAGE DETAILS in quizanswersheets: ", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no && pageDetailsRes.set && Number(pageDetailsRes.page_no)) {
 
@@ -810,7 +810,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             let words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS : ", pageDetailsRes);
+            console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
 
             if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
                 quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
