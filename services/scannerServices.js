@@ -605,9 +605,9 @@ exports.setValues2 = async function (words) {
           if (word.startsWith("pageno")) {
             const pagePart = word.slice(6);
             pageNo = pagePart.split("/")[0];}
-          //  else if (word.startsWith("testid") && word.split(":")[1]) {
-          //       testID = word.split(":")[1];
-          //   } 
+           else if (word.startsWith("testid")) {
+                testID = word.slice(6);
+            } 
             else if (word.startsWith("rollno")) {
               rollNo = word.slice(6);
             }
