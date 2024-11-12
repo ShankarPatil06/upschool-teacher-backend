@@ -349,7 +349,7 @@ exports.uploadAnswerSheets = async function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS in uploadanswersheets: ", pageDetailsRes);
+                        console.log("PAGE DETAILS", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
 
@@ -486,13 +486,13 @@ exports.uploadAnswerSheets2 = async (request) => {
 
     try {
         const scannedRes = await ocrServices.readScannedPage2(request);
-        console.log("BEFORE FORMATTING:", scannedRes.data.text);
+        console.log("BEFORE FORMATTING2:", scannedRes.data.text);
 
         if (scannedRes.data.text) {
             const words = await helper.formattingAnswer(scannedRes.data.text);
             const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS in uploadanswersheets2:", pageDetailsRes);
+            console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
 
             if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
                 pageMetadata = {
