@@ -108,7 +108,7 @@ app.post("/v1/validateOTPForScanning", scannerController.validateOTPForScanning)
 app.post("/v1/fetchSignedURLForAnswers", validator.validScannerUser, scannerController.fetchSignedURLForAnswers);
 app.post("/v1/uploadAnswerSheets", validator.validScannerUser, scannerController.uploadAnswerSheets);
 app.post("/v1/fetchSignedURLForQuizAnswers", validator.validScannerUser, scannerController.fetchSignedURLForQuizAnswers) //Quiz
-app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets); // Quiz  validator.validScannerUser,
+app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2); // Quiz  validator.validScannerUser,
 
 // Quiz
 app.post("/v1/checkDuplicateQuizName",  validator.validUser, quizController.checkDuplicateQuizName);
