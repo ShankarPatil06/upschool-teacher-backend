@@ -1,10 +1,9 @@
 const dynamoDbCon = require("../awsConfig");
-const { TABLE_NAMES } = require("../constants/tables");
-const indexName = require("../constants/indexes");
 const { DATABASE_TABLE } = require("./baseRepository");
-const { successResponse } = require("./baseRepository");
 const helper = require("../helper/helper");
-const constant = require("../constants/constant");
+const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
+const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
+
 
 exports.fetchBulkData = function (request, callback) {
   dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -60,6 +59,44 @@ exports.fetchBulkData = function (request, callback) {
     }
   });
 };
+
+exports.fetchBulkData2 = async function (request) {
+    const { IdArray, fetchIdName, TableName } = request;
+
+    if (!IdArray || IdArray.length === 0) {
+      throw new Error(constant.messages.INVALID_PARAMETERS);
+    }
+
+    let response = { data: [] };
+
+    if (IdArray.length === 1) {
+      const readParams = {
+        TableName,
+        KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: {
+          [`:${fetchIdName}`]: IdArray[0]
+        }
+      };
+
+      const result = await DATABASE_TABLE2.query(readParams);
+      response.data = result.Items || [];
+    } else {
+      const keys = IdArray.map(id => ({ [fetchIdName]: id }));
+      const readParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys
+          }
+        }
+      };
+
+      const result = await DATABASE_TABLE2.getByObjects(readParams);
+      response.data = result.Responses ? result.Responses[TableName] : [];
+    }
+
+    return response;
+};
+
 
 exports.BulkInsert = function (final_data, userTable, callback) {
   if (final_data.length > 0) {
@@ -118,7 +155,7 @@ exports.fetchBulkDataUsingIndex = function (request, callback) {
 
         let read_params = {
           TableName: TableName,
-          IndexName: indexName.Indexes.common_id_index,
+          IndexName: Indexes.common_id_index,
           KeyConditionExpression: "common_id = :common_id",
           FilterExpression: "" + fetchIdName + " = :" + fetchIdName + "",
           ExpressionAttributeValues: expAttributeVal,
@@ -144,7 +181,7 @@ exports.fetchBulkDataUsingIndex = function (request, callback) {
 
         let read_params = {
           TableName: TableName,
-          IndexName: indexName.Indexes.common_id_index,
+          IndexName: Indexes.common_id_index,
           KeyConditionExpression: "common_id = :common_id",
           FilterExpression: FilterExpressionDynamic,
           ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
@@ -183,7 +220,7 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
 
         let read_params = {
           TableName: TableName,
-          IndexName: indexName.Indexes.common_id_index,
+          IndexName: Indexes.common_id_index,
           KeyConditionExpression: "common_id = :common_id",
           FilterExpression: "" + fetchIdName + " = :" + fetchIdName + "",
           ExpressionAttributeValues: expAttributeVal,
@@ -216,7 +253,7 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
 
         let read_params = {
           TableName: TableName,
-          IndexName: indexName.Indexes.common_id_index,
+          IndexName: Indexes.common_id_index,
           KeyConditionExpression: "common_id = :common_id",
           FilterExpression: FilterExpressionDynamic,
           ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
@@ -228,6 +265,53 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
   });
 };
 
+exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
+
+    const { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
+
+    let FilterExpressionDynamic = "";
+    let ExpressionAttributeValuesDynamic = {};
+
+    if (IdArray.length === 1) {
+      ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
+      ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+      const readParams = {
+        TableName: TableName,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+      };
+
+      return await DATABASE_TABLE2.query(readParams);
+    } else {
+      IdArray.forEach((element, index) => {
+        FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
+        ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
+
+        if (index < IdArray.length - 1) {
+          FilterExpressionDynamic += " OR ";
+        }
+      });
+
+      FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
+      ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
+      ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+      const readParams = {
+        TableName: TableName,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: FilterExpressionDynamic,
+        ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+      };
+
+      return await DATABASE_TABLE2.query(readParams);
+    }
+};
+
+
 exports.fetchBulkDataWithProjection = function (request, callback) {
   dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
     if (DBErr) {
@@ -236,100 +320,157 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
       callback(500, constant.messages.DATABASE_ERROR);
     } else {
 
-        let { IdArray, fetchIdName, TableName, projectionExp } = request;
-    //   let IdArray = request.IdArray;
-    //   let fetchIdName = request.fetchIdName;
-    //   let TableName = request.TableName;
-    //   let projectionExp = request.projectionExp;
+      let { IdArray, fetchIdName, TableName, projectionExp } = request;
+      //   let IdArray = request.IdArray;
+      //   let fetchIdName = request.fetchIdName;
+      //   let TableName = request.TableName;
+      //   let projectionExp = request.projectionExp;
 
-        let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
-        let expAttributeVal = {};
+      let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
+      let expAttributeVal = {};
 
-        let docClient = dynamoDBCall;
-        let FilterExpressionDynamic = "";
-        let ExpressionAttributeValuesDynamic = {};
+      let docClient = dynamoDBCall;
+      let FilterExpressionDynamic = "";
+      let ExpressionAttributeValuesDynamic = {};
 
-        IdArray = [...new Set(IdArray)];
+      IdArray = [...new Set(IdArray)];
 
-        console.log("IdArray : ", IdArray);
-        if (IdArray.length === 0) {
-            console.log("EMPTY BULK ID");
-            callback(0, { Items: [] });
-        } 
-        else if (IdArray.length === 1) 
-        {
-            expAttributeVal[":" + fetchIdName] = IdArray[0];
+      console.log("IdArray : ", IdArray);
+      if (IdArray.length === 0) {
+        console.log("EMPTY BULK ID");
+        callback(0, { Items: [] });
+      }
+      else if (IdArray.length === 1) {
+        expAttributeVal[":" + fetchIdName] = IdArray[0];
 
-            let read_params = {
-                TableName: TableName,
-                KeyConditionExpression: "" + fetchIdName + " = :" + fetchIdName + "",
-                ExpressionAttributeValues: expAttributeVal,
-                ProjectionExpression: projectionExp,
-            };
+        let read_params = {
+          TableName: TableName,
+          KeyConditionExpression: "" + fetchIdName + " = :" + fetchIdName + "",
+          ExpressionAttributeValues: expAttributeVal,
+          ProjectionExpression: projectionExp,
+        };
 
-            // console.log("READ PARAMS : ", read_params);
+        // console.log("READ PARAMS : ", read_params);
 
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        } 
-        else {
-            IdArray.forEach((element, index) => {
-                if (index < IdArray.length - 1) {
-                    FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " OR ";
-                    ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = element + "";
-                } else {
-                    FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + "";
-                    ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = element;
-                }
-            });
+        DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+      }
+      else {
+        IdArray.forEach((element, index) => {
+          if (index < IdArray.length - 1) {
+            FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " OR ";
+            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = element + "";
+          } else {
+            FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + "";
+            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = element;
+          }
+        });
 
-            let read_params = {
-                TableName: TableName,
-                FilterExpression: FilterExpressionDynamic,
-                ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-                ProjectionExpression: projectionExp,
-            };
+        let read_params = {
+          TableName: TableName,
+          FilterExpression: FilterExpressionDynamic,
+          ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+          ProjectionExpression: projectionExp,
+        };
 
-            console.log("READ PARAMETER : ", read_params);
+        console.log("READ PARAMETER : ", read_params);
 
-            DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-        }
+        DATABASE_TABLE.scanRecord(docClient, read_params, callback);
+      }
     }
   });
 };
-
-exports.bulkBatchWrite = async (itemsToWrite, userTable, callback) => {
-    if (itemsToWrite.length > 0) {
-        dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
-            if (DBErr) {
-                console.log(constant.messages.DATABASE_ERROR);
-                console.log(DBErr);
-                callback(500, constant.messages.DATABASE_ERROR);
-            } else {
-                /** CALL BATCH WRITE **/
-                const batchSize = 25;
-                const promises = [];
-            
-                for (let i = 0; i < itemsToWrite.length; i += batchSize) {
-                    const batch = itemsToWrite.slice(i, i + batchSize);
-                    promises.push(exports.performBatchWrite(batch, userTable, dynamoDBCall));
-                }
-            
-                try {
-                    await Promise.all(promises);
-                    console.log('All batch writes completed.');
-                    callback(0, 200);
-                } catch (error) {
-                    console.error(`Error in batch writes: ${error.message}`);
-                    callback(400, `Error in batch writes: ${error.message}`);
-                }
-                /** END CALL BATCH WRITE **/
-            }
-        })        
-    } else {
-        console.log("EMPTY BATCH ITEM!");
-        callback(0, 200);
-    }
+exports.fetchBulkDataWithProjection2 = async (request) => {
+  const fromatedRequest = await helper.getDataByFilterKey(request);
+  const params = {
+    TableName: TABLE_NAMES.upschool_question_table,
+    IndexName: Indexes.common_id_index,
+    KeyConditionExpression: "common_id = :common_id",
+    FilterExpression: fromatedRequest.FilterExpression,
+    ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
+  };
+  try {
+    return await DATABASE_TABLE2.query(params);    
+  } catch (error) {
+    console.error(`Error fetching quiz results:`, error);
+    throw error;
+  }
 };
+
+
+exports.fetchBulkDataWithProjection3 = async function (request) {
+  try {
+    let { IdArray, fetchIdName, TableName, projectionExp } = request;
+
+    IdArray = [...new Set(IdArray)];
+    console.log("IdArray : ", IdArray);
+
+    if (IdArray.length === 0) {
+      console.log("EMPTY BULK ID");
+      return { Items: [] };
+    } else if (IdArray.length === 1) {
+      let expAttributeVal = {};
+      expAttributeVal[`:${fetchIdName}`] = IdArray[0];
+
+      let read_params = {
+        TableName: TableName,
+        KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+        ExpressionAttributeValues: expAttributeVal,
+        ProjectionExpression: projectionExp,
+      };
+
+      console.log("READ PARAMS : ", read_params);
+      return await DATABASE_TABLE2.query(read_params);
+    } else {
+      const keys = IdArray.map((id) => ({
+        [fetchIdName]: id,
+      }));
+
+      let batchParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys,
+            ProjectionExpression: projectionExp.join(", "),
+          },
+        },
+      };
+
+      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+
+      const response = await DATABASE_TABLE2.getByObjects(batchParams);
+      return response.Responses ? response.Responses[TableName] : [];
+    }
+  } catch (error) {
+    console.error("DATABASE ERROR", error);
+    throw new Error('DATABASE_ERROR');
+  }
+};
+
+
+
+exports.bulkBatchWrite = async (itemsToWrite, userTable) => {
+  if (itemsToWrite.length > 0) {
+    
+        const batchSize = constant.awsConstants.batchSize;
+        const promises = [];
+
+        for (let i = 0; i < itemsToWrite.length; i += batchSize) {
+          const batch = itemsToWrite.slice(i, i + batchSize);
+          console.log({ batch });
+          promises.push(exports.performBatchWrite(batch, userTable));
+        }
+
+        try {
+          await Promise.all(promises);
+          return 200;
+        } catch (error) {
+          throw helper.formatErrorResponse(error.message, 400);
+
+        }
+  } else {
+    return 200;
+  }
+};
+
 
 // async function performBatchWrite(batch, userTable) {
 //     const params = { RequestItems: { 'YourTableName': batch } };
@@ -341,25 +482,26 @@ exports.bulkBatchWrite = async (itemsToWrite, userTable, callback) => {
 //     }
 // }
 
-exports.performBatchWrite = async (batch, userTable, docClient) => {
+exports.performBatchWrite = async (batch, userTable) => {
 
-    const putReqs = await batch.map((item) => ({
-        PutRequest: {
-            Item: item,
-        },
-    }));
+  const putReqs = await batch.map((item) => ({
+    PutRequest: {
+      Item: item,
+    },
+  }));
 
-    let ItemsObjects = {};
-    ItemsObjects[userTable] = putReqs;
+  let ItemsObjects = {};
+  ItemsObjects[userTable] = putReqs;
 
-    const req = {
-        RequestItems: ItemsObjects,
-    };
+  const req = {
+    RequestItems: ItemsObjects,
+  };
 
-    try {
-        await docClient.batchWrite(req).promise();
-        console.log("Doing batch wirte...");
-    } catch (error) {
-        console.error(`Error in batch write: ${error.message}`);
-    }    
+  try {
+    await DATABASE_TABLE2.createMany(req).promise();
+
+    console.log("Doing batch wirte...");
+  } catch (error) {
+    console.error(`Error in batch write: ${error.message}`);
+  }
 }

@@ -1,4 +1,4 @@
-const questionServices = require("../services/questionServices");
+const {questionServices} = require("../services");
 
 exports.fetchAvailableNumOfQuestions = (req, res, next) => {
     let request = req.body;

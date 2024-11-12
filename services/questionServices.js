@@ -1,9 +1,5 @@
-const schoolRepository = require("../repository/schoolRepository");  
-const chapterRepository = require("../repository/chapterRepository");  
-const topicRepository = require("../repository/topicRepository");  
 const chapterServices = require("../services/chapterServices");
-const teachingActivityRepository = require("../repository/teachingActivityRepository");  
-const conceptRepository = require("../repository/conceptRepository");  
+const { schoolRepository,chapterRepository,topicRepository,teachingActivityRepository,conceptRepository } = require("../repository")
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 
@@ -33,7 +29,7 @@ exports.fetchAvailabeQuestions = function (request, callback) {
                     } else { 
                         console.log("single_chapter_response : ", single_chapter_response);
                         // Check if we have Chapter on the ID given : 
-                        if(single_chapter_response.length === 0){
+                        if(single_chapter_response.Items.length === 0){
                             callback(400, constant.messages.CHAPTER_COMBO_DOESNT_EXISTS)
                         }else{
                             if(request.data.test_stage === "Pre"){ 

@@ -1,20 +1,12 @@
- 
-const chapterRepository = require("../repository/chapterRepository"); 
-const digicardExtension = require("../repository/digicardExtension");
-const digicardRepository = require("../repository/digicardRepository");  
-const conceptRepository = require("../repository/conceptRepository");  
-const teachingActivityRepository = require("../repository/teachingActivityRepository");  
-const topicRepository = require("../repository/topicRepository");  
-const presetRepository = require("../repository/presetRepository");   
-const schoolRepository = require("../repository/schoolRepository");
+const {chapterRepository,digicardRepository,digicardExtension,teachingActivityRepository,topicRepository,presetRepository,schoolRepository,commonRepository} = require("../repository")
 const commonServices = require("../services/commonServices");
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
-const commonRepository = require("../repository/commonRepository");
 const { TABLE_NAMES } = require('../constants/tables');
 const { nextTick } = require("process");
 const { response } = require("express");
 const { resolve } = require("path");
+const s3Services = require("./s3Service");
 
 exports.fetchRelatedDigiCards = async function (request, callback) {
     /** FETCH USER BY EMAIL **/
@@ -49,101 +41,87 @@ exports.fetchRelatedDigiCards = async function (request, callback) {
     })
 }
 
-exports.fetchIndividualDigiCard = async function (request, callback) {
-    /** FETCH USER BY EMAIL **/
-    digicardRepository.fetchDigiCardByID(request, async function (single_digicard_err, single_digicard_response) {
-        if (single_digicard_err) {
-            console.log(single_digicard_err);
-            callback(single_digicard_err, single_digicard_response);
-        } else {
-            if (single_digicard_response.Items.length > 0) {
+exports.fetchIndividualDigiCard = async function (request) {
+    // Fetch DigiCard by ID
+    const singleDigicardResponse = await digicardRepository.fetchDigiCardByID2(request);
+    if (!singleDigicardResponse.Items || singleDigicardResponse.Items.length === 0) {
+      return singleDigicardResponse;
+    }
+  
+    let digiContent = singleDigicardResponse.Items[0].digi_card_content || "";
+    const presetDataRes = await presetRepository.getAllPresets2(request);
+  
+    let openTag = "", closeTag = "</p></div>";
+    presetDataRes.Items.forEach(preset => {
+      if (digiContent.includes(preset.preset_markup)) {
+        openTag = `<div style='${preset.preset_bg_style}'><span style='${preset.preset_heading_style}'>${preset.preset_heading}</span><br><p style='${preset.preset_content_style}'>`;
+        const replaceCondition = new RegExp(`${preset.preset_markup}(.*?)${preset.preset_markup}`, "g");
+        digiContent = digiContent.replace(replaceCondition, `${openTag}$1${closeTag}`);
+      }
+    });
+  
+    console.log("PREVIEW DIGICARD: ", digiContent);
+    singleDigicardResponse.Items[0].preview_content = digiContent;
+  
+    // Handle S3 signed URLs
+    const { digicard_image, digicard_voice_note, digicard_document } = singleDigicardResponse.Items[0];
+  
+    if (digicard_image && digicard_image.includes("uploads/")) {
+      singleDigicardResponse.Items[0].digicard_imageURL = await s3Services.getS3SignedUrl(digicard_image);
+    }
+    if (digicard_voice_note && digicard_voice_note.includes("uploads/")) {
+      singleDigicardResponse.Items[0].digicard_voice_noteURL = await s3Services.getS3SignedUrl(digicard_voice_note);
+    }
+    if (digicard_document && digicard_document.includes("uploads/")) {
+      singleDigicardResponse.Items[0].digicard_documentURL = await s3Services.getS3SignedUrl(digicard_document);
+    }
+  
+    // Replace voice inputs
+    let digiCardContent = `<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">` + digiContent;
+    let audioTagIndex = 0;
+    const toReplace = /##audio##(.*?)##audio##/;
+    digiCardContent = digiCardContent.split("##audio##").map((segment, index) => {
+      if (segment.startsWith("http")) {
+        return `<i id="itag${audioTagIndex}" class="fa fa-volume-up" onclick="document.getElementById('audio${audioTagIndex}').play()" alt="Play">
+                  <audio id="audio${audioTagIndex}" src="${segment}"></audio>
+                </i>`;
+        audioTagIndex++;
+      }
+      return segment;
+    }).join("");
+  
+    singleDigicardResponse.Items[0].preview_content = digiCardContent;
+  
+    return singleDigicardResponse;
+  };
 
-                let digiContent = (single_digicard_response.Items[0].digi_card_content === undefined) ? "" : single_digicard_response.Items[0].digi_card_content;
+  exports.fetchRelatedDigiCards = async function (request) {
+    let response = { data: [], statusCode: 400 };
 
-                console.log("DIGI CONTENT : ", digiContent);
-                /** SET PRESETS **/
-                presetRepository.getAllPresets(request, async function (presetData_err, presetData_res) {
-                    if (presetData_err) {
-                        console.log(presetData_err);
-                        callback(presetData_err, presetData_res);
-                    } else {
+        const singleDigiCardResponse = await digicardRepository.fetchDigiCardByID2(request);
+        
+        if (singleDigiCardResponse.Items.length > 0) {
+            const relatedDigiCards = singleDigiCardResponse.Items[0].related_digi_cards;
 
-                        console.log("PRESET DATA : ", presetData_res);
+            if (relatedDigiCards && relatedDigiCards.length > 0) {
+                // Fetch related DigiCards data
+                const relatedDigiCardResponse = await digicardRepository.fetchRelatedDigiCardData2({ related_digi_cards: relatedDigiCards });
 
-                        let openTag = "";
-                        let closeTag = "</p></div>";
-                        let replaceCondition;
-                        async function checkAndSetPreset(k)
-                        {
-                            if(k < presetData_res.Items.length)
-                            {
-                                if(digiContent.includes(presetData_res.Items[k].preset_markup))
-                                {
-                                    openTag = "<div style = '";
-                                    openTag += presetData_res.Items[k].preset_bg_style +"'><span style='" + presetData_res.Items[k].preset_heading_style + "'>" + presetData_res.Items[k].preset_heading + "</span><br><p style='" + presetData_res.Items[k].preset_content_style + "'>";
-
-                                    replaceCondition = new RegExp(`${presetData_res.Items[k].preset_markup}(.*?)${presetData_res.Items[k].preset_markup}`, "g");
-
-                                    digiContent = digiContent.replace(replaceCondition, openTag+"$1"+closeTag);
-                                }
-
-                                k++;
-                                checkAndSetPreset(k);
-                            }
-                            else
-                            {
-                                /** END PRESET LOOP **/
-                                console.log("PREVIEW DIGICARD : ", digiContent);
-                                single_digicard_response.Items[0].preview_content = digiContent;
-
-                                if (single_digicard_response.Items[0].digicard_image && single_digicard_response.Items[0].digicard_image !== "" && single_digicard_response.Items[0].digicard_image !== "N.A." && single_digicard_response.Items[0].digicard_image.includes("uploads/")) 
-                                {
-                                    single_digicard_response.Items[0].digicard_imageURL = await helper.getS3SignedUrl(single_digicard_response.Items[0].digicard_image);
-                                }
-                                if (single_digicard_response.Items[0].digicard_voice_note && single_digicard_response.Items[0].digicard_voice_note !== "" && single_digicard_response.Items[0].digicard_voice_note !== "N.A." && single_digicard_response.Items[0].digicard_voice_note.includes("uploads/")) 
-                                {
-                                    single_digicard_response.Items[0].digicard_voice_noteURL = await helper.getS3SignedUrl(single_digicard_response.Items[0].digicard_voice_note);
-                                }
-                                if (single_digicard_response.Items[0].digicard_document && single_digicard_response.Items[0].digicard_document !== "" && single_digicard_response.Items[0].digicard_document !== "N.A." && single_digicard_response.Items[0].digicard_document.includes("uploads/")) 
-                                {
-                                    single_digicard_response.Items[0].digicard_documentURL = await helper.getS3SignedUrl(single_digicard_response.Items[0].digicard_document);
-                                }
-
-                                /** END PRESET LOOP **/
-                                   // Voice Inputs into Icon as Play 
-                                let digi_card_content = `<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">` + single_digicard_response.Items[0].preview_content;
-
-                                const toReplace = /##audio##(.*?)##audio##/
-                                let j = 0; 
-                                if(digi_card_content != undefined && digi_card_content != ""){
-                                    let spliArray = digi_card_content.split("##audio##"); 
-                                    console.log("spliArray : ", spliArray);
-                                    
-                                    spliArray.forEach((e, i) => {
-                                        console.log("e : ", JSON.stringify(e), JSON.stringify(e).includes("http") && e[0] === "h");
-                                        if(JSON.stringify(e).includes("http") && e[0] === "h"){
-                                            
-                                            digi_card_content = digi_card_content.replace(toReplace, '<i id="itag'+ j +'" class="fa fa-volume-up" onclick="document.getElementById('+"\'audio"+""+j+'\').play()" alt="Play"><audio id="audio'+ j +'" src="$1"></audio></i>');
-                                            j++;
-                                        }
-                                    })
-                                }
-                                
-                                single_digicard_response.Items[0].preview_content = digi_card_content;
-                                callback(0, single_digicard_response);
-                                
-                            }
-                        }
-                        checkAndSetPreset(0)
-                    }
-                })
-                /** END SET PRESETS **/              
+                response.data = relatedDigiCardResponse.Items;
+                response.message = constant.messages.RELATED_DIGICARDS;
+                response.statusCode = 200;
+                return response;
             } else {
-                callback(0, single_digicard_response);
+                response.message = constant.messages.NO_RELATED_DIGICARDS;
+                return response;
             }
+        } else {
+            response.message = constant.messages.INVALID_DIGICARD;
+            response.statusCode = 401;
+            return response;
         }
-    })
-}
+};
+
 
 exports.fetchAllPreTopicsAndItsDigicards = async function (request, callback) { 
     schoolRepository.getSchoolDetailsById(request, (schoolDataErr, schoolDataRes) => {
@@ -764,39 +742,34 @@ exports.getPrePostTopicsAndItsDigicards = async function (topicData_res, callbac
     /** END FETCH CONCEPT DATA **/
 }
 
-exports.getExtensionOfDigicard = async function (request, callback) {
-    /** FETCH EXTENSION **/
-    digicardExtension.getExtensionDetails(request, async function (digiExtension_err, digiExtension_response) {
-        if (digiExtension_err) {
-            console.log(digiExtension_err);
-            callback(digiExtension_err, digiExtension_response);
-        } else {
-            console.log("DIGI EXTENSION : ", digiExtension_response);
-            if(digiExtension_response.Items.length > 0)
-            {
-                async function getExtFileS3Url(i)
-                {
-                    if(i < digiExtension_response.Items[0].extensions.length)
-                    {
-                        let ExtContent = digiExtension_response.Items[0].extensions[i].ext_file;
-                        digiExtension_response.Items[0].extensions[i].ext_file_url = (JSON.stringify(ExtContent).includes("digicard_extension/")) ? await helper.getS3SignedUrl(ExtContent) : "N.A.";
-                        i++;
-                        getExtFileS3Url(i);
-                    }
-                    else
-                    {
-                        console.log("DIGICARD DATA : ", digiExtension_response);
-                        callback(digiExtension_err, digiExtension_response);
-                    }
-                }
-                getExtFileS3Url(0);
-            }   
-            else
-            {
-                console.log("EMPTY EXTENSION!");
-                callback(digiExtension_err, digiExtension_response);
-            }
-        }
-    })
-    /** END FETCH EXTENSION **/
-}
+exports.getExtensionOfDigicard = async function (request) {
+    try {
+      // Fetch extension details
+      const digiExtensionResponse = await digicardExtension.getExtensionDetails2(request);
+  
+      if (digiExtensionResponse.Items.length === 0) {
+        console.log("EMPTY EXTENSION!");
+        return digiExtensionResponse;
+      }
+  
+      console.log("DIGI EXTENSION:", digiExtensionResponse);
+  
+      // Fetch S3 URLs for each extension file
+      const extensions = digiExtensionResponse.Items[0].extensions;
+      
+      for (let i = 0; i < extensions.length; i++) {
+        const extFile = extensions[i].ext_file;
+        extensions[i].ext_file_url = extFile.includes("digicard_extension/")
+          ? await s3Services.getS3SignedUrl(extFile)
+          : "N.A.";
+      }
+  
+      console.log("DIGICARD DATA:", digiExtensionResponse);
+      return digiExtensionResponse;
+  
+    } catch (error) {
+      console.error("Error fetching digicard extension:", error);
+      throw error;
+    }
+  };
+  

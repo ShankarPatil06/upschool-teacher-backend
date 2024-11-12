@@ -3,43 +3,29 @@ const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
+const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
-const commonController = require('./controller/commonController');
-const digicardController = require('./controller/digicardController');
-const studentController = require('./controller/studentController');
-const topicController = require('./controller/topicController');
-const chapterController = require('./controller/chapterController');
-const blueprintController = require('./controller/blueprintController');
-// const classController = require('./controller/classController');
-// const schoolController = require('./controller/schoolController');
-// const userController = require('./controller/userController');
-const conceptController = require('./controller/conceptController');
-const subjectController = require('./controller/subjectController');
-const teacherController = require('./controller/teacherController');
-const questionController = require('./controller/questionController');
-const testQuestionPaperController = require('./controller/testQuestionPaperController');
-const classTestController = require('./controller/classTestController');
-const scannerController = require('./controller/scannerController');
-const quizController = require('./controller/quizController');
-const schoolAdminController = require('./controller/schoolAdminController');
-const dashboardController = require('./controller/dashboardController');
+
+const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController, schoolController } = require('./controller')
 
 const validator = require('./middleware/validator');
+const { ERROR } = require("./helper/helper");
 
-app.use(bodyParser.urlencoded({
+app.use(express.urlencoded({
     limit: '50mb',
     extended: true,
     parameterLimit: 100000,
 }));
 
-app.use(bodyParser.json({
+app.use(express.json({
+    type: "application/json",
     limit: '50mb'
 }));
 
-app.use(bodyParser.json({
-    type: "application/vnd.api+json",
-}));
+app.use(haltOnTimedout);
+
+app.use(fileUpload());
 
 app.use(cors());
 
@@ -62,12 +48,11 @@ app.post("/v1/fetchAllStudents",  studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
 
-app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning);
-app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock);
+// app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning); 
+// app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock); // removed beacuse of not used
 app.post("/v1/topicUnlock", validator.validUser, topicController.topicUnlock);
 app.post("/v1/digicardUnlock", validator.validUser, digicardController.digicardUnlock);
 app.post("/v1/fetchAvailableNumOfQuestions", validator.validUser, questionController.fetchAvailableNumOfQuestions);
-
 
 app.post("/v1/fetchTeacherClasses", validator.validUser, teacherController.fetchTeacherClasses);
 app.post("/v1/fetchTeacherSectionsBasedonClass", validator.validUser, teacherController.fetchTeacherSectionsBasedonClass);
@@ -101,13 +86,13 @@ app.post("/v1/toggleQuestionPaper", validator.validUser, testQuestionPaperContro
 
 /** BLUE PRINT **/
 app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);
-app.post("/v1/fetchQuestionBasedOnBlueprint", validator.validUser, blueprintController.fetchQuestionBasedOnBlueprint);
+app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionBasedOnBlueprint); // validator.validUser,
 app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints);
 
 // CLASS TEST : 
-app.post("/v1/addClassTest", validator.validUser, classTestController.addClassTest);
-app.post("/v1/fetchClassTestsBasedonStatus", validator.validUser, classTestController.fetchClassTestsBasedonStatus);
-app.post("/v1/fetchClassTestById", validator.validUser, classTestController.fetchClassTestById);
+app.post("/v1/addClassTest",validator.validUser, classTestController.addClassTest);
+app.post("/v1/fetchClassTestsBasedonStatus",validator.validUser, classTestController.fetchClassTestsBasedonStatus);
+app.post("/v1/fetchClassTestById",  classTestController.fetchClassTestById);
 app.post("/v1/fetchQuestionsBasedonQuestionPaper", validator.validUser, classTestController.fetchQuestionsBasedonQuestionPaper);
 app.post("/v1/startEvaluation", validator.validUser, classTestController.startEvaluation);
 app.post("/v1/getStudentsBasedOnSection", validator.validUser, classTestController.getStudentsBasedOnSection);
@@ -123,7 +108,7 @@ app.post("/v1/validateOTPForScanning", scannerController.validateOTPForScanning)
 app.post("/v1/fetchSignedURLForAnswers", validator.validScannerUser, scannerController.fetchSignedURLForAnswers);
 app.post("/v1/uploadAnswerSheets", validator.validScannerUser, scannerController.uploadAnswerSheets);
 app.post("/v1/fetchSignedURLForQuizAnswers", validator.validScannerUser, scannerController.fetchSignedURLForQuizAnswers) //Quiz
-app.post("/v1/uploadQuizAnswerSheets", validator.validScannerUser, scannerController.uploadQuizAnswerSheets); // Quiz
+app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2); // Quiz  validator.validScannerUser,
 
 // Quiz
 app.post("/v1/checkDuplicateQuizName",  validator.validUser, quizController.checkDuplicateQuizName);
@@ -136,24 +121,50 @@ app.post("/v1/fetchQuizTemplates", validator.validUser, quizController.fetchQuiz
 app.post("/v1/resetQuizEvaluationStatus", validator.validUser, quizController.resetQuizEvaluationStatus);
 app.post("/v1/startQuizEvaluation", quizController.startQuizEvaluation); // validator.validUser,
 
-app.post("/v1/getIndividualQuizReport",quizController.getIndividualQuizReport)
+app.post("/v1/getIndividualQuizReport",reportController.getIndividualQuizReport)
 
 // School admin
 app.post("/v1/createSchoolAdmin", validator.validUser, schoolAdminController.createSchoolAdmin);
 app.post("/v1/updateSchoolAdmin", validator.validUser, schoolAdminController.updateSchoolAdmin);
 app.post("/v1/toggleSchoolAdminStatus", validator.validUser, schoolAdminController.toggleSchoolAdminStatus);
 
-// Dashboard
-app.post("/v1/fetchAssessmentSummary", dashboardController.fetchAssessmentSummary);
-app.post("/v1/getTargetedLearningExpectation",dashboardController.getTargetedLearningExpectation);
-app.post("/v1/getTargetedLearningExpectationDetails",dashboardController.getTargetedLearningExpectationDetails);
-app.post("/v1/getAssesmentSummaryDetails",dashboardController.getAssesmentSummaryDetails);
-app.post("/v1/preLearningSummaryDetails",dashboardController.preLearningSummaryDetails);
-app.post("/v1/postLearningSummaryDetails",dashboardController.postLearningSummaryDetails);
-app.post("/v1/preLearningBlueprintDetails",dashboardController.preLearningBlueprintDetails);
+// Dashboard Reports
+app.post("/v1/fetchAssessmentSummary", reportController.fetchAssessmentSummary);
+app.post("/v1/getTargetedLearningExpectation",reportController.getTargetedLearningExpectation);
+app.post("/v1/getTargetedLearningExpectationDetails",reportController.getTargetedLearningExpectationDetails);
+app.post("/v1/preLearningSummaryDetails",reportController.preLearningSummaryDetails);
+app.post("/v1/postLearningSummaryDetails",reportController.postLearningSummaryDetails);
+app.post("/v1/preLearningBlueprintDetails",reportController.preLearningBlueprintDetails);
+app.post("/v1/viewAnalysisIndividualReport",reportController.viewAnalysisIndividualReport);
+app.post("/v1/comprehensivePerformanceChapterWise",reportController.comprehensivePerformanceChapterWise);
+app.post("/v1/comprehensivePerformanceTopicWise",reportController.comprehensivePerformanceTopicWise);
+app.post("/v1/comprehensivePerformanceConceptWise",reportController.comprehensivePerformanceConceptWise);
+app.post("/v1/viewClassReportQuestions",reportController.viewClassReportQuestions);
+app.post("/v1/viewClassReportFocusArea",reportController.viewClassReportFocusArea);
+app.post("/v1/viewChapterwisePerformanceTracking",reportController.viewChapterwisePerformanceTracking);
+app.post("/v1/getActionsAndRecommendations",reportController.getActionsAndRecommendations);
+app.post("/v1/getActionsAndRecommendationDetail",reportController.getActionsAndRecommendationDetail);
+app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 
+
+function haltOnTimedout(req, res, next) {
+    if (!req.timedout) next()
+}
+
+
+app.use((err, req, res, next) => {
+    console.log(`Path: ${req.path} -> Status Code: ${err.status || ERROR.INTERNAL_SERVER_ERROR} -> Stack: ${err.stack}`)
+    res.status(err.status || ERROR.INTERNAL_SERVER_ERROR).send(err.message);
+});
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// if (NODE_ENV === 'development' || NODE_ENV === Environment.Testing) {
+//     const swaggerOptions = {
+//         explorer: true, // Enable Swagger UI explorer in development and testing environments
+//     };
+//     app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerJSDocs, swaggerOptions));
+// }
 
 if (NODE_ENV === 'development') {
 

@@ -1,9 +1,8 @@
 const dynamoDbCon = require('../awsConfig');
-const { TABLE_NAMES } = require('../constants/tables');
-const indexName = require('../constants/indexes');
 const { DATABASE_TABLE } = require('./baseRepository');
 const helper = require('../helper/helper');
-const constant = require('../constants/constant');
+const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
+const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
 
 exports.fetchTestDataOfStudent = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -17,7 +16,7 @@ exports.fetchTestDataOfStudent = function (request, callback) {
 
             let read_params = {
                 TableName: TABLE_NAMES.upschool_test_result,
-                IndexName: indexName.Indexes.common_id_index,
+                IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
                 FilterExpression: "class_test_id = :class_test_id AND student_id = :student_id",
                 ExpressionAttributeValues: {
@@ -31,6 +30,25 @@ exports.fetchTestDataOfStudent = function (request, callback) {
         }
     });
 }
+
+exports.fetchTestDataOfStudent2 = async (request) => {
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_result,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: "class_test_id = :class_test_id AND student_id = :student_id",
+            ExpressionAttributeValues: {
+                ":class_test_id": request.data.class_test_id,
+                ":student_id": request.data.student_id,
+                ":common_id": constant.constValues.common_id
+            }
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result;
+};
+
 
 exports.insertTestDataOfStudent = function (request, callback) {
 
@@ -61,6 +79,25 @@ exports.insertTestDataOfStudent = function (request, callback) {
         }
     });
 }
+exports.insertTestDataOfStudent2 = async (request) => {
+        const insertTestResultsParams = {
+            TableName: TABLE_NAMES.upschool_test_result,
+            Item: {
+                "result_id": helper.getRandomString(),
+                "student_id": request.data.student_id,
+                "class_test_id": request.data.class_test_id,
+                "answer_metadata": request.data.answer_metadata,
+                "common_id": constant.constValues.common_id,
+                "evaluated": "No",
+                "created_ts": helper.getCurrentTimestamp(),
+                "updated_ts": helper.getCurrentTimestamp(),
+            }
+        };
+
+        const result = await DATABASE_TABLE2.putItem(insertTestResultsParams);
+        return result;
+};
+
 
 exports.updateTestDataOfStudent = function (request, callback) {
 
@@ -93,6 +130,27 @@ exports.updateTestDataOfStudent = function (request, callback) {
     });
 }
 
+exports.updateTestDataOfStudent2 = async function (request) {
+
+        const updateParams = {
+            TableName: TABLE_NAMES.upschool_test_result,
+            Key: {
+                "result_id": request.data.result_id
+            },
+            UpdateExpression: "set answer_metadata = :answer_metadata, updated_ts = :updated_ts, evaluated = :evaluated",
+            ExpressionAttributeValues: {
+                ":answer_metadata": request.data.answer_metadata,
+                ":evaluated": "No",
+                ":updated_ts": helper.getCurrentTimestamp(),
+            },
+        };
+
+        const result = await DATABASE_TABLE2.updateService(updateParams);
+        return result;
+
+};
+
+
 exports.fetchStudentresultMetadata = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {
@@ -105,7 +163,7 @@ exports.fetchStudentresultMetadata = function (request, callback) {
 
             let read_params = {
                 TableName: TABLE_NAMES.upschool_test_result,
-                IndexName: indexName.Indexes.common_id_index,
+                IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
                 FilterExpression: "class_test_id = :class_test_id AND evaluated = :evaluated",
                 ExpressionAttributeValues: {
@@ -118,6 +176,23 @@ exports.fetchStudentresultMetadata = function (request, callback) {
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
     });
+}
+exports.fetchStudentresultMetadata2 = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_test_result,
+                IndexName: Indexes.common_id_index,
+                KeyConditionExpression: "common_id = :common_id",
+                FilterExpression: "class_test_id = :class_test_id AND evaluated = :evaluated",
+                ExpressionAttributeValues: {
+                    ":class_test_id": request.data.class_test_id,
+                    ":evaluated": "No",
+                    ":common_id": constant.constValues.common_id
+                }
+        
+
+    };
+    const data = await DATABASE_TABLE2.query(params);
+    return data;
 }
 
 
@@ -148,4 +223,21 @@ exports.changeTestEvaluationStatus = function (request, callback) {
 
         }
     });
+}
+exports.changeTestEvaluationStatus2 = async (request) => {
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_test_result,
+                Key: {
+                    "result_id": request.data.result_id
+                },
+                UpdateExpression: "set updated_ts = :updated_ts, evaluated = :evaluated",
+                ExpressionAttributeValues: {
+                    ":evaluated": "No",
+                    ":updated_ts": helper.getCurrentTimestamp(),
+                },
+
+    }
+    const data = (await DATABASE_TABLE2.updateService(params)).$metadata.httpStatusCode;
+    return data;
 }

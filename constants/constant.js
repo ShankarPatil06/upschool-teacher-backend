@@ -158,7 +158,9 @@ exports.messages = {
 
     // Athena
     QUERY_FAILED: "Query failed with status: **status**", 
-    QUERY_EXECUTION_FAILED: "Error executing query: **error**"
+    QUERY_EXECUTION_FAILED: "Error executing query: **error**",
+
+    INVALID_SUBJECT_ID:"INVALID SUBJECT ID"
 }
 
 exports.constValues = {
@@ -287,3 +289,7 @@ exports.groupTypes = {
     Intermediate: "Intermediate", 
     Advanced: "Advanced"
 }; 
+
+exports.awsConstants ={
+    batchSize : 25
+}

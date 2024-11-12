@@ -1,2 +1,2 @@
-const classServices = require("../services/classServices");
+const {classServices} = require("../services");
 

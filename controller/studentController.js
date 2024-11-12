@@ -1,4 +1,4 @@
-const studentServices = require("../services/studentServices");
+const {studentServices} = require("../services");
 
 exports.fetchIndividualDigiCard = (req, res, next) => {
     let request = req.body;
@@ -22,7 +22,7 @@ exports.fetchAllStudents = (req, res, next) => {
         if (fetch_all_digicard_err) {
             res.status(fetch_all_digicard_err).json(fetch_all_digicard_response);
         } else {
-            console.log("Fetch All DigiCards Successfully");
+            console.log("Fetch All DigiCards Successfull");
             res.json(fetch_all_digicard_response);
         }
     });

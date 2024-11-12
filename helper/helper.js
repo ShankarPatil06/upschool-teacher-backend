@@ -6,6 +6,11 @@ const dynamoDbCon = require('../awsConfig');
 const constant = require('../constants/constant');
 const {groupTypes } = require('../constants/constant');
 const { constants } = require("buffer");
+const { StatusCodes } = require('http-status-codes');
+const fs = require("fs");
+// const { getS3SignedUrl } = require("../services/s3Service");
+const {s3Services} = require("../services");
+
 
 const excelEpoc = new Date(1900, 0, 0).getTime();
 const msDay = 86400000;
@@ -54,6 +59,7 @@ exports.hashingPassword = function (hashReq) {
 }
 
 exports.change_dd_mm_yyyy = function (givenDate) {
+    console.log({givenDate});
     if (givenDate.toString().includes('-')) {
         let splitedDate = givenDate.split("-");
         let dd_mm_yyyy = splitedDate[2] + "-" + splitedDate[1] + "-" + splitedDate[0];
@@ -64,21 +70,6 @@ exports.change_dd_mm_yyyy = function (givenDate) {
     }
 }
 
-exports.getS3SignedUrl = async function (fileKey) {
-
-    let Key = fileKey;
-    let URL_EXPIRATION_SECONDS = 600;
-    // Get signed URL from S3
-    let s3Params = {
-        Bucket: process.env.BUCKET_NAME,
-        Key,
-        Expires: URL_EXPIRATION_SECONDS,
-    }
-
-    let signedS3URL = await dynamoDbCon.s3.getSignedUrlPromise('getObject', s3Params)
-
-    return signedS3URL;
-}
 
 exports.sortDataBasedOnTimestamp = function (j, data) {
     let orderedData = data;
@@ -412,7 +403,7 @@ exports.getAnswerContentFileUrl = async (answerArr) => {
 
         async function contentUrl(i) {
             if (i < answerArr.length) {
-                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await exports.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
+                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await s3Services.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
                 i++;
                 contentUrl(i);
             }
@@ -453,31 +444,26 @@ exports.checkPriorityQuestions = async (quesDetails) => {
 }
 
 exports.formattingAnswer = async (answer) => {
-    answer = answer.split("\n");
-    // let regexp = /.*Ans: /;
-    let array;
-    await answer.forEach((words, i) => {
-        // answer[i] = words.replace(regexp, "");
-        answer[i] = answer[i].replace(/\\\(/g, "");
-        answer[i] = answer[i].replace(/\\\)/g, "");
-        answer[i] = answer[i].trim();
+    answer = answer.split("\n");  // Split by line
+  const formattedAnswer = answer.map((words) => {
+    // Remove LaTeX style parentheses (\\( and \\)) and \\qquad with surrounding spaces
+    words = words.replace(/\\\(\s*\\qquad\s*\\\)/g, ""); // Remove \\( \\qquad \\)
+    words = words.replace(/\s*\\qquad\s*/g, ""); // Remove \\qquad with spaces
+    // Remove all spaces
+    words = words.replace(/\s/g, "");
+    // Remove periods and other unwanted characters
+    words = words.replace(/\./g, "");  // Remove periods
+    words = words.replace(/\:/g, "");  // Remove colons
+    words = words.replace(/\;/g, "");  // Remove semicolons
 
-        array = answer[i].match(/[^\\]+/g);
+    // Convert to lowercase if needed
+    words = words.toLowerCase();
 
-        if (array && array.length === 1) {
-            answer[i] = answer[i].replace(/\s/g, "");
-            answer[i] = answer[i].replace(/\./g, "");
-            // answer[i] = answer[i].replace(/\,/g, "");
-            // answer[i] = answer[i].replace(/\:/g, "");
-            answer[i] = answer[i].replace(/\;/g, "");
-            answer[i] = answer[i].toLowerCase();
-        }
-    })
-    answer[0] = answer[0].replace(/\s/g, "");
+    return words;
+  });
 
-    console.log("AFTER FORMATIING : ", answer);
-
-    return answer;
+  console.log("AFTER FORMATTING : ", formattedAnswer);
+  return formattedAnswer;
 }
 
 exports.getAnswerBlanks = async (blankCount) => {
@@ -683,6 +669,7 @@ exports.splitSectionAnswer = async (studMetaData, questionPaper) => {
 }
 
 exports.splitStudentQuizAnswer = async (studMetaData) => {
+    console.log("studMetaData",studMetaData)
     return new Promise(async (resolve, reject) => {
         let splitedAns = [];
         await exports.splitIndividualAns(studMetaData).then((speAns) => {
@@ -707,7 +694,40 @@ exports.formatIndividualAnsArr = async (studMetaData, sectionIndex, splitContinu
     return resArr;
 }
 
+// exports.splitIndividualAns = async (ansArray) => {
+
+//     return new Promise(async (resolve, reject) => {
+//         let individualAns = [];
+//         let formattedAns = "";
+//         let tempAns = "";
+        
+//         await ansArray.forEach(inAns => {
+//             if(inAns.toLowerCase().replace(/ /g,'').includes(constant.evalConstant.ans))
+//             {
+//                 individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
+//                 formattedAns = inAns.toLowerCase().replace(/ /g, '').split(constant.evalConstant.ans)[1];
+//                 tempAns = formattedAns == "" ? constant.evalConstant.empty : formattedAns;
+//             }
+//             else {
+//                 if (tempAns.length > 0) {
+//                     tempAns += tempAns != constant.evalConstant.splitLines ? constant.evalConstant.splitLines + inAns : inAns;
+//                 }
+//             }
+//         })
+
+//         if (tempAns.length > 0) {
+//             individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
+//         }
+//         individualAns.shift();
+//         resolve(individualAns);
+//     })
+// }
+
 exports.splitIndividualAns = async (ansArray) => {
+    if (!Array.isArray(ansArray)) {
+        console.error("splitIndividualAns expected an array but got:", ansArray);
+        return []; // or handle the error appropriately
+    }
 
     return new Promise(async (resolve, reject) => {
         let individualAns = [];
@@ -726,15 +746,16 @@ exports.splitIndividualAns = async (ansArray) => {
                     tempAns += tempAns != constant.evalConstant.splitLines ? constant.evalConstant.splitLines + inAns : inAns;
                 }
             }
-        })
+        });
 
         if (tempAns.length > 0) {
             individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
         }
         individualAns.shift();
         resolve(individualAns);
-    })
-}
+    });
+};
+
 
 exports.getIndexOfAlphabet = async (char) => {
     char = char.toUpperCase().replace(/\,/g, "").trim();
@@ -1107,5 +1128,61 @@ exports.processRows = (resultsData) => {
       });
       rows.push(row);
     });
-    return rows;
+    return rows.slice(1);
   }
+
+  exports.ERROR = StatusCodes;
+
+  exports.formatResponse = (res ,data ,statusCode = 200) =>
+  {
+    return res.status(statusCode).json(data);
+  }
+  exports.formatErrorResponse = (errorMessage, status = '') => {  let error = new Error(errorMessage);  error.status = status;  return error;};
+  exports.formatResponse2 = (result) => ({ "Items": result });
+  exports.getDataByFilterKey = async (request) => {
+   console.log("test2request", request);
+    let { items, condition } = request;
+    const result = items.reduce((acc, item, index) => {
+        const currentResult = Object.entries(items[index]).reduce((acc, [key, value]) => {
+            const uniqueKey = `:${key}_${index}`;
+            acc.FilterExpression += `${key} = ${uniqueKey} ${condition} `;
+            acc.ExpressionAttributeValues[`${uniqueKey}`] = value;
+            return acc;
+        },
+            {
+                FilterExpression: ' ',
+                ExpressionAttributeValues: {},
+            });
+        // Remove the trailing condition (AND/OR) from the current FilterExpression
+        currentResult.FilterExpression = currentResult.FilterExpression.slice(0, -(condition.length + 1));
+ 
+        // Concatenate the FilterExpression for the current item with the overall result
+        acc.FilterExpression += `(${currentResult.FilterExpression}) ${condition} `;
+        acc.ExpressionAttributeValues = {
+            ...acc.ExpressionAttributeValues,
+            ...currentResult.ExpressionAttributeValues,
+        };
+ 
+        return acc;
+    }, {
+        FilterExpression: '',
+        ExpressionAttributeValues: {},
+    });
+    result.FilterExpression = result.FilterExpression.slice(0, -(condition.length + 1));
+    result.ExpressionAttributeValues[':common_id'] = '61692656'   
+    return result;
+}
+
+exports.formatDate =(isoString) => {
+    const date = new Date(isoString);
+  
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+  
+    return `${day}-${month}-${year}`;
+  }
+
+  exports.fortmatData = (data) => JSON.stringify(data, null, 2);
+
+  exports.readFile = async filePath => await fs.promises.readFile(filePath, 'utf8');

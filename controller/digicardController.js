@@ -1,4 +1,5 @@
-const digicardServices = require("../services/digicardServices");
+const {digicardServices} = require("../services");
+const { formatResponse } = require("../helper/helper");
 
 exports.fetchRelatedDigiCards = (req, res, next) => {
     let request = req.body;
@@ -14,18 +15,14 @@ exports.fetchRelatedDigiCards = (req, res, next) => {
         }
     });
 };
-exports.fetchIndividualDigiCard = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    digicardServices.fetchIndividualDigiCard(request, function (individual_digicard_err, individual_digicard_response) {
-        if (individual_digicard_err) {
-            res.status(individual_digicard_err).json(individual_digicard_response);
-        } else {
-            console.log("DigiCard Fetched Successfully");
-            res.json(individual_digicard_response);
-        }
-    });
+exports.fetchIndividualDigiCard = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await digicardServices.fetchIndividualDigiCard(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
 };
 
 exports.fetchAllPreTopicDigicards = (req, res, next) => {
@@ -66,14 +63,12 @@ exports.fetchAllPostTopicDigicards = (req, res, next) => {
     });
 };
 
-exports.fetchDigicardExtension = (req, res, next) => {
-    let request = req.body;    
-    digicardServices.getExtensionOfDigicard(request, function (digiExtension_err, digiExtension_response) {
-        if (digiExtension_err) {
-            res.status(digiExtension_err).json(digiExtension_response);
-        } else {
-            console.log("Got digicard extensions!");
-            res.json(digiExtension_response);
-        }
-    });
+exports.fetchDigicardExtension = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await digicardServices.getExtensionOfDigicard(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
 };

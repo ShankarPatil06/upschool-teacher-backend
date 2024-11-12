@@ -1,12 +1,11 @@
-require('dotenv').config();
 const { AthenaClient, StartQueryExecutionCommand, GetQueryExecutionCommand, GetQueryResultsCommand } = require("@aws-sdk/client-athena");
-const { processRows } = require('../helper/helper')
-const { messages } = require('../constants/constant')
+const { processRows } = require("../helper/helper");
+// const { messages } = require('../constants/constant')
 
 const client = new AthenaClient({
     credentials: {
-        accessKeyId: process.env.ACCESS_KEY_ID,
-        secretAccessKey: process.env.SECRET_ACCESS_KEY,
+        accessKeyId: "AKIAQREMEI3PTKK4GBG5",
+        secretAccessKey: "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",
     },
     region: "ap-south-1",
     maxRetries: 2,
@@ -68,9 +67,9 @@ exports.executeQuery = async (query) => {
             // Get first batch of rows
             return processRows(resultsData);
         } else {
-            throw messages.QUERY_FAILED.replace('**status**', status);
+            throw status;
         }
     } catch (error) {
-        throw messages.QUERY_EXECUTION_FAILED.replace("**error**", error);
+        throw error;
     }
 }
