@@ -60,98 +60,93 @@ exports.sendOTPForScanning = async (req, res, next) => {
 // };
 
 exports.validateOTPForScanning = async (req, res, next) => {
-    console.log("validateOTPForScanning Controller!", req.body);
-    let request = req.body;
-  try{
-      const validateOTPForScanningRes = await scannerServices.validateOTPForScanning(request);
-      formatResponse(res, validateOTPForScanningRes)
-  }catch(error)
-  {
-      next(error);
+  console.log("validateOTPForScanning Controller!", req.body);
+  let request = req.body;
+  try {
+    const validateOTPForScanningRes = await scannerServices.validateOTPForScanning(request);
+    formatResponse(res, validateOTPForScanningRes)
+  } catch (error) {
+    next(error);
   }
-  };
+};
 
 exports.fetchSignedURLForAnswers = async (req, res, next) => {
-    let request = req.body;
-    try{
-        const fetchSignedURLForAnswersRes = await scannerServices.fetchSignedURLForAnswers(request);
-        formatResponse(res ,fetchSignedURLForAnswersRes );
-    }catch(error)
-    {
-        next(error);
-    }
-    };
+  let request = req.body;
+  try {
+    const fetchSignedURLForAnswersRes = await scannerServices.fetchSignedURLForAnswers(request);
+    formatResponse(res, fetchSignedURLForAnswersRes);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    
-    exports.fetchSignedURLForQuizAnswers = async (req, res, next) => {
-        console.log("fetchSignedURLForQuizAnswers Controller!", req.body);
-        let request = req.body;
-        try{
-        const fetchSignedURLForQuizAnswersRes = await scannerServices.fetchSignedURLForQuizAnswers(request);
-        formatResponse(res ,fetchSignedURLForQuizAnswersRes);
-        }catch(error)
-        {
-            next(error);
-        }
+
+exports.fetchSignedURLForQuizAnswers = async (req, res, next) => {
+  console.log("fetchSignedURLForQuizAnswers Controller!", req.body);
+  let request = req.body;
+  try {
+    const fetchSignedURLForQuizAnswersRes = await scannerServices.fetchSignedURLForQuizAnswers(request);
+    formatResponse(res, fetchSignedURLForQuizAnswersRes);
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.uploadQuizAnswerSheets = (req, res, next) => {
-    console.log("uploadAnswerSheets Controller!", req.body);
-    let request = req.body;
-    
-    scannerServices.uploadQuizAnswerSheets(
-        request,
-        function (
-            upload_quiz_answer_sheets_err,
-            upload_quiz_answer_sheets_response
-            ) {
-                if (upload_quiz_answer_sheets_err) {
-                    res.status(400).json(upload_quiz_answer_sheets_err);
-                } else {
-                    console.log("Answer Sheet Uploaded Successfully");
-                    res.json(upload_quiz_answer_sheets_response);
-                }
-            }
-            );
-        };
+  console.log("uploadAnswerSheets Controller!", req.body);
+  let request = req.body;
 
-        exports.uploadQuizAnswerSheets2 = async(req, res, next) => {
-            console.log("uploadAnswerSheets Controller!", req.body);
-            let request = req.body;
-            try{
-                const uploadQuizAnswerSheetsRes =  await scannerServices.uploadQuizAnswerSheets2(request);
-                formatResponse(res, uploadQuizAnswerSheetsRes);
-            }catch(error)
-            {
-                next(error);
-            }
-        };
-        
-    exports.uploadAnswerSheets = (req, res, next) => {
-          console.log("uploadAnswerSheets Controller!", req.body);
-          let request = req.body;
-        
-          scannerServices.uploadAnswerSheets(
-            request,
-            function (upload_answer_sheets_err, upload_answer_sheets_response) {
-              if (upload_answer_sheets_err) {
-                res.status(400).json(upload_answer_sheets_err);
-              } else {
-                console.log("Answer Sheet Uploaded Successfully");
-                res.json(upload_answer_sheets_response);
-              }
-            }
-          );
-        };
+  scannerServices.uploadQuizAnswerSheets(
+    request,
+    function (
+      upload_quiz_answer_sheets_err,
+      upload_quiz_answer_sheets_response
+    ) {
+      if (upload_quiz_answer_sheets_err) {
+        res.status(400).json(upload_quiz_answer_sheets_err);
+      } else {
+        console.log("Answer Sheet Uploaded Successfully");
+        res.json(upload_quiz_answer_sheets_response);
+      }
+    }
+  );
+};
 
-    exports.uploadAnswerSheets2 = async (req, res, next) => {
-      console.log("uploadAnswerSheets2222 Controller!!!!", req.body);
-            let request = req.body;
-          try{
-              const uploadAnswerSheetsRes =  await scannerServices.uploadAnswerSheets2(request);
-              formatResponse(res , uploadAnswerSheetsRes );
-            }catch(error)
-            {
-                next(error);
-            }
-          };
+exports.uploadQuizAnswerSheets2 = async (req, res, next) => {
+  console.log("uploadAnswerSheets2 Controller!", req.body);
+  let request = req.body;
+  try {
+    const uploadQuizAnswerSheetsRes = await scannerServices.uploadQuizAnswerSheets2(request);
+    formatResponse(res, uploadQuizAnswerSheetsRes);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.uploadAnswerSheets = (req, res, next) => {
+  console.log("uploadAnswerSheets Controller!", req.body);
+  let request = req.body;
+
+  scannerServices.uploadAnswerSheets(
+    request,
+    function (upload_answer_sheets_err, upload_answer_sheets_response) {
+      if (upload_answer_sheets_err) {
+        res.status(400).json(upload_answer_sheets_err);
+      } else {
+        console.log("Answer Sheet Uploaded Successfully");
+        res.json(upload_answer_sheets_response);
+      }
+    }
+  );
+};
+
+exports.uploadAnswerSheets2 = async (req, res, next) => {
+  console.log("uploadAnswerSheets2222 Controller!!!!", req.body);
+  let request = req.body;
+  try {
+    const uploadAnswerSheetsRes = await scannerServices.uploadAnswerSheets2(request);
+    formatResponse(res, uploadAnswerSheetsRes);
+  } catch (error) {
+    next(error);
+  }
+};
