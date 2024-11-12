@@ -812,7 +812,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 
             console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
 
-            if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
+            if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no) {
                 quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
                 quizPageMetadata.quiz_set = pageDetailsRes.set;
                 quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase();

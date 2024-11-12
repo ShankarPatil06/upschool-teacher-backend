@@ -145,7 +145,7 @@ exports.getTargetedLearningExpectation = async (request) => {
 
   quizDataRes.Items.forEach((quiz) => {
     const passedStudentsOfParticularQuiz = quizResultDataRes.filter(
-      (val) => val.isPassed
+      (val) => val.isPassed && quiz.quiz_id == val.quiz_id
     ).length;
 
     const classPercentage =
@@ -407,15 +407,13 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
 exports.preLearningSummaryDetails = async (request) => {
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
-console.log("--------1----------");
+
   const subjectDataRes = await subjectRepository.getSubjetById2(request);
-  console.log("--------2----------");
 
   if (!subjectDataRes.Items?.length) return;
 
   const subject_unit_id = subjectDataRes.Items[0].subject_unit_id;
   const unitDataRes = await unitRepository.fetchUnitData2({ subject_unit_id });
-  console.log("--------33----------");
 
   if (!unitDataRes?.length) return;
 
@@ -425,12 +423,9 @@ console.log("--------1----------");
   const chapterDataRes = await chapterRepository.fetchBulkChaptersIDName2({
     unit_chapter_id,
   });
-  console.log("--------4----------",chapterDataRes);
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-  console.log("--------5----------");
-
-   console.log("quizDataRes - ",quizDataRes); 
+ 
   const quizIds = [];
   quizDataRes.Items.forEach((quiz) => {
     if (quiz.learningType === request.data.type) {
@@ -448,7 +443,6 @@ console.log("--------1----------");
     }
   });
 
-  console.log("--------6----------",quizIds);
   const quizResultDataRes =
     await quizResultRepository.fetchBulkQuizResultsByID2({
       unit_Quiz_id: quizIds,
@@ -463,9 +457,7 @@ console.log("--------1----------");
       const quizResults = quizResultDataRes.filter(
         (result) => result.quiz_id === val.quiz_id
       );
-      console.log("+=============================================");
-      console.log("quizResults - ", quizResults[0].marks_details[0].qa_details);
-      console.log("quizResults - ", quizResults[1].marks_details);
+
       val.student_attendance = quizResults.length;
       val.avgMarks = quizResults.length
         ? ((quizResults.reduce(
@@ -514,7 +506,6 @@ exports.postLearningSummaryDetails = async (request) => {
   });
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
 
-  // Collect topic IDs and map chapters with quiz data
   const topicIds = [];
   quizDataRes.Items.forEach((quiz) => {
     if (quiz.not_considered_topics) {
@@ -538,7 +529,6 @@ exports.postLearningSummaryDetails = async (request) => {
     }
   });
 
-  // Fetch quiz results
   const quizIds = chapterDataRes.flatMap(
     (val) => val.quiz_id?.map((quiz) => quiz.id) || []
   );
@@ -547,7 +537,6 @@ exports.postLearningSummaryDetails = async (request) => {
       unit_Quiz_id: quizIds,
     });
 
-  // Calculate average marks and attendance
   chapterDataRes.forEach((val) => {
     val.totalStrength = studentsCount;
 
@@ -574,7 +563,6 @@ exports.postLearningSummaryDetails = async (request) => {
     }
   });
 
-  // Fetch topic data
   if (topicIds.length > 0) {
     const topicDataRes = await topicRepository.fetchBulkTopicsIDName2({
       unit_Topic_id: topicIds,
