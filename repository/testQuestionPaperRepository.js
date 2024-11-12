@@ -56,7 +56,7 @@ exports.getTestQuestionPapersBasedonStatus2 = async (request) => {
             ":subject_id": request.data.subject_id,
             ":question_paper_status": request.data.question_paper_status
         },
-        ProjectionExpression: "question_paper_id, question_paper_name, blueprint_id"
+        ProjectionExpression: "question_paper_id, question_paper_name, blueprint_id , blueprint_type"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data.Items;
