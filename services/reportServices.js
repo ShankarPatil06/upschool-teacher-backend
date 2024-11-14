@@ -845,10 +845,6 @@ exports.viewClassReportFocusArea = async (request) => {
       }
     );
   });
-  const totalMarksForAllQuestions = questions.Items.reduce(
-    (total, question) => total + question.marks,
-    0
-  );
   const marksOfEachStudent = [];
   //get student marks based on question
   quizResultMarksData.map((qdata) => {
@@ -899,11 +895,12 @@ exports.viewClassReportFocusArea = async (request) => {
 
     return acc;
   }, []);
+  const studentIds = groupedMarks.map((student)=>student.studentid)
+  const students = studentIds.length && await studentRepository.getStudentsByIdName2({ student_id: studentIds });
   const noOfQuestionsperConcept = conceptIdsSetA.reduce((acc, curr) => {
     acc[curr] = (acc[curr] || 0) + 1;
     return acc;
   }, []);
-  console.log({ noOfQuestionsperConcept });
   const conceptNames =
     conceptIdsSetA.length &&
     (await conceptRepository.fetchBulkConceptsIDName2({
@@ -922,11 +919,18 @@ exports.viewClassReportFocusArea = async (request) => {
     let studentsData = []
     item.passPercentage = passPercentage
     console.log({ groupedMarks });
-
+   
     groupedMarks.map((student) => {
       let marks = 0;
+      let totalconceptMarks = 0;
       console.log(student.details);
       student.details.map((q) => {
+        questions.Items.map((questionData)=>{
+          // console.log({questionData});
+          if (q.questionId === questionData.questionId) {
+            totalconceptMarks = totalconceptMarks + questionData.marks;
+          }
+        })
         item.questions.map((question) => {
           if (q.questionId === question) {
             console.log("detailedmarkes", q.marks);
@@ -935,15 +939,12 @@ exports.viewClassReportFocusArea = async (request) => {
         })
       })
 
-      let finalMarks = (marks / totalMarksForAllQuestions) * 100
-      console.log({ marks }, item.questions.length, { finalMarks });
+      let finalMarks = (marks / totalconceptMarks) * 100
+      console.log({ marks }, item.questions.length,totalconceptMarks, { finalMarks },{passPercentage});
 
       let passed = finalMarks >= passPercentage ? true : false;
       studentsData.push({ student: student.studentid, passed: passed });
     });
-    // const studentIds = studentsData.filter((student)=>student.passed == false)
-    // const failedStudents = studentIds.length && await studentRepository.getStudentsByIdName2({ student_id: studentIds });
-    console.log({ studentsData });
     const countPassed = studentsData.filter(student => student.passed).length;
     item.passed = (countPassed / totalStudents) * 100 //[%] value
     item.count = countPassed //pass % numerator
@@ -954,6 +955,15 @@ exports.viewClassReportFocusArea = async (request) => {
       item.successMatrix = "no";
       conceptsToFocus.push(item.name);
     }
+    const studentFailed = studentsData.filter((student)=>student.passed == false)
+     studentFailed.map((failedStudent)=>{
+      students.map((student)=>{
+        if (failedStudent.student === student.student_id) {
+         failedStudent.student_name = student.user_firstname + student.user_lastname
+        }
+      })
+    })
+    item.failedStudent = studentFailed
   });
   // console.log({ conceptAndQuestions });
   return { conceptAndQuestions: conceptAndQuestions, conceptsToFocus: conceptsToFocus, quizData: quizData }
