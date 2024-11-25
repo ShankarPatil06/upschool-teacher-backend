@@ -406,7 +406,8 @@ exports.fetchTopicIDandTopicConceptID2 = async (request) => {
             ProjectionExpression: "topic_id, topic_concept_id",
         };
 
-        return await DATABASE_TABLE2.query(readParams);
+        const data =  await DATABASE_TABLE2.query(readParams);
+        return data.Items;
     } else {
         const keys = topic_array.map(id => ({
             topic_id: id,
