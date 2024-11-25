@@ -70,70 +70,72 @@ exports.readScannedPage2 = async (request) => {
 // Function to convert image URL to base64
 async function convertImageToBase64(imageUrl) {
     try {
-        // Fetch the image from the URL
-        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-
-        // Convert the image data to base64
-        const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-
-        // Determine the MIME type (e.g., image/jpeg, image/png)
-        const mimeType = response.headers['content-type'];
-
-        // Return the base64 string in a data URL format
-        return `data:${mimeType};base64,${base64Image}`;
+      // Fetch the image from the URL
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      
+      // Convert the image data to base64
+      const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+      
+      // Determine the MIME type (e.g., image/jpeg, image/png)
+      const mimeType = response.headers['content-type'];
+      
+      // Return the base64 string in a data URL format
+      return `data:${mimeType};base64,${base64Image}`;
     } catch (error) {
-        console.error('Error fetching or converting the image:', error);
-        return null;
+      console.error('Error fetching or converting the image:', error);
+      return null;
     }
-}
-
-exports.readOpenAiPage = async (request) => {
-
-    const { Key } = request.data;
-
-    const imageUrl = await s3Services.getS3SignedUrl(Key);
-    console.log("imageUrl", imageUrl);
-
+  }
+  
+  // Function to send the base64 image to OpenAI
+  async function extractTextAndEquations(imageUrl) {
     try {
-        const base64Image = await convertImageToBase64(imageUrl);
-
-        if (base64Image) {
-            // Send request to OpenAI with the base64 image
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o',  // Replace with the actual model you're using
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: 'extract text from the image' },
-                            { type: 'image_url', image_url: { url: base64Image } },
-                        ],
-                    },
-                ],
-            });
-
-            console.log('Analysis result:', response.choices[0].message);
-            return response;
+      const base64Image = await convertImageToBase64(imageUrl);
+      // console.log({base64Image})
+      if (base64Image) {
+        // Send request to OpenAI with the base64 image
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o',  // Replace with the actual model you're using
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'extract text and images and equations from image' },
+                { type: 'image_url', image_url: { url: base64Image } },
+              ],
+            },
+          ],
+        });
+  
+        console.log('Analysis result:', response.choices[0].message);
+        return response.choices[0].message
+      }else {
+          console.error('Failed to convert image to base64');
+          return null;
         }
     } catch (error) {
-        console.error('Error processing image:', error);
+      console.error('Error processing image:', error);
     }
-
-    // const response = await axios({
-    //     method: "post",
-    //     url: constant.externalURLs.mathpixURL,
-    //     headers: {
-    //         app_id: process.env.MP_APP_ID,
-    //         app_key: process.env.MP_APP_KEY,
-    //         "Content-type": "application/json",
-    //     },
-    //     data: {
-    //         src: imageUrl,
-    //         formats: ["text"],
-    //     },
-    // });
-
-    // console.log("RESPONSE : ", response);
-
-};
+  }
+  exports.readOpenAiPage = async (request) => {
+    try {
+      const { Key } = request.data;
+  
+    //   Assuming you have a method to get the image URL from S3
+    //   const imageUrl = await s3Services.getS3SignedUrl(Key);
+  
+      // For testing, you can pass a hardcoded URL to extract text and equations
+      const imageUrl = request.data.url; // Replace with your image URL
+  
+      const response = await extractTextAndEquations(imageUrl);
+      
+      console.log('Analysis result:', response);
+      return response;
+  
+    } catch (error) {
+      console.error('Error in readOpenAiPage:', error);
+      return { error: 'Error in processing the image' };
+    }
+  };
+  
 
