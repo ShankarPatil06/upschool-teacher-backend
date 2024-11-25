@@ -1186,3 +1186,75 @@ exports.formatDate =(isoString) => {
   exports.fortmatData = (data) => JSON.stringify(data, null, 2);
 
   exports.readFile = async filePath => await fs.promises.readFile(filePath, 'utf8');
+
+  exports.extractValuesFromInput = async (input) => {
+    // Split the input string by newlines
+    let lines = input.split('\n');
+    
+    // Create an array to store the formatted lines as objects
+    let formattedLines = [];
+  
+    // Helper function to process lines with a specific label
+    const processLine = (line, label) => {
+      const [_, ...value] = line.slice(2).split(':');
+      formattedLines.push({
+        label: label,
+        value: value.join(':').trim()
+      });
+    };
+  
+    // Iterate over each line and apply formatting
+    lines.forEach((line) => {
+      // Trim whitespace and skip empty lines
+      line = line.trim();
+      if (line === '') return;
+  
+      // Process specific lines
+      if (line.includes('Set')) processLine(line, "set");
+      else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
+      else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
+      else if (line.includes('Class')) processLine(line, "Class");
+      else if (line.includes('Section')) processLine(line, "Section");
+      else if (line.includes('Subject Name')) processLine(line, "Subject Name");
+      else if (line.includes('Test ID')) processLine(line, "Test ID");
+      else if (line.includes('Roll No')) processLine(line, "Roll No");
+      else if (line.includes('Page No:')) {
+        const match = line.match(/Page No: (\d+)\/\d+/);
+        if (match) {
+          formattedLines.push({
+            label: "pageNo",
+            value: match[1]
+          });
+        }
+      }
+    });
+  
+    return formattedLines;
+  };
+  exports.extractAnswersFromInput = async (input) => {
+    // Split the input by newline
+    let lines = input.split('\n');
+    
+    // Array to store the extracted question-answer pairs
+    let answers = [];
+    
+    // Iterate over each line and check for answer format
+    lines.forEach((line) => {
+      // Trim the line to remove extra spaces
+      line = line.trim();
+      
+      // Check if the line starts with a number followed by 'Ans:'
+      const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
+      
+      if (match) {
+        // Extract question number and the corresponding answer
+        const question = match[1] + '.'; // e.g., "2."
+        const answer = match[2]; // e.g., "one"
+        
+        // Push the question-answer pair to the array
+        answers.push({ question, answer });
+      }
+    });
+    
+    return answers;
+  }
