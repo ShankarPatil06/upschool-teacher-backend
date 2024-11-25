@@ -70,22 +70,51 @@ exports.readScannedPage2 = async (request) => {
 // Function to convert image URL to base64
 async function convertImageToBase64(imageUrl) {
     try {
-        // Fetch the image from the URL
-        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-
-        // Convert the image data to base64
-        const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-
-        // Determine the MIME type (e.g., image/jpeg, image/png)
-        const mimeType = response.headers['content-type'];
-
-        // Return the base64 string in a data URL format
-        return `data:${mimeType};base64,${base64Image}`;
+      // Fetch the image from the URL
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      
+      // Convert the image data to base64
+      const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+      
+      // Determine the MIME type (e.g., image/jpeg, image/png)
+      const mimeType = response.headers['content-type'];
+      
+      // Return the base64 string in a data URL format
+      return `data:${mimeType};base64,${base64Image}`;
     } catch (error) {
-        console.error('Error fetching or converting the image:', error);
-        return null;
+      console.error('Error fetching or converting the image:', error);
+      return null;
     }
-}
+  }
+  
+  // Function to send the base64 image to OpenAI
+  async function extractTextAndEquations(imageUrl) {
+    try {
+      const base64Image = await convertImageToBase64(imageUrl);
+      
+      if (base64Image) {
+        // Send request to OpenAI with the base64 image
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o',  // Replace with the actual model you're using
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'whats in the image' },
+                { type: 'image_url', image_url: { url: base64Image } },
+              ],
+            },
+          ],
+        });
+  
+        console.log('Analysis result:', response.choices[0].message);
+        return response.choices[0].message
+      }
+    } catch (error) {
+      console.error('Error processing image:', error);
+      return error
+    }
+  }
 
 exports.readOpenAiPage = async (request) => {
 
@@ -93,31 +122,12 @@ exports.readOpenAiPage = async (request) => {
 
     const imageUrl = await s3Services.getS3SignedUrl(Key);
     console.log("imageUrl", imageUrl);
+    const response = await extractTextAndEquations(imageUrl);
 
-    try {
-        const base64Image = await convertImageToBase64(imageUrl);
-
-        if (base64Image) {
-            // Send request to OpenAI with the base64 image
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o',  // Replace with the actual model you're using
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: 'extract text from the image' },
-                            { type: 'image_url', image_url: { url: base64Image } },
-                        ],
-                    },
-                ],
-            });
-
-            console.log('Analysis result:', response.choices[0].message);
-            return response;
-        }
-    } catch (error) {
-        console.error('Error processing image:', error);
-    }
+        console.log('Analysis result:', response);
+        return response;
+    
+    
 
     // const response = await axios({
     //     method: "post",
