@@ -926,7 +926,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            quizPageMetadata.roll_no = rollNo.trim().toLowerCase();
+            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
                 url: request.data.Key,
@@ -938,9 +938,9 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             request.data.quiz_id = quizId;
             request.data.quiz_set = set;
             request.data.answer_metadata = quizPageMetadata.answer_metadata;
-
+            console.log(request)
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-            console.log(fetchQuizDataResponse)
+            console.log("quiz?",fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
                 throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
