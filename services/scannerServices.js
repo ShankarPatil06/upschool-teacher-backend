@@ -940,6 +940,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             request.data.answer_metadata = quizPageMetadata.answer_metadata;
 
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
+            console.log(fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
                 throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
