@@ -122,10 +122,10 @@ async function convertImageToBase64(imageUrl) {
       const { Key } = request.data;
   
     //   Assuming you have a method to get the image URL from S3
-    //   const imageUrl = await s3Services.getS3SignedUrl(Key);
+      const imageUrl = await s3Services.getS3SignedUrl(Key);
   
       // For testing, you can pass a hardcoded URL to extract text and equations
-      const imageUrl = request.data.url; // Replace with your image URL
+    //   const imageUrl = request.data.url; // Replace with your image URL
   
       const response = await extractTextAndEquations(imageUrl);
       
