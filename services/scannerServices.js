@@ -481,91 +481,182 @@ exports.uploadAnswerSheets = async function (request, callback) {
     })
 }
 
+// exports.uploadAnswerSheets2 = async (request) => {
+//     let pageMetadata = {};
+
+//     try {
+//         const scannedRes = await ocrServices.readScannedPage2(request);
+//         console.log("Before Formatting:", scannedRes);
+
+//         // if (scannedRes.data.text) {
+//         //     const words = await helper.formattingAnswer(scannedRes.data.text);
+//         //     const pageDetailsRes = await exports.setValues2(words);
+
+//         //     console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
+
+//         //     if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
+//         //         pageMetadata = {
+//         //             class_test_id: pageDetailsRes.test_id,
+//         //             roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
+//         //             answer_metadata: [{
+//         //                 page_no: pageDetailsRes.page_no,
+//         //                 url: request.data.Key,
+//         //                 confidence_rate: scannedRes.data.confidence_rate,
+//         //                 studentAnswer: words
+//         //             }]
+//         //         };
+
+//         //         request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: pageDetailsRes.test_id, answer_metadata: pageMetadata.answer_metadata };
+
+//         //         const classTestData = await classTestRepository.fetchClassTestDataById2(request);
+//         //         console.log("Test object:", classTestData);
+
+//         //         if (helper.isEmptyObject(classTestData.Item)) {
+//         //             throw new Error(constant.messages.COULDNT_READ_TEST_ID);
+//         //         }
+
+//         //         const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+//         //         console.log("Student data:", studentData);
+
+//         //         if (studentData.Items.length > 0) {
+//         //             request.data.student_id = studentData.Items[0].student_id;
+//         //             const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
+
+//         //             console.log("Test result data:", testResultData);
+
+//         //             if (testResultData.Items.length === 0) {
+//         //                 console.log("New Student Record for this test!");
+//         //                 const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
+//         //                 return insertResponse;
+//         //             } else {
+//         //                 console.log("Existing Student Record - Updating metadata");
+
+//         //                 let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
+
+//         //                 if (!pageExists) {
+//         //                     console.log("New Page!");
+//         //                     testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
+//         //                 } else {
+//         //                     console.log("Page already exists!", testResultData.Items[0].answer_metadata);
+//         //                     testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
+//         //                         meta.page_no === pageMetadata.answer_metadata[0].page_no
+//         //                             ? { ...meta, ...pageMetadata.answer_metadata[0] }
+//         //                             : meta
+//         //                     ));
+//         //                 }
+
+//         //                 const updateRequest = {
+//         //                     data: {
+//         //                         result_id: testResultData.Items[0].result_id,
+//         //                         answer_metadata: testResultData.Items[0].answer_metadata,
+//         //                     }
+//         //                 };
+
+//         //                 console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
+
+//         //                 const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
+//         //                 return updateResponse;
+//         //             }
+//         //         } else {
+//         //             throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+//         //         }
+//         //     } else {
+//         //         throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
+//         //     }
+//         // } else {
+//         //     throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+//         // }
+//     } catch (error) {
+//         console.error("Error in uploadAnswerSheets:", error.message || error);
+//         throw error; // or return specific error handling if needed
+//     }
+// };
+
 exports.uploadAnswerSheets2 = async (request) => {
     let pageMetadata = {};
 
     try {
-        const scannedRes = await ocrServices.readScannedPage2(request);
-        console.log("BEFORE FORMATTING2:", scannedRes.data.text);
+        const scannedRes = await ocrServices.readOpenAiPage(request);
+        console.log("OPENAI scanned Data:", scannedRes);
 
-        if (scannedRes.data.text) {
-            const words = await helper.formattingAnswer(scannedRes.data.text);
-            const pageDetailsRes = await exports.setValues2(words);
+        // if (scannedRes.data.text) {
+        //     const words = await helper.formattingAnswer(scannedRes.data.text);
+        //     const pageDetailsRes = await exports.setValues2(words);
 
-            console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
+        //     console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
 
-            if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
-                pageMetadata = {
-                    class_test_id: pageDetailsRes.test_id,
-                    roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
-                    answer_metadata: [{
-                        page_no: pageDetailsRes.page_no,
-                        url: request.data.Key,
-                        confidence_rate: scannedRes.data.confidence_rate,
-                        studentAnswer: words
-                    }]
-                };
+        //     if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
+        //         pageMetadata = {
+        //             class_test_id: pageDetailsRes.test_id,
+        //             roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
+        //             answer_metadata: [{
+        //                 page_no: pageDetailsRes.page_no,
+        //                 url: request.data.Key,
+        //                 confidence_rate: scannedRes.data.confidence_rate,
+        //                 studentAnswer: words
+        //             }]
+        //         };
 
-                request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: pageDetailsRes.test_id, answer_metadata: pageMetadata.answer_metadata };
+        //         request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: pageDetailsRes.test_id, answer_metadata: pageMetadata.answer_metadata };
 
-                const classTestData = await classTestRepository.fetchClassTestDataById2(request);
-                console.log("Test object:", classTestData);
+        //         const classTestData = await classTestRepository.fetchClassTestDataById2(request);
+        //         console.log("Test object:", classTestData);
 
-                if (helper.isEmptyObject(classTestData.Item)) {
-                    throw new Error(constant.messages.COULDNT_READ_TEST_ID);
-                }
+        //         if (helper.isEmptyObject(classTestData.Item)) {
+        //             throw new Error(constant.messages.COULDNT_READ_TEST_ID);
+        //         }
 
-                const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-                console.log("Student data:", studentData);
+        //         const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+        //         console.log("Student data:", studentData);
 
-                if (studentData.Items.length > 0) {
-                    request.data.student_id = studentData.Items[0].student_id;
-                    const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
+        //         if (studentData.Items.length > 0) {
+        //             request.data.student_id = studentData.Items[0].student_id;
+        //             const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
 
-                    console.log("Test result data:", testResultData);
+        //             console.log("Test result data:", testResultData);
 
-                    if (testResultData.Items.length === 0) {
-                        console.log("New Student Record for this test!");
-                        const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                        return insertResponse;
-                    } else {
-                        console.log("Existing Student Record - Updating metadata");
+        //             if (testResultData.Items.length === 0) {
+        //                 console.log("New Student Record for this test!");
+        //                 const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
+        //                 return insertResponse;
+        //             } else {
+        //                 console.log("Existing Student Record - Updating metadata");
 
-                        let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
+        //                 let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
-                        if (!pageExists) {
-                            console.log("New Page!");
-                            testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
-                        } else {
-                            console.log("Page already exists!", testResultData.Items[0].answer_metadata);
-                            testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
-                                meta.page_no === pageMetadata.answer_metadata[0].page_no
-                                    ? { ...meta, ...pageMetadata.answer_metadata[0] }
-                                    : meta
-                            ));
-                        }
+        //                 if (!pageExists) {
+        //                     console.log("New Page!");
+        //                     testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
+        //                 } else {
+        //                     console.log("Page already exists!", testResultData.Items[0].answer_metadata);
+        //                     testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
+        //                         meta.page_no === pageMetadata.answer_metadata[0].page_no
+        //                             ? { ...meta, ...pageMetadata.answer_metadata[0] }
+        //                             : meta
+        //                     ));
+        //                 }
 
-                        const updateRequest = {
-                            data: {
-                                result_id: testResultData.Items[0].result_id,
-                                answer_metadata: testResultData.Items[0].answer_metadata,
-                            }
-                        };
+        //                 const updateRequest = {
+        //                     data: {
+        //                         result_id: testResultData.Items[0].result_id,
+        //                         answer_metadata: testResultData.Items[0].answer_metadata,
+        //                     }
+        //                 };
 
-                        console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
+        //                 console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
 
-                        const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                        return updateResponse;
-                    }
-                } else {
-                    throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
-                }
-            } else {
-                throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
-            }
-        } else {
-            throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
-        }
+        //                 const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
+        //                 return updateResponse;
+        //             }
+        //         } else {
+        //             throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+        //         }
+        //     } else {
+        //         throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
+        //     }
+        // } else {
+        //     throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+        // }
     } catch (error) {
         console.error("Error in uploadAnswerSheets:", error.message || error);
         throw error; // or return specific error handling if needed
