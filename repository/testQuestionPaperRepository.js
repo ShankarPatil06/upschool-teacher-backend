@@ -291,13 +291,14 @@ exports.getClassTestsBasedonIds2 = async (request) => {
             ProjectionExpression: "class_test_name, question_paper_id",
         };
 
-        const result = await DATABASE_TABLE2.query(readParams);
+        return await DATABASE_TABLE2.query(readParams);
 
-        if (result.Items && result.Items.length > 0) {
-            return { statusCode: 200, data: result.Items };
-        } else {
-            return { statusCode: 404, message: "No active class tests found" };
-        }
+        // return result.Items;
+        // if (result.Items && result.Items.length > 0) {
+        //     return { statusCode: 200, data: result.Items };
+        // } else {
+        //     return { statusCode: 404, message: "No active class tests found" };
+        // }
 };
 
 
@@ -342,3 +343,36 @@ exports.updateQuestionPaperStatus2 = async function (request) {
 
         return { statusCode: 200, message: "Question paper status updated successfully" };
 };
+
+
+exports.fetchAllTestsBasedonSubject2 = async (request) => {
+    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id";
+
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":quiz_status": request.data.quiz_status,
+        ":section_id": request.data.section_id,
+        ":subject_id": request.data.subject_id,
+        ":client_class_id": request.data.client_class_id,
+    };
+
+    if (request.data.learningType !== undefined) {
+        filterExpression += " AND learningType = :learningType";
+        expressionAttributeValues[":learningType"] = request.data.learningType;
+    }
+
+    if (request.data.quiz_id !== undefined && request.data.quiz_id !== "") {
+        filterExpression += " AND quiz_id = :quiz_id";
+        expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
+    }
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_quiz_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterExpression,
+        ExpressionAttributeValues: expressionAttributeValues
+    };
+
+    return await DATABASE_TABLE2.query(params);
+}
