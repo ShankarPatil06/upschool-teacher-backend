@@ -60,7 +60,8 @@ exports.getConceptsBasedonTopics = (request, callback) => {
             };
         }
 
-        const concept_array = topic_res.flatMap(e => e.topic_concept_id);
+        // const concept_array = topic_res.flatMap(e => e.topic_concept_id);
+        const concept_array = [...new Set(topic_res.flatMap(e => e.topic_concept_id))];
 
         const concept_res = await conceptRepository.fetchConceptIDDisplayName2({ concept_array });
         
