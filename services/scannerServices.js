@@ -813,140 +813,42 @@ exports.uploadQuizAnswerSheets = function (request, callback) {
     })
 }
 
-exports.uploadQuizAnswerSheets2 = async function (request) {
-    let quizPageMetadata = {};
-
-    const scannedRes = await ocrServices.readScannedPage2(request);
-    console.log("BEFORE FORMATTING : ", scannedRes.data.text);
-
-    if (scannedRes.data.text) {
-        let words = await helper.formattingAnswer(scannedRes.data.text);
-        const pageDetailsRes = await exports.setValues2(words);
-
-        console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
-
-        if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no) {
-            quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
-            quizPageMetadata.quiz_set = pageDetailsRes.set;
-            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase();
-            quizPageMetadata.answer_metadata = [{
-                page_no: pageDetailsRes.page_no,
-                url: request.data.Key,
-                confidence_rate: scannedRes.data.confidence_rate,
-                studentAnswer: words,
-            }];
-
-            request.data.roll_no = quizPageMetadata.roll_no;
-            request.data.quiz_id = pageDetailsRes.quiz_id;
-            request.data.quiz_set = pageDetailsRes.set;
-            request.data.answer_metadata = quizPageMetadata.answer_metadata;
-
-            const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-
-            if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
-                throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
-            }
-
-            const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-
-            if (fetchStudentDataResponse.Items.length > 0) {
-                request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
-
-                const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
-
-                if (fetchQuizResultResponse.Items.length === 0) {
-                    const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-                    return insertQuizDataResponse;
-                } else {
-                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
-
-                    let pageExists = await fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.page_no === quizPageMetadata.answer_metadata[0].page_no);
-
-                    if (pageExists.length === 0) {
-                        fetchQuizResultResponse.Items[0].answer_metadata.push({
-                            page_no: quizPageMetadata.answer_metadata[0].page_no,
-                            url: quizPageMetadata.answer_metadata[0].url,
-                            confidence_rate: quizPageMetadata.answer_metadata[0].confidence_rate,
-                            studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer
-                        });
-                    } else {
-                        await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
-                            if (meta.page_no === quizPageMetadata.answer_metadata[0].page_no) {
-                                fetchQuizResultResponse.Items[0].answer_metadata[i].url = quizPageMetadata.answer_metadata[0].url;
-                                fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = quizPageMetadata.answer_metadata[0].confidence_rate;
-                                fetchQuizResultResponse.Items[0].answer_metadata[i].studentAnswer = quizPageMetadata.answer_metadata[0].studentAnswer;
-                                fetchQuizResultResponse.Items[0].quiz_set = quizPageMetadata.quiz_set;
-                            }
-                        });
-                    }
-
-                    let updateRequest = {
-                        data: {
-                            result_id: fetchQuizResultResponse.Items[0].result_id,
-                            answer_metadata: fetchQuizResultResponse.Items[0].answer_metadata,
-                            quiz_set: fetchQuizResultResponse.Items[0].quiz_set
-                        }
-                    };
-
-                    console.log("UPDATE PAGE!");
-                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
-
-                    const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    return updateQuizDataResponse;
-
-                }
-            } else {
-                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
-            }
-        } else {
-            throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS);
-        }
-    } else {
-        console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-        throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-    }
-}
-
 // exports.uploadQuizAnswerSheets2 = async function (request) {
 //     let quizPageMetadata = {};
 
-//     const scannedRes = await ocrServices.readOpenAiPage(request);
-//     console.log("OPENAI scanned Data:", scannedRes);
-//     if (scannedRes?.content) {
-//         let pageDetailsRes = await helper.extractValuesFromInput(scannedRes.content);
-//         const answers = await helper.extractAnswersFromInput(scannedRes.content);
+//     const scannedRes = await ocrServices.readScannedPage2(request);
+//     console.log("BEFORE FORMATTING : ", scannedRes.data.text);
 
-//         console.log("PAGE DETAILS in openai: ", pageDetailsRes);
-//         const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
-//         const quizId = pageDetailsRes.find(item => item.label === 'Quiz ID')?.value;
-//         const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
-//         const set = pageDetailsRes.find(item => item.label === 'set')?.value;
-//         console.log(pageNo,quizId,rollNo,set);
-        
-//         if (pageNo && quizId && rollNo) {
-//             quizPageMetadata.quiz_id = quizId;
-//             quizPageMetadata.quiz_set = set;
-//             quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+//     if (scannedRes.data.text) {
+//         let words = await helper.formattingAnswer(scannedRes.data.text);
+//         const pageDetailsRes = await exports.setValues2(words);
+
+//         console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
+
+//         if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no) {
+//             quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
+//             quizPageMetadata.quiz_set = pageDetailsRes.set;
+//             quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase();
 //             quizPageMetadata.answer_metadata = [{
-//                 page_no: pageNo,
+//                 page_no: pageDetailsRes.page_no,
 //                 url: request.data.Key,
-//                 confidence_rate:0,
-//                 studentAnswer: answers,
+//                 confidence_rate: scannedRes.data.confidence_rate,
+//                 studentAnswer: words,
 //             }];
 
 //             request.data.roll_no = quizPageMetadata.roll_no;
-//             request.data.quiz_id = quizId;
-//             request.data.quiz_set = set;
+//             request.data.quiz_id = pageDetailsRes.quiz_id;
+//             request.data.quiz_set = pageDetailsRes.set;
 //             request.data.answer_metadata = quizPageMetadata.answer_metadata;
-//             console.log(request)
+
 //             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-//             console.log("quiz?",fetchQuizDataResponse)
 
 //             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
 //                 throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
 //             }
 
 //             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+
 //             if (fetchStudentDataResponse.Items.length > 0) {
 //                 request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
 
@@ -964,14 +866,14 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 //                         fetchQuizResultResponse.Items[0].answer_metadata.push({
 //                             page_no: quizPageMetadata.answer_metadata[0].page_no,
 //                             url: quizPageMetadata.answer_metadata[0].url,
-//                             confidence_rate: 0,
+//                             confidence_rate: quizPageMetadata.answer_metadata[0].confidence_rate,
 //                             studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer
 //                         });
 //                     } else {
 //                         await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
 //                             if (meta.page_no === quizPageMetadata.answer_metadata[0].page_no) {
 //                                 fetchQuizResultResponse.Items[0].answer_metadata[i].url = quizPageMetadata.answer_metadata[0].url;
-//                                 fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = 0;
+//                                 fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = quizPageMetadata.answer_metadata[0].confidence_rate;
 //                                 fetchQuizResultResponse.Items[0].answer_metadata[i].studentAnswer = quizPageMetadata.answer_metadata[0].studentAnswer;
 //                                 fetchQuizResultResponse.Items[0].quiz_set = quizPageMetadata.quiz_set;
 //                             }
@@ -996,13 +898,111 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 //             } else {
 //                 throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
 //             }
+//         } else {
+//             throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS);
 //         }
-//         else { throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
-
-
 //     } else {
 //         console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
 //         throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
 //     }
 // }
+
+exports.uploadQuizAnswerSheets2 = async function (request) {
+    let quizPageMetadata = {};
+
+    const scannedRes = await ocrServices.readOpenAiPage(request);
+    console.log("OPENAI scanned Data:", scannedRes);
+    if (scannedRes?.content) {
+        let pageDetailsRes = await helper.extractValuesFromInput(scannedRes.content);
+        const answers = await helper.extractAnswersFromInput(scannedRes.content);
+
+        console.log("PAGE DETAILS in openai: ", pageDetailsRes);
+        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
+        const quizId = pageDetailsRes.find(item => item.label === 'Quiz ID')?.value;
+        const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
+        const set = pageDetailsRes.find(item => item.label === 'set')?.value;
+        console.log(pageNo,quizId,rollNo,set);
+        
+        if (pageNo && quizId && rollNo) {
+            quizPageMetadata.quiz_id = quizId;
+            quizPageMetadata.quiz_set = set;
+            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+            quizPageMetadata.answer_metadata = [{
+                page_no: pageNo,
+                url: request.data.Key,
+                confidence_rate:0,
+                studentAnswer: answers,
+            }];
+
+            request.data.roll_no = quizPageMetadata.roll_no;
+            request.data.quiz_id = quizId;
+            request.data.quiz_set = set;
+            request.data.answer_metadata = quizPageMetadata.answer_metadata;
+            console.log(request)
+            const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
+            console.log("quiz?",fetchQuizDataResponse)
+
+            if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
+                throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
+            }
+
+            const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+            if (fetchStudentDataResponse.Items.length > 0) {
+                request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
+
+                const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
+
+                if (fetchQuizResultResponse.Items.length === 0) {
+                    const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
+                    return insertQuizDataResponse;
+                } else {
+                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
+
+                    let pageExists = await fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.page_no === quizPageMetadata.answer_metadata[0].page_no);
+
+                    if (pageExists.length === 0) {
+                        fetchQuizResultResponse.Items[0].answer_metadata.push({
+                            page_no: quizPageMetadata.answer_metadata[0].page_no,
+                            url: quizPageMetadata.answer_metadata[0].url,
+                            confidence_rate: 0,
+                            studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer
+                        });
+                    } else {
+                        await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
+                            if (meta.page_no === quizPageMetadata.answer_metadata[0].page_no) {
+                                fetchQuizResultResponse.Items[0].answer_metadata[i].url = quizPageMetadata.answer_metadata[0].url;
+                                fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = 0;
+                                fetchQuizResultResponse.Items[0].answer_metadata[i].studentAnswer = quizPageMetadata.answer_metadata[0].studentAnswer;
+                                fetchQuizResultResponse.Items[0].quiz_set = quizPageMetadata.quiz_set;
+                            }
+                        });
+                    }
+
+                    let updateRequest = {
+                        data: {
+                            result_id: fetchQuizResultResponse.Items[0].result_id,
+                            answer_metadata: fetchQuizResultResponse.Items[0].answer_metadata,
+                            quiz_set: fetchQuizResultResponse.Items[0].quiz_set
+                        }
+                    };
+
+                    console.log("UPDATE PAGE!");
+                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
+
+                    const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
+                    return updateQuizDataResponse;
+
+                }
+            } else {
+                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+            }
+        }
+        else { throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
+
+
+    } else {
+        console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
+        throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
+    }
+}
 
