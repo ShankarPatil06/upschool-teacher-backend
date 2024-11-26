@@ -339,7 +339,7 @@ exports.toggleQuestionPaperBasedOnId2 = async (request) => {
     const fetchClassTestResponse = await testQuestionPaperRepository.getClassTestsBasedonIds2(request);
 
     console.log("fetchClassTestResponse - ",fetchClassTestResponse);
-    if (fetchClassTestResponse.data.length === 0) {
+    if (fetchClassTestResponse.Items.length === 0) {
       const updateQuestionResponse = await testQuestionPaperRepository.updateQuestionPaperStatus2(request);
       console.log("update_question_response", updateQuestionResponse);
       return { statusCode: 200, body: updateQuestionResponse };
