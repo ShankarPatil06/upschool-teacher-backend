@@ -106,7 +106,7 @@ app.post("/v1/sendScannerLink", validator.validUser, scannerController.sendScann
 app.post("/v1/sendOTPForScanning", scannerController.sendOTPForScanning);  // Test & Quiz
 app.post("/v1/validateOTPForScanning", scannerController.validateOTPForScanning); // Test & Quiz
 app.post("/v1/fetchSignedURLForAnswers", validator.validScannerUser, scannerController.fetchSignedURLForAnswers);
-app.post("/v1/uploadAnswerSheets", validator.validScannerUser, scannerController.uploadAnswerSheets);
+app.post("/v1/uploadAnswerSheets", validator.validScannerUser, scannerController.uploadAnswerSheets2);
 app.post("/v1/fetchSignedURLForQuizAnswers", validator.validScannerUser, scannerController.fetchSignedURLForQuizAnswers) //Quiz
 app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2); // Quiz  validator.validScannerUser,
 

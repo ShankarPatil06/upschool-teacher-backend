@@ -164,5 +164,39 @@ exports.getAllStudents2 = async (request) => {
 
 };
 
+exports.getStudentsByIdName2 = async function (request) {
+    const studentArray = request.student_id;
+    console.log("studentArray : ", studentArray);
+
+    if (studentArray.length === 1) {
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_student_info,
+            KeyConditionExpression: "student_id = :student_id",
+            ExpressionAttributeValues: { 
+                ":student_id": studentArray[0]
+            },
+            ProjectionExpression: "student_id, user_firstname,user_lastname",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result.Items;
+
+    } else {
+
+        const batchGetParams = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_student_info]: {
+                    Keys: studentArray.map(student => ({ student_id: student })),
+                    ProjectionExpression: "student_id, user_firstname,user_lastname",
+                }
+            }
+        };
+
+        const result = await DATABASE_TABLE2.getByObjects(batchGetParams);
+        return result.Responses[TABLE_NAMES.upschool_student_info] || [];
+    }
+};
+
 
 
