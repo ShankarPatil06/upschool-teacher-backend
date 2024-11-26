@@ -921,7 +921,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         const quizId = pageDetailsRes.find(item => item.label === 'Quiz ID')?.value;
         const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
         const set = pageDetailsRes.find(item => item.label === 'set')?.value;
-        console.log(pageNo,quizId,rollNo,set);
+        console.log("CHECK THESE VALUES",pageNo,quizId,rollNo,set);
         
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
