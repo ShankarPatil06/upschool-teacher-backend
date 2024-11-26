@@ -100,7 +100,7 @@ async function convertImageToBase64(imageUrl) {
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'extract text and images and equations from image' },
+                { type: 'text', text: 'extract text and images and equations from image also read page number' },
                 { type: 'image_url', image_url: { url: base64Image } },
               ],
             },
@@ -117,13 +117,33 @@ async function convertImageToBase64(imageUrl) {
       console.error('Error processing image:', error);
     }
   }
+
+// async function extractTextAndEquations(imageUrl) {
+//     const response = await openai.chat.completions.create({
+//         model: "gpt-4o", // Replace with a proper multimodal model like GPT-4 or other available models
+//         messages: [
+//           {
+//             role: "user",
+//             content: "Extract text and equations from image",
+//           },
+//           {
+//             role: "user",  // Including image URL as a message with the role set to "user"
+//             content: imageUrl, // Send the image URL directly
+//           }
+//         ],
+//         // Since gpt-4 handles multimodal inputs, you'd likely need to use 'image_url' in a compatible way:
+//         // images: [{ url: imageUrl }],
+//       });
+    
+//       console.log(response.choices[0].message);
+//       return response.choices[0].message;
+   
+//   }
   exports.readOpenAiPage = async (request) => {
     try {
       const { Key } = request.data;
-  
-    //   Assuming you have a method to get the image URL from S3
       const imageUrl = await s3Services.getS3SignedUrl(Key);
-        console.log(imageUrl)
+        console.log("IMAGE URL",imageUrl)
   
       // For testing, you can pass a hardcoded URL to extract text and equations
     //   const imageUrl = request.data.url; // Replace with your image URL
