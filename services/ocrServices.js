@@ -67,61 +67,81 @@ exports.readScannedPage2 = async (request) => {
     return response;
 };
 
-// Function to convert image URL to base64
-async function convertImageToBase64(imageUrl) {
-    try {
-      // Fetch the image from the URL
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+// // Function to convert image URL to base64
+// async function convertImageToBase64(imageUrl) {
+//     try {
+//       // Fetch the image from the URL
+//       const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
       
-      // Convert the image data to base64
-      const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+//       // Convert the image data to base64
+//       const base64Image = Buffer.from(response.data, 'binary').toString('base64');
       
-      // Determine the MIME type (e.g., image/jpeg, image/png)
-      const mimeType = response.headers['content-type'];
+//       // Determine the MIME type (e.g., image/jpeg, image/png)
+//       const mimeType = response.headers['content-type'];
       
-      // Return the base64 string in a data URL format
-      return `data:${mimeType};base64,${base64Image}`;
-    } catch (error) {
-      console.error('Error fetching or converting the image:', error);
-      return null;
-    }
-  }
+//       // Return the base64 string in a data URL format
+//       return `data:${mimeType};base64,${base64Image}`;
+//     } catch (error) {
+//       console.error('Error fetching or converting the image:', error);
+//       return null;
+//     }
+//   }
   
-  // Function to send the base64 image to OpenAI
-  async function extractTextAndEquations(imageUrl) {
-    try {
-      const base64Image = await convertImageToBase64(imageUrl);
-      // console.log({base64Image})
-      if (base64Image) {
-        // Send request to OpenAI with the base64 image
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4o',  // Replace with the actual model you're using
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'extract text and images and equations from image' },
-                { type: 'image_url', image_url: { url: base64Image } },
-              ],
-            },
-          ],
-        });
+//   // Function to send the base64 image to OpenAI
+//   async function extractTextAndEquations(imageUrl) {
+//     try {
+//       const base64Image = await convertImageToBase64(imageUrl);
+//       // console.log({base64Image})
+//       if (base64Image) {
+//         // Send request to OpenAI with the base64 image
+//         const response = await openai.chat.completions.create({
+//           model: 'gpt-4o',  // Replace with the actual model you're using
+//           messages: [
+//             {
+//               role: 'user',
+//               content: [
+//                 { type: 'text', text: 'extract text and images and equations from image' },
+//                 { type: 'image_url', image_url: { url: base64Image } },
+//               ],
+//             },
+//           ],
+//         });
   
-        console.log('Analysis result:', response.choices[0].message);
-        return response.choices[0].message
-      }else {
-          console.error('Failed to convert image to base64');
-          return null;
-        }
-    } catch (error) {
-      console.error('Error processing image:', error);
-    }
+//         console.log('Analysis result:', response.choices[0].message);
+//         return response.choices[0].message
+//       }else {
+//           console.error('Failed to convert image to base64');
+//           return null;
+//         }
+//     } catch (error) {
+//       console.error('Error processing image:', error);
+//     }
+//   }
+
+async function extractTextAndEquations(imageUrl) {
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o", // Replace with a proper multimodal model like GPT-4 or other available models
+        messages: [
+          {
+            role: "user",
+            content: "Extract text and equations from this image",
+          },
+          {
+            role: "user",  // Including image URL as a message with the role set to "user"
+            content: imageUrl, // Send the image URL directly
+          }
+        ],
+        // Since gpt-4 handles multimodal inputs, you'd likely need to use 'image_url' in a compatible way:
+        // images: [{ url: imageUrl }],
+      });
+    
+      console.log(response.choices[0].message);
+      return response.choices[0].message;
+   
   }
   exports.readOpenAiPage = async (request) => {
     try {
       const { Key } = request.data;
-  
-    //   Assuming you have a method to get the image URL from S3
       const imageUrl = await s3Services.getS3SignedUrl(Key);
         console.log(imageUrl)
   
