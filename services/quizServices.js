@@ -478,9 +478,9 @@ exports.startQuizEvaluationProcess = async (request) => {
             TableName: TABLE_NAMES.upschool_question_table,
             projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type", "marks"]
         };
-        const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
+        const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
 
-        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "AND" });
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
         let answerCompareArray = [];
         const marksToUpdate = studentMetaRes.Items[0].marks_details[0].qa_details
         marksToUpdate.map((marks, index) => {
