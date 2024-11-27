@@ -11,6 +11,13 @@ const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
 const s3Services = require("./s3Service");
 
+const { OpenAI } = require('openai');
+
+// Initialize OpenAI Client
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
+});
+
 exports.checkDuplicateQuizName = async (request) => {
     const quizData_response = await quizRepository.checkDuplicateQuizName2(request)
     if (quizData_response.Items.length > 0) {
@@ -105,9 +112,9 @@ exports.editStudentQuizMarks = async (request) => {
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 
-        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage , passPassPercentage);
+        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage, passPassPercentage);
         console.log("-----------------------------------------------------");
-        console.log("overallResult.studentResult - ",overallResult.studentResult);
+        console.log("overallResult.studentResult - ", overallResult.studentResult);
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
         request.data.marks_details[0].expectedMarks = overallResult.expectedMarks;
         request.data.passStatus = overallResult.isPassed;
@@ -122,7 +129,7 @@ exports.editStudentQuizMarks = async (request) => {
 
         const questionMarksMap = {};
         questionDataRes?.Items?.forEach(question => {
-            console.log("question - ",question);
+            console.log("question - ", question);
             if (question.question_id && typeof question.marks === 'number') {
                 questionMarksMap[question.question_id] = question.marks;
             }
@@ -133,23 +140,23 @@ exports.editStudentQuizMarks = async (request) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
                 console.log("question - ", question);
-                console.log("marksPerQuestion - ",marksPerQuestion );
-                console.log("question.obtained_marks - ",question.modified_marks ," - question.type - ",question.type);
+                console.log("marksPerQuestion - ", marksPerQuestion);
+                console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
                 switch (question.type) {
                     case 'basic':
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        basicObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                     case 'intermediate':
                         intermediateQuestions += 1;
                         intermediateMarks += marksPerQuestion;
-                        intermediateObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        intermediateObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                     case 'advanced':
                         advancedQuestions += 1;
                         advancedMarks += marksPerQuestion;
-                        advancedObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 :  parseFloat(question.obtained_marks) || 0;
+                        advancedObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                 }
             });
@@ -261,7 +268,7 @@ exports.fetchQuizTemplates = async (request) => {
     try {
         // if(!request.data.quiz_status)
         // request.data.quiz_status = "Active";
-        console.log("request - ",request);
+        console.log("request - ", request);
         const quizRes = await quizRepository.fetchQuizTemplates2(request);
         console.log("quizRes", quizRes);
 
@@ -375,6 +382,67 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
 }
 
 
+// exports.startQuizEvaluationProcess = async (request) => {
+//     try {
+//         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
+
+//         if (!quizTestRes || !quizTestRes.Item || quizTestRes.Item.quiz_status !== "Active") {
+//             throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
+//         }
+
+//         /** FETCH SCHOOL DATA **/
+//         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+
+//         let classPassPercentage = quizTestRes.Item.learningType == constant.prePostConstans.preLearningVal
+//             ? Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage)
+//             : Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
+
+//         let groupPassPercentage = quizTestRes.Item.learningType == constant.prePostConstans.preLearningVal
+//             ? Number(schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage)
+//             : Number(schoolDataRes.Items[0].post_quiz_config.group_pass_percentage);
+
+//         /** FETCH STUDENT QUIZ METADATA **/
+//         const studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
+
+//         if (studentMetaRes.Items.length === 0) {
+//             throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
+//         }
+
+//         const questionArray = await getQuizQuestionIds(quizTestRes.Item.quiz_question_details);
+
+//         /** FETCH CATEGORY DATA **/
+//         const fetchBulkQtnReq = {
+//             IdArray: questionArray,
+//             fetchIdName: "question_id",
+//             TableName: TABLE_NAMES.upschool_question_table,
+//             projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type", "marks"]
+//         };
+//         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
+
+//         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "AND" });
+
+//         /** ASSIGNING QUIZ MARKS **/
+//         let markAssignRes = await exports.assigningQuizMarks(
+//             studentMetaRes.Items,
+//             quizTestRes.Item.quiz_question_details,
+//             questionDataRes.Items,
+//             classPassPercentage,
+//             groupPassPercentage,
+//             quizTestRes.Item.question_track_details
+//         );
+
+//         markAssignRes = addIndividualGroupPerformance(markAssignRes, questionDataRes, groupPassPercentage);
+
+//         /** BATCH UPDATE **/
+//         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
+
+//         return { status: 200 };
+//     } catch (error) {
+//         console.error(error);
+//         throw error;
+//     }
+// };
+
 exports.startQuizEvaluationProcess = async (request) => {
     try {
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
@@ -402,7 +470,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         }
 
         const questionArray = await getQuizQuestionIds(quizTestRes.Item.quiz_question_details);
-
+        console.log({ questionArray })
         /** FETCH CATEGORY DATA **/
         const fetchBulkQtnReq = {
             IdArray: questionArray,
@@ -413,29 +481,56 @@ exports.startQuizEvaluationProcess = async (request) => {
         const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
 
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        let answerCompareArray = [];
+        const marksToUpdate = studentMetaRes.Items[0].marks_details[0].qa_details
+        marksToUpdate.map((marks, index) => {
+            questionDataRes.map((question) => { 
+                    if (question.question_id == marks.question_id) {
+                       const answer = question.answers_of_question.filter((ans) => ans.answer_display === "Yes")
+                        studentMetaRes.Items[0].answer_metadata.map(async (metadata) => {
+                            //*******// if(metadata.set == marks.set)this should be done once you update upload process
+                            
+                            // const response = await openai.chat.completions.create({
+                            //     model: 'gpt-4o',  // You can use GPT-4 or any other model that suits your needs
+                            //     messages: [
+                            //       {
+                            //         role: 'system',
+                            //         content: 'You are a helpful assistant that compares two answers for similarity.',
+                            //       },
+                            //       {
+                            //         role: 'user',
+                            //         content: `Please compare the following two answers for similarity. Provide a similarity score between 0 and 100.\n\nAnswer 1: ${metadata.studentAnswer[index].answer}\n\nAnswer 2: ${answer[0].answer_content}.mention only score`,
+                            //       },
+                            //     ],
+                            //   });
+                            //   console.log(response.choices[0].message.content)
+                            // //if matching scenario
+                            // if (response.choices[0].message.content > 80) {
+                            //     marks.obtained_marks = question.marks.toString()
+                            // }
+                            answerCompareArray.push({
+                                question_id:question.question_id,
+                                extractedAns:metadata.studentAnswer[index].answer,
+                                actualAns:answer[0].answer_content
+                            })
+                        })
+                       
+                        
+                    }
+                
+            })
 
-        /** ASSIGNING QUIZ MARKS **/
-        let markAssignRes = await exports.assigningQuizMarks(
-            studentMetaRes.Items,
-            quizTestRes.Item.quiz_question_details,
-            questionDataRes.Items,
-            classPassPercentage,
-            groupPassPercentage,
-            quizTestRes.Item.question_track_details
-        );
 
-        markAssignRes = addIndividualGroupPerformance(markAssignRes, questionDataRes, groupPassPercentage);
+        })
 
-        /** BATCH UPDATE **/
-        await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
-
-        return { status: 200 };
+        console.log({ answerCompareArray });
+        
+        return { status: 200, marksToUpdate: marksToUpdate, questionDataRes: questionDataRes, studentMetaRes: studentMetaRes.Items };
     } catch (error) {
         console.error(error);
         throw error;
     }
 };
-
 
 const getQuizQuestionIds = async (quiz_question_details) => {
     let quizSetDetails = constant.quizSetDetails;
@@ -570,7 +665,7 @@ exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack)
 };
 
 
-const knowPassOrFail = (marks_details, quesAndAns,classPercentage , individualPassPercentage =50) => {
+const knowPassOrFail = (marks_details, quesAndAns, classPercentage, individualPassPercentage = 50) => {
 
     return new Promise((resolve, reject) => {
         let totalMarks = quesAndAns?.reduce((acc, item) => {
@@ -580,20 +675,20 @@ const knowPassOrFail = (marks_details, quesAndAns,classPercentage , individualPa
         const studentResult = marks_details?.qa_details?.filter(studentProgress => {
             return quesAndAns.some(question => question?.question_id === studentProgress?.question_id);
         }).reduce((acc, item) => {
-            if(item?.modified_marks != 'N.A.')
-            return acc + parseFloat(item?.modified_marks)
-            if(item?.obtained_marks != 'N.A.')
-            return acc + parseFloat(item?.obtained_marks)
-        return acc;
+            if (item?.modified_marks != 'N.A.')
+                return acc + parseFloat(item?.modified_marks)
+            if (item?.obtained_marks != 'N.A.')
+                return acc + parseFloat(item?.obtained_marks)
+            return acc;
         }, 0);
 
-        console.log("studentResult - ",studentResult);
-        const isPassed = (studentResult/totalMarks)*100 >= individualPassPercentage;
-        console.log("isPassed - ",isPassed);
-        console.log("-m marks - ",{ totalMarks });
+        console.log("studentResult - ", studentResult);
+        const isPassed = (studentResult / totalMarks) * 100 >= individualPassPercentage;
+        console.log("isPassed - ", isPassed);
+        console.log("-m marks - ", { totalMarks });
         console.log({ studentResult });
 
-        resolve({ isPassed, studentResult,totalMarks : studentResult ,expectedMarks :totalMarks  });
+        resolve({ isPassed, studentResult, totalMarks: studentResult, expectedMarks: totalMarks });
     })
 };
 
