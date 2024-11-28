@@ -142,88 +142,95 @@ exports.validateQuestionPaperName2 = async (request) => {
 
 };
 
-exports.viewTestQuestionPaper = (request, callback) => {
+// exports.viewTestQuestionPaper = (request, callback) => {
 
-  testQuestionPaperRepository.fetchTestQuestionPaperByID(request, function (fetch_question_paper_err, fetch_question_paper_res) {
-    if (fetch_question_paper_err) {
-      console.log(fetch_question_paper_err);
-      callback(fetch_question_paper_err, fetch_question_paper_res);
-    } else {
-      console.log(fetch_question_paper_res.Items[0]);
+//   testQuestionPaperRepository.fetchTestQuestionPaperByID(request, function (fetch_question_paper_err, fetch_question_paper_res) {
+//     if (fetch_question_paper_err) {
+//       console.log(fetch_question_paper_err);
+//       callback(fetch_question_paper_err, fetch_question_paper_res);
+//     } else {
+//       console.log(fetch_question_paper_res.Items[0]);
 
-      if (fetch_question_paper_res.Items.length > 0) {
-        let questionsData = JSON.parse(JSON.stringify(fetch_question_paper_res.Items[0].questions));
-        let queationIDs = [];
+//       if (fetch_question_paper_res.Items.length > 0) {
+//         let questionsData = JSON.parse(JSON.stringify(fetch_question_paper_res.Items[0].questions));
+//         let queationIDs = [];
 
-        async function fetchAllQuestionIDs(i) {
-          if (i < questionsData.length) {
-            queationIDs = queationIDs.concat(await questionsData[i].question_id.map(ques => ques));
-            i++;
-            fetchAllQuestionIDs(i);
-          }
-          else {
-            queationIDs = helper.removeDuplicates(queationIDs);
+//         async function fetchAllQuestionIDs(i) {
+//           if (i < questionsData.length) {
+//             queationIDs = queationIDs.concat(await questionsData[i].question_id.map(ques => ques));
+//             i++;
+//             fetchAllQuestionIDs(i);
+//           }
+//           else {
+//             queationIDs = helper.removeDuplicates(queationIDs);
 
-            /** FETCH Questions DATA **/
-            let fetchBulkCatReq = {
-              IdArray: queationIDs,
-              fetchIdName: "question_id",
-              TableName: TABLE_NAMES.upschool_question_table,
-              projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
-            }
+//             /** FETCH Questions DATA **/
+//             let fetchBulkCatReq = {
+//               IdArray: queationIDs,
+//               fetchIdName: "question_id",
+//               TableName: TABLE_NAMES.upschool_question_table,
+//               projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+//             }
 
-            commonRepository.fetchBulkDataWithProjection(fetchBulkCatReq, async function (fetch_questions_err, fetch_questions_res) {
-              if (fetch_questions_err) {
-                console.log(fetch_questions_err);
-                callback(fetch_questions_err, fetch_questions_res);
-              } else {
+//             commonRepository.fetchBulkDataWithProjection(fetchBulkCatReq, async function (fetch_questions_err, fetch_questions_res) {
+//               if (fetch_questions_err) {
+//                 console.log(fetch_questions_err);
+//                 callback(fetch_questions_err, fetch_questions_res);
+//               } else {
 
-                /** SET FINAL Question Paper View DATA **/
-                exports.setQuestionPaperView(questionsData, fetch_questions_res.Items, (questionsErr, questionsRes) => {
-                  if (questionsErr) {
-                    console.log(questionsErr);
-                    callback(questionsErr, questionsRes);
-                  }
-                  else {
-                    console.log(questionsRes);
-                    fetch_question_paper_res.Items[0].questions = questionsRes
-                    callback(questionsErr, fetch_question_paper_res);
-                  }
-                })
-                /** END SET FINAL Question Paper View DATA **/
-              }
-            })
-            /** END FETCH Questions DATA **/
-          }
-        }
-        fetchAllQuestionIDs(0);
-      }
-      else {
-        console.log(constant.messages.NO_DATA);
-        callback(400, constant.messages.NO_DATA);
-      }
+//                 /** SET FINAL Question Paper View DATA **/
+//                 exports.setQuestionPaperView(questionsData, fetch_questions_res.Items, (questionsErr, questionsRes) => {
+//                   if (questionsErr) {
+//                     console.log(questionsErr);
+//                     callback(questionsErr, questionsRes);
+//                   }
+//                   else {
+//                     console.log(questionsRes);
+//                     fetch_question_paper_res.Items[0].questions = questionsRes
+//                     callback(questionsErr, fetch_question_paper_res);
+//                   }
+//                 })
+//                 /** END SET FINAL Question Paper View DATA **/
+//               }
+//             })
+//             /** END FETCH Questions DATA **/
+//           }
+//         }
+//         fetchAllQuestionIDs(0);
+//       }
+//       else {
+//         console.log(constant.messages.NO_DATA);
+//         callback(400, constant.messages.NO_DATA);
+//       }
 
-    }
-  })
-}
+//     }
+//   })
+// }
 
 exports.viewTestQuestionPaper2 = async (request) => {
-
+ 
     const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
-    
+
     if (!fetchQuestionPaperRes.Items || fetchQuestionPaperRes.Items.length === 0) {
       console.log(constant.messages.NO_DATA);
       return { statusCode: 400, message: constant.messages.NO_DATA };
     }
 
-    const questionsData = JSON.parse(JSON.stringify(fetchQuestionPaperRes.Items[0].questions));
+    const questionsData = fetchQuestionPaperRes.Items[0].questions;
     let questionIDs = [];
 
     questionsData.forEach(questionSet => {
-      questionIDs = questionIDs.concat(questionSet.question_id);
+      if (Array.isArray(questionSet.question_id)) {
+        questionIDs = questionIDs.concat(questionSet.question_id);
+      }
     });
-    
+
     questionIDs = helper.removeDuplicates(questionIDs);
+
+    if (questionIDs.length === 0) {
+      console.log("No questions found in the question paper.");
+      return fetchQuestionPaperRes;
+    }
 
     const fetchBulkCatReq = {
       IdArray: questionIDs,
@@ -233,14 +240,20 @@ exports.viewTestQuestionPaper2 = async (request) => {
     };
 
     const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
-    
+
+
+    if (!fetchQuestionsRes || fetchQuestionsRes.length === 0) {
+      console.log("No questions found for the given IDs.");
+      return { statusCode: 400, message: "Questions not found." };
+    }
+
     const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
-    
+
     fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
 
-    return fetchQuestionPaperRes ;
-
+    return fetchQuestionPaperRes;
 };
+
 
 exports.setQuestionPaperView = (questionsSectionData, questionData, callback) => {
 
@@ -291,27 +304,39 @@ exports.setQuestionPaperView = (questionsSectionData, questionData, callback) =>
 exports.setQuestionPaperView2 = async (questionsSectionData, questionData) => {
   const tempQuestionArr = [];
 
+  // Iterate through each section of questions
   for (let i = 0; i < questionsSectionData.length; i++) {
     const section = questionsSectionData[i];
+
+    // Map over each question_id in the section and resolve their respective data
     const questionsPromises = section.question_id.map(async (questionId) => {
       const individualQuestion = questionData.find(value => value.question_id === questionId) || {};
 
       try {
-        const url = await helper.getAnswerContentFileUrl(individualQuestion.answers_of_question);
-        individualQuestion.answers_of_question = url;
+        // If the question has an answer content URL, attempt to fetch it
+        if (individualQuestion.answers_of_question) {
+          const url = await helper.getAnswerContentFileUrl(individualQuestion.answers_of_question);
+          individualQuestion.answers_of_question = url;
+        }
       } catch (err) {
+        // In case of an error, assign a default value
         individualQuestion.answers_of_question = "N.A.";
+        console.error(`Error fetching answer content for question ID ${questionId}:`, err);
       }
 
       return individualQuestion;
     });
 
+    // Await all promises to ensure questions are fully resolved before proceeding
     const resolvedQuestions = await Promise.all(questionsPromises);
+    
+    // Assign the resolved questions back to the section
     questionsSectionData[i].questions = resolvedQuestions;
   }
 
   return questionsSectionData;
 };
+
 
 exports.toggleQuestionPaperBasedOnId = function (request, callback) {
   testQuestionPaperRepository.getClassTestsBasedonIds(request, function (fetch_class_test_err, fetch_class_test_response) {

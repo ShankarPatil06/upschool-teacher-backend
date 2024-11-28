@@ -74,84 +74,140 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
     });
 }
 
-exports.fetchBulkQuestionsWithPublishStatusAndProjection = function (request, callback) {
+// exports.fetchBulkQuestionsWithPublishStatusAndProjection = function (request, callback) {
 
-    dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log(constant.messages.DATABASE_ERROR);
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR);
-        } else {
-            let { IdArray, fetchIdName, TableName, projectionExp, questionStatus, sourceIds } = request;
+//     dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log(constant.messages.DATABASE_ERROR);
+//             console.log(DBErr);
+//             callback(500, constant.messages.DATABASE_ERROR);
+//         } else {
+//             let { IdArray, fetchIdName, TableName, projectionExp, questionStatus, sourceIds } = request;
             
-            let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
-            let expAttributeVal = {};
+//             let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
+//             let expAttributeVal = {};
 
-            let docClient = dynamoDBCall;
-            let FilterExpressionDynamic = "";
-            let ExpressionAttributeValuesDynamic = {};
+//             let docClient = dynamoDBCall;
+//             let FilterExpressionDynamic = "";
+//             let ExpressionAttributeValuesDynamic = {};
 
-            IdArray = [...new Set(IdArray)];
+//             IdArray = [...new Set(IdArray)];
 
-            if (IdArray.length === 0) {
-                console.log("EMPTY BULK ID");
-                callback(0, { Items: [] });
-            } 
-            else if (IdArray.length === 1) 
-            {
-                /** SINGLE DATA **/
-                expAttributeVal[":" + fetchIdName] = IdArray[0];
-                expAttributeVal[":question_status"] = questionStatus;
+//             if (IdArray.length === 0) {
+//                 console.log("EMPTY BULK ID");
+//                 callback(0, { Items: [] });
+//             } 
+//             else if (IdArray.length === 1) 
+//             {
+//                 /** SINGLE DATA **/
+//                 expAttributeVal[":" + fetchIdName] = IdArray[0];
+//                 expAttributeVal[":question_status"] = questionStatus;
 
-                let read_params = {
-                    TableName: TableName,
-                    FilterExpression: "" + fetchIdName + " = :" + fetchIdName + " AND question_status = :question_status",
-                    ExpressionAttributeValues: expAttributeVal,
-                    ProjectionExpression: projectionExp,
-                };
+//                 let read_params = {
+//                     TableName: TableName,
+//                     FilterExpression: "" + fetchIdName + " = :" + fetchIdName + " AND question_status = :question_status",
+//                     ExpressionAttributeValues: expAttributeVal,
+//                     ProjectionExpression: projectionExp,
+//                 };
 
-                DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-                /** END SINGLE DATA **/
-            } 
-            else {
-                let multiSourceFilter = "";
-                async function multiset(index)
-                {
-                    if(index < IdArray.length)
-                    {
-                        if (index < IdArray.length - 1) {
-                            FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " AND question_status = :question_status" + index + "" +" OR ";
-                            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = IdArray[index] + "";
-                            ExpressionAttributeValuesDynamic[":question_status" + index] = questionStatus + "";
-                        } else {
-                            FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " AND question_status = :question_status" + index + ""; 
-                            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = IdArray[index];
-                            ExpressionAttributeValuesDynamic[":question_status" + index] = questionStatus;
-                        }
+//                 DATABASE_TABLE.scanRecord(docClient, read_params, callback);
+//                 /** END SINGLE DATA **/
+//             } 
+//             else {
+//                 let multiSourceFilter = "";
+//                 async function multiset(index)
+//                 {
+//                     if(index < IdArray.length)
+//                     {
+//                         if (index < IdArray.length - 1) {
+//                             FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " AND question_status = :question_status" + index + "" +" OR ";
+//                             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = IdArray[index] + "";
+//                             ExpressionAttributeValuesDynamic[":question_status" + index] = questionStatus + "";
+//                         } else {
+//                             FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " AND question_status = :question_status" + index + ""; 
+//                             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] = IdArray[index];
+//                             ExpressionAttributeValuesDynamic[":question_status" + index] = questionStatus;
+//                         }
 
-                        index++;
-                        multiset(index);
-                    }
-                    else
-                    {
+//                         index++;
+//                         multiset(index);
+//                     }
+//                     else
+//                     {
 
-                        /** THE END **/
-                        let read_params = {
-                            TableName: TableName,
-                            FilterExpression: FilterExpressionDynamic,
-                            ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-                            ProjectionExpression: projectionExp,
-                        };
+//                         /** THE END **/
+//                         let read_params = {
+//                             TableName: TableName,
+//                             FilterExpression: FilterExpressionDynamic,
+//                             ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//                             ProjectionExpression: projectionExp,
+//                         };
 
-                        DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-                        /** END THE END **/
-                    }
-                }
-                multiset(0);
-            }
+//                         DATABASE_TABLE.scanRecord(docClient, read_params, callback);
+//                         /** END THE END **/
+//                     }
+//                 }
+//                 multiset(0);
+//             }
+//         }
+//     });
+// }
+
+
+exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (request, callback) {
+    try {
+        const { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
+
+        const uniqueIds = [...new Set(IdArray)];
+        const expressionValues = {
+            ':question_status': questionStatus.toString(),
+        };
+
+        if (uniqueIds.length === 0) {
+            console.log("EMPTY BULK ID");
+            return callback(0, { Items: [] });
         }
-    });
-}
+
+        if (uniqueIds.length === 1) {
+            const getParams = {
+                TableName,
+                Key: { [fetchIdName]: uniqueIds[0] }, 
+                ProjectionExpression: projectionExp.join(', '),
+            };
+
+            const response = await DATABASE_TABLE2.getItem(getParams);
+            if (response.Item && response.Item.question_status === questionStatus) {
+                return callback(null, { Items: [response.Item] });
+            }
+            return callback(null, { Items: [] });
+        }
+
+        const keys = uniqueIds.map((id) => ({
+            [fetchIdName]: id,
+        }));
+
+        const batchParams = {
+            RequestItems: {
+                [TableName]: {
+                    Keys: keys,
+                    ProjectionExpression: projectionExp.join(', '),
+                },
+            },
+        };
+
+        const batchResponse = await DATABASE_TABLE2.getByObjects(batchParams);
+        const items = batchResponse.Responses[TableName] || [];
+
+        const filteredItems = items.filter((item) => item.question_status === questionStatus);
+
+        callback(null, { Items: filteredItems });
+    } catch (error) {
+        console.error("Error fetching questions:", error);
+        callback(500, error.message || "Error fetching questions.");
+    }
+};
+
+
 
 // exports.fetchBulkQuestionsWithPublishStatusAndProjection = function (request, callback) {
 
