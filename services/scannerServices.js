@@ -932,6 +932,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                 url: request.data.Key,
                 confidence_rate:0,
                 studentAnswer: answers,
+                set:set
             }];
 
             request.data.roll_no = quizPageMetadata.roll_no;
@@ -965,7 +966,8 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                             page_no: quizPageMetadata.answer_metadata[0].page_no,
                             url: quizPageMetadata.answer_metadata[0].url,
                             confidence_rate: 0,
-                            studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer
+                            studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer,
+                            set:quizPageMetadata.answer_metadata[0].set
                         });
                     } else {
                         await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
@@ -973,6 +975,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                                 fetchQuizResultResponse.Items[0].answer_metadata[i].url = quizPageMetadata.answer_metadata[0].url;
                                 fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = 0;
                                 fetchQuizResultResponse.Items[0].answer_metadata[i].studentAnswer = quizPageMetadata.answer_metadata[0].studentAnswer;
+                                fetchQuizResultResponse.Items[0].answer_metadata[i].set = quizPageMetadata.answer_metadata[0].set;
                                 fetchQuizResultResponse.Items[0].quiz_set = quizPageMetadata.quiz_set;
                             }
                         });
