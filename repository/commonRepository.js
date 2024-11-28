@@ -420,53 +420,49 @@ exports.fetchBulkDataWithProjection2 = async (request) => {
 };
 
 
-exports.fetchBulkDataWithProjection3 = async function (request) {
-  try {
-    let { IdArray, fetchIdName, TableName, projectionExp } = request;
+exports.fetchBulkDataWithProjection3 = async (request) => {
+  let { IdArray, fetchIdName, TableName, projectionExp } = request;
 
-    IdArray = [...new Set(IdArray)];
-    console.log("IdArray : ", IdArray);
+  IdArray = [...new Set(IdArray)];
+  console.log("IdArray : ", IdArray);
 
-    if (IdArray.length === 0) {
-      console.log("EMPTY BULK ID");
-      return { Items: [] };
-    } else if (IdArray.length === 1) {
-      let expAttributeVal = {};
-      expAttributeVal[`:${fetchIdName}`] = IdArray[0];
+  if (IdArray.length === 0) {
+    console.log("EMPTY BULK ID");
+    return { Items: [] };
+  } else if (IdArray.length === 1) {
+    let expAttributeVal = {};
+    expAttributeVal[`:${fetchIdName}`] = IdArray[0];
 
-      let read_params = {
-        TableName: TableName,
-        KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
-        ExpressionAttributeValues: expAttributeVal,
-        ProjectionExpression: projectionExp,
-      };
+    let read_params = {
+      TableName: TableName,
+      KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+      ExpressionAttributeValues: expAttributeVal,
+      ProjectionExpression: projectionExp.join(", "),
+    };
 
-      console.log("READ PARAMS : ", read_params);
-      return await DATABASE_TABLE2.query(read_params);
-    } else {
-      const keys = IdArray.map((id) => ({
-        [fetchIdName]: id,
-      }));
+    console.log("READ PARAMS : ", read_params);
+    const result = await DATABASE_TABLE2.query(read_params);
+    return result.Items || [];
+  } else {
+    const keys = IdArray.map(id => ({
+      [fetchIdName]: id,
+    }));
 
-      let batchParams = {
-        RequestItems: {
-          [TableName]: {
-            Keys: keys,
-            ProjectionExpression: projectionExp.join(", "),
-          },
+    let batchParams = {
+      RequestItems: {
+        [TableName]: {
+          Keys: keys,
+          ProjectionExpression: projectionExp.join(", "), 
         },
-      };
+      },
+    };
 
-      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
-
-      const response = await DATABASE_TABLE2.getByObjects(batchParams);
-      return response.Responses ? response.Responses[TableName] : [];
-    }
-  } catch (error) {
-    console.error("DATABASE ERROR", error);
-    throw new Error('DATABASE_ERROR');
+    console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+    const response = await DATABASE_TABLE2.getByObjects(batchParams);
+    return response.Responses ? response.Responses[TableName] : [];
   }
 };
+
 
 
 
@@ -521,9 +517,8 @@ exports.performBatchWrite = async (batch, userTable) => {
   };
 
   try {
-    await DATABASE_TABLE2.createMany(req).promise();
-
-    console.log("Doing batch wirte...");
+    await DATABASE_TABLE2.createMany(req);
+    console.log("Done batch wirte");
   } catch (error) {
     console.error(`Error in batch write: ${error.message}`);
   }
