@@ -380,20 +380,43 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
   });
 };
 exports.fetchBulkDataWithProjection2 = async (request) => {
-  const fromatedRequest = await helper.getDataByFilterKey(request);
+  // const fromatedRequest = await helper.getDataByFilterKey(request);
+  // const params = {
+  //   TableName: TABLE_NAMES.upschool_question_table,
+  //   IndexName: Indexes.common_id_index,
+  //   KeyConditionExpression: "common_id = :common_id",
+  //   FilterExpression: fromatedRequest.FilterExpression,
+  //   ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
+  // };
+  // try {
+  //   console.log("params",params)
+  //   return await DATABASE_TABLE2.query(params);    
+  // } catch (error) {
+  //   console.error(`Error fetching quiz results:`, error);
+  //   throw error;
+  // }
+  const unit_Quiz_id = [...new Set(request.items)]; // Remove duplicates
+  const common_id = constant.constValues.common_id;
+
+  // Create filter expression for multiple quiz_id
+  const filterExpression = unit_Quiz_id.map((_, index) => `question_id = :question_id${index}`).join(" OR ");
+  const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
+      acc[`:question_id${index}`] = quizId.question_id;
+      return acc;
+  }, { ":common_id": common_id });
+
   const params = {
-    TableName: TABLE_NAMES.upschool_question_table,
-    IndexName: Indexes.common_id_index,
-    KeyConditionExpression: "common_id = :common_id",
-    FilterExpression: fromatedRequest.FilterExpression,
-    ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
+      TableName: TABLE_NAMES.upschool_question_table,
+      IndexName: Indexes.common_id_index,
+      KeyConditionExpression: "common_id = :common_id",
+      FilterExpression: filterExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
+      // ProjectionExpression:["question_id","question_type","marks","answers_of_question"]
   };
-  try {
-    return await DATABASE_TABLE2.query(params);    
-  } catch (error) {
-    console.error(`Error fetching quiz results:`, error);
-    throw error;
-  }
+  // console.log("params",params)
+
+      const result = await DATABASE_TABLE2.query(params);
+      return result.Items;
 };
 
 
