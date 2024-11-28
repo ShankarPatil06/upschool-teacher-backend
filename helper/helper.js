@@ -9,7 +9,7 @@ const { constants } = require("buffer");
 const { StatusCodes } = require('http-status-codes');
 const fs = require("fs");
 // const { getS3SignedUrl } = require("../services/s3Service");
-const {s3Services} = require("../services");
+const s3Services = require("../services/s3Service");
 
 
 const excelEpoc = new Date(1900, 0, 0).getTime();
