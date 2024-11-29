@@ -411,4 +411,8 @@ functions:
       - http:
           path: /v1/fetchSchoolDetails
           method: POST
+          cors: true
+      - http:
+          path: /v1/fetchBlueprintDetailsBasedonId
+          method: POST
           cors: true    
