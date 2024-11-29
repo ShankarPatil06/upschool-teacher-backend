@@ -263,3 +263,33 @@ exports.fetchBulkConceptsIDName2 = async (request) => {
         return result.Responses[TABLE_NAMES.upschool_concept_blocks_table];
     }
 };
+
+
+exports.fetchConceptDatabasedonQuestionID3 = async function (uniqueQuestionArr) {
+    const questionIds = uniqueQuestionArr; // Array of question IDs to match
+    console.log("Searching for question IDs:", questionIds);
+
+    // Query the groups using the GSI on common_id
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_concept_blocks_table,
+        IndexName: Indexes.common_id_index, // The GSI name
+        KeyConditionExpression: "common_id = :common_id", // Query for the common_id
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+        },
+        ProjectionExpression: "concept_id, display_name, concept_question_id", // Include only necessary fields
+    };
+
+    // Query the table using the common_id GSI
+    const result = await DATABASE_TABLE2.query(queryParams);
+    // console.log({result})
+    // Filter groups where group_question_id contains any of the provided question IDs
+    const filteredGroups = result.Items.filter(group => {
+        // console.log(group.group_question_id)
+        // Check if any of the question IDs exist in the group's group_question_id array
+        return group.concept_question_id.some(questionId => questionIds.includes(questionId));
+    });
+    console.log(filteredGroups)
+    // Return the filtered groups
+    return filteredGroups || [];
+};
