@@ -141,33 +141,33 @@ async function convertImageToBase64(imageUrl) {
   
         let extractedText = response.choices[0].message;
   
-        if (predictiveText) {
-          // OpenAI request for predicting and correcting text mistakes
-          const correctionResponse = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: 'Identify mistakes in the text and suggest corrections. Highlight corrections with HTML and CSS.' },
-                  { type: 'text', text: extractedText },
-                ],
-              },
-            ],
-          });
+        // if (predictiveText) {
+        //   // OpenAI request for predicting and correcting text mistakes
+        //   const correctionResponse = await openai.chat.completions.create({
+        //     model: 'gpt-4o',
+        //     messages: [
+        //       {
+        //         role: 'user',
+        //         content: [
+        //           { type: 'text', text: 'Identify mistakes in the text and suggest corrections. Highlight corrections with HTML and CSS.' },
+        //           { type: 'text', text: extractedText },
+        //         ],
+        //       },
+        //     ],
+        //   });
   
-          // Wrap corrected words with a span for highlighting
-          const correctedText = correctionResponse.choices[0].message.content.replace(
-            /\[([^\]]+)\]\(([^)]+)\)/g,
-            '<span class="highlight" title="$2">$1</span>'
-          );
+        //   // Wrap corrected words with a span for highlighting
+        //   const correctedText = correctionResponse.choices[0].message.content.replace(
+        //     /\[([^\]]+)\]\(([^)]+)\)/g,
+        //     '<span class="highlight" title="$2">$1</span>'
+        //   );
   
-          console.log('Corrected text with highlights:', correctedText);
-          return correctedText;
-        } else {
-          console.log('Analysis result:', extractedText);
+        //   console.log('Corrected text with highlights:', correctedText);
+        //   return correctedText;
+        // } else {
+        //   console.log('Analysis result:', extractedText);
           return extractedText;
-        }
+        // }
       } else {
         console.error('Failed to convert image to base64');
         return null;
