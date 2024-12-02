@@ -119,55 +119,92 @@ async function convertImageToBase64(imageUrl) {
   //   }
   // }
 
+  // async function extractTextAndEquations(imageUrl) {
+  //   try {
+  //     const base64Image = await convertImageToBase64(imageUrl);
+  //     const predictiveText = true;
+  
+  //     if (base64Image) {
+  //       // OpenAI request for extracting text and equations
+  //       const response = await openai.chat.completions.create({
+  //         model: 'gpt-4o',  // Replace with the actual model you're using
+  //         messages: [
+  //           {
+  //             role: 'user',
+  //             content: [
+  //               { type: 'text', text: 'Extract text, images, and equations from the image. Also, read page number.' },
+  //               { type: 'image_url', image_url: { url: base64Image } },
+  //             ],
+  //           },
+  //         ],
+  //       });
+  
+  //       let extractedText = response.choices[0].message;
+  
+  //       // if (predictiveText) {
+  //       //   // OpenAI request for predicting and correcting text mistakes
+  //       //   const correctionResponse = await openai.chat.completions.create({
+  //       //     model: 'gpt-4o',
+  //       //     messages: [
+  //       //       {
+  //       //         role: 'user',
+  //       //         content: [
+  //       //           { type: 'text', text: 'Identify mistakes in the text and suggest corrections. Highlight corrections with HTML and CSS.' },
+  //       //           { type: 'text', text: extractedText },
+  //       //         ],
+  //       //       },
+  //       //     ],
+  //       //   });
+  
+  //       //   // Wrap corrected words with a span for highlighting
+  //       //   const correctedText = correctionResponse.choices[0].message.content.replace(
+  //       //     /\[([^\]]+)\]\(([^)]+)\)/g,
+  //       //     '<span class="highlight" title="$2">$1</span>'
+  //       //   );
+  
+  //       //   console.log('Corrected text with highlights:', correctedText);
+  //       //   return correctedText;
+  //       // } else {
+  //       //   console.log('Analysis result:', extractedText);
+  //         return extractedText;
+  //       // }
+  //     } else {
+  //       console.error('Failed to convert image to base64');
+  //       return null;
+  //     }
+  //   } catch (error) {
+  //     console.error('Error processing image:', error);
+  //     return null;
+  //   }
+  // }
+  
+
   async function extractTextAndEquations(imageUrl) {
     try {
       const base64Image = await convertImageToBase64(imageUrl);
       const predictiveText = true;
   
       if (base64Image) {
-        // OpenAI request for extracting text and equations
+        const promptText = predictiveText
+          ? 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).'
+          : 'Extract text, images, and equations from the image. Also, read the page number.';
+  
         const response = await openai.chat.completions.create({
-          model: 'gpt-4o',  // Replace with the actual model you're using
+          model: 'gpt-4o', 
           messages: [
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'Extract text, images, and equations from the image. Also, read page number.' },
+                { type: 'text', text: promptText },
                 { type: 'image_url', image_url: { url: base64Image } },
               ],
             },
           ],
         });
   
-        let extractedText = response.choices[0].message;
+        const extractedText = response.choices[0].message.content;
   
-        // if (predictiveText) {
-        //   // OpenAI request for predicting and correcting text mistakes
-        //   const correctionResponse = await openai.chat.completions.create({
-        //     model: 'gpt-4o',
-        //     messages: [
-        //       {
-        //         role: 'user',
-        //         content: [
-        //           { type: 'text', text: 'Identify mistakes in the text and suggest corrections. Highlight corrections with HTML and CSS.' },
-        //           { type: 'text', text: extractedText },
-        //         ],
-        //       },
-        //     ],
-        //   });
-  
-        //   // Wrap corrected words with a span for highlighting
-        //   const correctedText = correctionResponse.choices[0].message.content.replace(
-        //     /\[([^\]]+)\]\(([^)]+)\)/g,
-        //     '<span class="highlight" title="$2">$1</span>'
-        //   );
-  
-        //   console.log('Corrected text with highlights:', correctedText);
-        //   return correctedText;
-        // } else {
-        //   console.log('Analysis result:', extractedText);
-          return extractedText;
-        // }
+        return extractedText;
       } else {
         console.error('Failed to convert image to base64');
         return null;
