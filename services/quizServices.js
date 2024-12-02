@@ -705,7 +705,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. Mention only score(like 100 )even question number not needed.`;
+                ).join("\n") + `. Mention only score(like 100 )even question number not needed and dont consider html and css which are provided in answer.`;
 
                 console.log("userPrompt - ", userPrompt);
 
