@@ -88,6 +88,7 @@ async function convertImageToBase64(imageUrl) {
     }
   }
   
+  
   // Function to send the base64 image to OpenAI
   // async function extractTextAndEquations(imageUrl) {
   //   try {
