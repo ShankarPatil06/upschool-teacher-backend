@@ -4,6 +4,7 @@ const axios = require('axios');
 const s3Services = require("./s3Service");
 const fs = require('fs');
 const { OpenAI } = require('openai');
+const { schoolRepository } = require('../repository');
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
@@ -119,21 +120,22 @@ async function convertImageToBase64(imageUrl) {
   //   }
   // }
 
-  async function extractTextAndEquations(imageUrl) {
+  async function extractTextAndEquations(imageUrl ,predictiveText ) {
     try {
+      const promptText = predictiveText && predictiveText === 'Yes'
+              ? 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).'
+              : 'Extract text, images, and equations from the image. Also, read the page number.';
+      
       const base64Image = await convertImageToBase64(imageUrl);
-      const predictiveText = true;
   
       if (base64Image) {
-        // OpenAI request for extracting text and equations
         const response = await openai.chat.completions.create({
-          model: 'gpt-4o',  // Replace with the actual model you're using
+          model: 'gpt-4o',  
           messages: [
             {
               role: 'user',
               content: [
-                // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read page number.' },
-                { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                { type: 'text', text: promptText },
                 { type: 'image_url', image_url: { url: base64Image } },
               ],
             },
@@ -142,33 +144,7 @@ async function convertImageToBase64(imageUrl) {
   
         let extractedText = response.choices[0].message;
   
-        // if (predictiveText) {
-        //   // OpenAI request for predicting and correcting text mistakes
-        //   const correctionResponse = await openai.chat.completions.create({
-        //     model: 'gpt-4o',
-        //     messages: [
-        //       {
-        //         role: 'user',
-        //         content: [
-        //           { type: 'text', text: 'Identify mistakes in the text and suggest corrections. Highlight corrections with HTML and CSS.' },
-        //           { type: 'text', text: extractedText },
-        //         ],
-        //       },
-        //     ],
-        //   });
-  
-        //   // Wrap corrected words with a span for highlighting
-        //   const correctedText = correctionResponse.choices[0].message.content.replace(
-        //     /\[([^\]]+)\]\(([^)]+)\)/g,
-        //     '<span class="highlight" title="$2">$1</span>'
-        //   );
-  
-        //   console.log('Corrected text with highlights:', correctedText);
-        //   return correctedText;
-        // } else {
-        //   console.log('Analysis result:', extractedText);
           return extractedText;
-        // }
       } else {
         console.error('Failed to convert image to base64');
         return null;
@@ -247,7 +223,8 @@ async function convertImageToBase64(imageUrl) {
       // For testing, you can pass a hardcoded URL to extract text and equations
     //   const imageUrl = request.data.url; // Replace with your image URL
   
-      const response = await extractTextAndEquations(imageUrl);
+    const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+      const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
       
       console.log('Analysis result:', response);
       return response;
