@@ -9,7 +9,7 @@ const { constants } = require("buffer");
 const { StatusCodes } = require('http-status-codes');
 const fs = require("fs");
 // const { getS3SignedUrl } = require("../services/s3Service");
-const {s3Services} = require("../services");
+const s3Services = require("../services/s3Service");
 
 
 const excelEpoc = new Date(1900, 0, 0).getTime();
@@ -398,11 +398,12 @@ exports.removeExistObject = async (idArray, checkObjArr, idName) => {
 }
 
 exports.getAnswerContentFileUrl = async (answerArr) => {
-
+console.log("answerArr",answerArr)
     return new Promise(async (resolve, reject) => {
 
         async function contentUrl(i) {
             if (i < answerArr.length) {
+                console.log("answerArr",answerArr[i].answer_content)
                 answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await s3Services.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
                 i++;
                 contentUrl(i);
