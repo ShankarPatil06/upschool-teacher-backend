@@ -13,6 +13,16 @@ exports.fetchBlueprintById = (req, res, next) => {
     });
 };
 
+exports.fetchBlueprintDetailsBasedonId = async (req, res, next)=> {
+    try {
+        let request = req.body;
+        const reportData = await blueprintServices.fetchBlueprintDetailsBasedonId(request);
+        return formatResponse(res, reportData);
+        } catch (error) {
+           next(error)
+        }
+};
+
 exports.fetchQuestionBasedOnBlueprint = async (req, res, next) => {
     let request = req.body;
     console.log("NO TOPIC HAS BEEN CHOOSEN!");
