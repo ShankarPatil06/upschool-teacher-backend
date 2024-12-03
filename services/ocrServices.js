@@ -120,7 +120,7 @@ async function convertImageToBase64(imageUrl) {
   //   }
   // }
 
-  async function extractTextAndEquations(imageUrl ,predictiveText ) {
+  const extractTextAndEquations = async (imageUrl ,predictiveText ) => {
     try {
 
       const base64Image = await convertImageToBase64(imageUrl);
@@ -170,6 +170,41 @@ async function convertImageToBase64(imageUrl) {
       return null;
     }
   }
+
+  // async function extractTextAndEquations(imageUrl ,predictiveText ) {
+  //   try {
+  //     const promptText = predictiveText && predictiveText === 'Yes'
+  //             ? 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).'
+  //             : 'Extract text, images, and equations from the image. Also, read the page number.';
+      
+  //     const base64Image = await convertImageToBase64(imageUrl);
+  
+  //     if (base64Image) {
+  //       const response = await openai.chat.completions.create({
+  //         model: 'gpt-4o',  
+  //         messages: [
+  //           {
+  //             role: 'user',
+  //             content: [
+  //               { type: 'text', text: promptText },
+  //               { type: 'image_url', image_url: { url: base64Image } },
+  //             ],
+  //           },
+  //         ],
+  //       });
+  
+  //       let extractedText = response.choices[0].message;
+  
+  //         return extractedText;
+  //     } else {
+  //       console.error('Failed to convert image to base64');
+  //       return null;
+  //     }
+  //   } catch (error) {
+  //     console.error('Error processing image:', error);
+  //     return null;
+  //   }
+  // }
   
 
   // async function extractTextAndEquations(imageUrl) {
