@@ -105,7 +105,7 @@ exports.fetchBlueprintDetailsBasedonId = async (request) => {
     const questions = testData.Items[0].questions.map((question)=>question.question_id).flat(1)
     const uniqueQuestionArr = [...new Set(questions)];
     const conceptData = await conceptRepository.fetchConceptDatabasedonQuestionID3(uniqueQuestionArr)
-    console.log({conceptData})
+    console.log(conceptData.length)
     const conceptids = conceptData.map(c=>c.concept_id)
     const TpoicData = await topicRepository.fetchTopicDatabasedonQuestionID3(conceptids)
     console.log({TpoicData})
@@ -125,8 +125,42 @@ exports.fetchBlueprintDetailsBasedonId = async (request) => {
         })
         console.log(topic.topic_title,topic.concepts.length)
     })
+    request.data.subject_id = testData.Items[0].subject_id
+    const subject_res = await subjectRepository.getSubjetById2(request);
+  let subject_unit_id = subject_res.Items[0].subject_unit_id;
 
-    return {TpoicData}
+  const unit_res = await unitRepository.fetchUnitData2({ subject_unit_id });
+
+  const unit_chapter_id = [
+    ...new Set(unit_res.flatMap((e) => e.unit_chapter_id)),
+  ];
+  const chapter_res = await chapterRepository.fetchBulkChaptersIDName2({
+    unit_chapter_id,
+  });
+  const topicIds = chapter_res.reduce((acc, chapter) => {
+    // Concatenate prelearning and postlearning topic IDs
+    return acc.concat(chapter.prelearning_topic_id, chapter.postlearning_topic_id);
+}, []);
+
+// Get unique topic IDs using Set
+const uniqueTopicIds = [...new Set(topicIds)];
+
+const Topic_res = await topicRepository.fetchBulkTopicsIDName2({
+    uniqueTopicIds,
+  });
+console.log(Topic_res.length,TpoicData.length);
+Topic_res.map((topic)=>{
+    topic.concepts = [];
+    blueprintData.map((data)=>{
+        if (topic.topic_concept_id.includes(data.conceptId)) {
+            topic.concepts.push(data);
+        }
+    })
+    console.log(topic.topic_title,topic.concepts.length)
+})
+
+
+    return {Topic_res}
 }
 
 exports.setBlueprintFinalData = (questionSection, catData, skillData, callback) => {
