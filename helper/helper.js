@@ -819,13 +819,10 @@ exports.getObjectiveMarks = async (arr1, arr2) => {
     })
 }
 
-exports.fetchQuizSetName = async (variant) => {
-
-    const returnValue = await variant === 'a' ? variant === 'b' ? constant.quizSets.b : constant.quizSets.a : constant.quizSets.c ;
-    return returnValue;
+exports.fetchQuizSetName = (variant) => {
+    // const returnValue = await variant === 'A' ? variant === 'B' ? constant.quizSets.b : constant.quizSets.a : constant.quizSets.c ;
+    return variant === 'A' ? constant.quizSets.a : variant === 'B' ? constant.quizSets.b : constant.quizSets.c ;
 }
-    
-
 
 exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDupCheck, quiz_duration) => { 
 

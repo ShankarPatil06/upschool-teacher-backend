@@ -70,8 +70,9 @@ exports.fetchQuizBasedonStatus = async (request) => await quizRepository.getQuiz
 
 exports.getQuizResult = async (request) => {
 
-    const result_response = await quizRepository.getQuizResult2(request)
-    await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
+    const result_response = await quizRepository.getQuizResult2(request);
+       if(result_response.Items.length)
+      await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
         result.content_url = await s3Services.getS3SignedUrl(result.url);
         console.log(result.content_url)
     }));
@@ -112,9 +113,7 @@ exports.editStudentQuizMarks = async (request) => {
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 
-        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes.Items, classPassPercentage, passPassPercentage);
-        console.log("-----------------------------------------------------");
-        console.log("overallResult.studentResult - ", overallResult.studentResult);
+        const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes, classPassPercentage, passPassPercentage);
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
         request.data.marks_details[0].expectedMarks = overallResult.expectedMarks;
         request.data.passStatus = overallResult.isPassed;
@@ -128,8 +127,7 @@ exports.editStudentQuizMarks = async (request) => {
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
 
         const questionMarksMap = {};
-        questionDataRes?.Items?.forEach(question => {
-            console.log("question - ", question);
+        questionDataRes?.forEach(question => {
             if (question.question_id && typeof question.marks === 'number') {
                 questionMarksMap[question.question_id] = question.marks;
             }
@@ -201,6 +199,7 @@ exports.editStudentQuizMarks = async (request) => {
 exports.viewQuizQuestionPaper = async (request) => {
     try {
         // Fetch quiz result data of student
+        // const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
         const fetchQuizResultData = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
         if (!fetchQuizResultData || fetchQuizResultData.Items.length === 0) {
             throw new Error(constant.messages.NO_ANSWER_SHEET_FOUND);
@@ -214,7 +213,6 @@ exports.viewQuizQuestionPaper = async (request) => {
         if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
             throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
         }
-        console.log({ fetchQuizDataResponse });
         // Extract question details
         const questionsData = fetchQuizDataResponse.Item.quiz_question_details[quizSetName];
         const questionIDs = helper.removeDuplicates(questionsData);
@@ -228,11 +226,9 @@ exports.viewQuizQuestionPaper = async (request) => {
         const questionIds = fetchBulkCatReq.IdArray.map((val) => ({ question_id: val }));
         const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "OR", TableName: fetchBulkCatReq.TableName });
 
-        console.log("fetchQuestionsRes - ", fetchQuestionsRes);
-        // Set final question paper view data
         const questionsRes = await exports.setQuestionPaperView(questionIDs, fetchQuestionsRes);
 
-        // Return the result
+        // return { Items: questionsRes ,predictive_evaluation : schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation};
         return { Items: questionsRes };
 
     } catch (error) {
@@ -319,9 +315,6 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         }
     });
 
-    // console.log("questionMarksMap", questionMarksMap);
-
-    // Convert group pass percentages to decimal thresholds
     const basicThreshold = group_pass_percentage.Basic / 100;
     const intermediateThreshold = group_pass_percentage.Intermediate / 100;
     const advancedThreshold = group_pass_percentage.Advanced / 100;
@@ -645,6 +638,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
 
 exports.startQuizEvaluationProcess = async (request) => {
     try {
+        const quizSets = constant.quizSets;
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
 
         if (!quizTestRes || !quizTestRes.Item || quizTestRes.Item.quiz_status !== "Active") {
@@ -680,17 +674,25 @@ exports.startQuizEvaluationProcess = async (request) => {
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
 
         let answerCompareArray = [];
+        const setsMarkFormat = await helper.getQuizMarksDetailsFormat( quizTestRes.Item.quiz_question_details);
 
         for (let studentMarkDetail of studentMetaRes.Items) {
+            let i=0;
+            const studentData =  studentMetaRes.Items[i++];
+            const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
+          
+            const markDetails = setsMarkFormat.filter(markForm => markForm.set_key === quizSetKey);
+            studentMarkDetail.marks_details = markDetails;
             const marksToUpdate = studentMarkDetail.marks_details[0].qa_details;
+            const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
 
             const questionAnswerPairs = marksToUpdate.map((mark , i) => {
-                console.log("mark - ", mark);
-                const studentAnswer = studentMarkDetail.answer_metadata[0]?.studentAnswer[i]?.answer;
+
+                const studentAnswer = allStudentAnswers[i]?.answer;
 
                 const correctAnswer = questionDataRes.find(
                     (q) => q.question_id === mark.question_id
-                )?.answers_of_question.find((ans) => ans.answer_display === "Yes")?.answer_content || "";
+                )?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
 
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
 
