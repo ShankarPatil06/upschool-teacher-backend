@@ -582,3 +582,36 @@ exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
    
     return filteredGroups || [];
 };
+
+exports.fetchBulkTopicsIDName2 = async (request) => {
+    const unit_topic_id = request.uniqueTopicIds;
+
+    console.log("unit_topic_id34", unit_topic_id);
+
+    if (unit_topic_id.length === 1) {
+
+        const params = {
+            TableName: TABLE_NAMES.upschool_topic_table,
+            KeyConditionExpression: "topic_id = :topic_id",
+            ExpressionAttributeValues: {
+                ":topic_id": unit_topic_id[0]
+            },
+        };
+
+        const topicData = await DATABASE_TABLE2.query(params);
+        return topicData.Items;
+    } else {
+        // Use BatchGetCommand for multiple topic IDs
+        const keys = unit_topic_id.map((id) => ({ topic_id: id }));
+        const params = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_topic_table]: {
+                    Keys: keys,
+                },
+            },
+        };
+
+        const data = await DATABASE_TABLE2.getByObjects(params);
+        return data.Responses[TABLE_NAMES.upschool_topic_table]; // Return the fetched chapters
+    }
+};
