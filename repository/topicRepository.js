@@ -583,7 +583,7 @@ exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
     return filteredGroups || [];
 };
 
-exports.fetchBulkTopicsIDName2 = async (request) => {
+exports.fetchBulkTopicsIDNameBlueprint = async (request) => {
     const unit_topic_id = request.uniqueTopicIds;
 
     console.log("unit_topic_id34", unit_topic_id);
