@@ -1024,8 +1024,10 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
           if (quiz.quiz_id === result.quiz_id) {
             //marks in each chapter
             result.marks_details[0].qa_details.map(marks => {
-              // console.log(quiz.quiz_id)
-              String(marks.modified_marks) === 'N.A.' ? marksTotal = marksTotal + Number(marks.obtained_marks) : marksTotal = marksTotal + Number(marks.modified_marks)
+              // console.log(marks.obtained_marks)
+              const newObtained = marks.obtained_marks === 'N.A.'? 0: marks.obtained_marks
+              String(marks.modified_marks) === 'N.A.' ? marksTotal = marksTotal + Number(newObtained) : marksTotal = marksTotal + Number(marks.modified_marks)
+              // console.log(marksTotal)
               questionMarksforeachQuiz.map(marksForEachQuiz=>{
                 if(quiz.quiz_id===marksForEachQuiz.quizId) 
                 {
@@ -1039,8 +1041,10 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
             })
           }
         })
+        
         marksinTotal = marksinTotal + marksTotal
-        Avgpercentage = (marksTotal/(possiblemarks))
+        Avgpercentage = possiblemarks===0?0:(marksTotal/(possiblemarks))
+        console.log(chapter,{marksTotal,possiblemarks,Avgpercentage})
         increAvg = increAvg + Avgpercentage
         //Data for post and prelearning summary page avg
         let summaryAverage = (Avgpercentage*100).toFixed(2)
