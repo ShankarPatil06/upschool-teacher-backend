@@ -145,7 +145,7 @@ exports.fetchBlueprintDetailsBasedonId = async (request) => {
 // Get unique topic IDs using Set
 const uniqueTopicIds = [...new Set(topicIds)];
 
-const Topic_res = await topicRepository.fetchBulkTopicsIDName2({
+const Topic_res = await topicRepository.fetchBulkTopicsIDNameBlueprint({
     uniqueTopicIds,
   });
 console.log(Topic_res.length,TpoicData.length);
