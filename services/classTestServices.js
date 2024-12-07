@@ -12,10 +12,11 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 
 exports.addClassTest = async (request) => {
-
     const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
+    console.log("fetch_class_test_res - ",fetch_class_test_res);
     if (fetch_class_test_res.Items.length === 0) {
         request.data.class_test_id = helper.getRandomString();
+        console.log("request.data.class_test_id - ",request.data.class_test_id);
         // const options = {
         //     method: 'POST',
         //     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -26,7 +27,7 @@ exports.addClassTest = async (request) => {
         // const pdfData = await axios(options);
         const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
-        request.data.question_paper_template = pdfData.data.question_paper_template;     
+        request.data.question_paper_template = pdfData.data.question_paper_template;  
 
         return await classTestRepository.insertClassTest2(request);
     }
