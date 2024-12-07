@@ -8,7 +8,7 @@ const { schoolRepository } = require('../repository');
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
+  apiKey: process.env.OPENAI_KEY, 
 });
 
 exports.readScannedPage = async function (request, callback) {
@@ -135,7 +135,7 @@ async function convertImageToBase64(imageUrl) {
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -150,7 +150,7 @@ async function convertImageToBase64(imageUrl) {
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number.' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -268,7 +268,9 @@ async function convertImageToBase64(imageUrl) {
   exports.readOpenAiPage = async (request) => {
     try {
       const { Key } = request.data;
-      const imageUrl = await s3Services.getS3SignedUrl(Key);
+      const imageUrl = await s3Services.getS3SignedUrl("quiz_uploads/c2ddd828-ab47-5a7a-9128-9243f107f187/student_answered_sheets/5e7af638-6523-5cf6-844b-f68b03b1041b.png");
+      // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/21285864-6e00-5562-a19f-b5166d6393a0/student_answered_sheets/66d3e452-5341-5e38-9199-faf443fa5f29.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241206%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241206T141537Z&X-Amz-Expires=600&X-Amz-Signature=c605b8ee1d23f91ac44bfca9c197b050fd56ec20eea42472ab087c5bc1b31ce9&X-Amz-SignedHeaders=host";
+      
         console.log("IMAGE URL",imageUrl)
   
       // For testing, you can pass a hardcoded URL to extract text and equations

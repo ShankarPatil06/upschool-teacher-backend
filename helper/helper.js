@@ -1,4 +1,5 @@
-const uuid = require("uuidv4");
+// const uuid = require("uuidv4");
+const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const jwt_decode = require('jwt-decode');
@@ -17,10 +18,21 @@ const msDay = 86400000;
 
 exports.getCurrentTimestamp = () => new Date().toISOString();
 
-exports.getRandomString = function () {
-    let group_random_user_id = crypto.randomBytes(20).toString("hex");
-    return uuid.fromString(group_random_user_id);
-}
+// exports.getRandomString = function () {
+//     // let group_random_user_id = crypto.randomBytes(20).toString("hex");
+//     // return uuid.fromString(group_random_user_id);
+//         return uuidv4(); // Generates a random UUID
+// }
+exports.getRandomString = () => uuidv4(); 
+
+
+// exports.getRandomString = function () {
+//     let group_random_user_id = crypto.randomBytes(20).toString("hex");
+//     return uuid.fromString(group_random_user_id);
+//     // const NAMESPACE = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"; // Predefined namespace for DNS
+//     // let group_random_user_id = crypto.randomBytes(20).toString("hex");
+//     // return v5(group_random_user_id, NAMESPACE);
+// }
 
 exports.getRandomOtp = function () {
     return Math.floor(100000 + Math.random() * 900000);
@@ -1194,10 +1206,11 @@ exports.formatDate =(isoString) => {
   
     // Helper function to process lines with a specific label
     const processLine = (line, label) => {
+        console.log("label - ",label);
       const [_, ...value] = line.slice(2).split(':');
       formattedLines.push({
         label: label,
-        value: value.join(':').trim()
+        value: value.join(':').replace(/\*/g, '').replace(/\\$/, '').trim()
       });
     };
   
@@ -1216,12 +1229,12 @@ exports.formatDate =(isoString) => {
       else if (line.includes('Subject Name')) processLine(line, "Subject Name");
       else if (line.includes('Test ID')) processLine(line, "Test ID");
       else if (line.includes('Roll No')) processLine(line, "Roll No");
-      else if (line.includes('Page No:')) {
+       else if (line.includes('Page No')) {
         const match = line.match(/Page No: (\d+)\/\d+/);
         if (match) {
           formattedLines.push({
             label: "pageNo",
-            value: match[1]
+            value: match[1].replace(/\*/g, '').replace(/\\$/, '').trim()
           });
         }
       }
