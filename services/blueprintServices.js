@@ -1,4 +1,4 @@
-const { blueprintRepository, questionRepository, commonRepository } = require("../repository")
+const { blueprintRepository, questionRepository, commonRepository, testQuestionPaperRepository, groupRepository, subjectRepository, unitRepository, chapterRepository, topicRepository, conceptRepository } = require("../repository")
 const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
@@ -96,6 +96,71 @@ exports.getBlueprintByItsId = (request, callback) => {
             }
         }
     }) 
+}
+
+exports.fetchBlueprintDetailsBasedonId = async (request) => {
+    const testData = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request)
+    console.log({testData})
+    // finding concepts and topics based on  question
+    const questions = testData.Items[0].questions.map((question)=>question.question_id).flat(1)
+    const uniqueQuestionArr = [...new Set(questions)];
+    const conceptData = await conceptRepository.fetchConceptDatabasedonQuestionID3(uniqueQuestionArr)
+    console.log(conceptData.length)
+    const conceptids = conceptData.map(c=>c.concept_id)
+    const TpoicData = await topicRepository.fetchTopicDatabasedonQuestionID3(conceptids)
+    console.log({TpoicData})
+    //creating new array with has based on concept ---no of questions and topic that it belongs to
+    const blueprintData = conceptData.map((concept)=>{
+        const commonItems = uniqueQuestionArr.filter(item => concept.concept_question_id.includes(item)).length;
+        console.log(commonItems,concept.display_name)
+        return {numOfQuestions: commonItems,concept : concept.display_name,conceptId:concept.concept_id}
+       
+    })
+    TpoicData.map((topic)=>{
+        topic.concepts = [];
+        blueprintData.map((data)=>{
+            if (topic.topic_concept_id.includes(data.conceptId)) {
+                topic.concepts.push(data);
+            }
+        })
+        console.log(topic.topic_title,topic.concepts.length)
+    })
+    request.data.subject_id = testData.Items[0].subject_id
+    const subject_res = await subjectRepository.getSubjetById2(request);
+  let subject_unit_id = subject_res.Items[0].subject_unit_id;
+
+  const unit_res = await unitRepository.fetchUnitData2({ subject_unit_id });
+
+  const unit_chapter_id = [
+    ...new Set(unit_res.flatMap((e) => e.unit_chapter_id)),
+  ];
+  const chapter_res = await chapterRepository.fetchBulkChaptersIDName2({
+    unit_chapter_id,
+  });
+  const topicIds = chapter_res.reduce((acc, chapter) => {
+    // Concatenate prelearning and postlearning topic IDs
+    return acc.concat(chapter.prelearning_topic_id, chapter.postlearning_topic_id);
+}, []);
+
+// Get unique topic IDs using Set
+const uniqueTopicIds = [...new Set(topicIds)];
+
+const Topic_res = await topicRepository.fetchBulkTopicsIDNameBlueprint({
+    uniqueTopicIds,
+  });
+console.log(Topic_res.length,TpoicData.length);
+Topic_res.map((topic)=>{
+    topic.concepts = [];
+    blueprintData.map((data)=>{
+        if (topic.topic_concept_id.includes(data.conceptId)) {
+            topic.concepts.push(data);
+        }
+    })
+    console.log(topic.topic_title,topic.concepts.length)
+})
+
+
+    return {Topic_res}
 }
 
 exports.setBlueprintFinalData = (questionSection, catData, skillData, callback) => {

@@ -558,3 +558,60 @@ exports.fetchBulkTopicsIDName2 = async (request) => {
     }
 };
 
+exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
+    const questionIds = topicids; 
+    console.log("Searching for question IDs:", questionIds);
+
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_topic_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id", 
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+        },
+        ProjectionExpression: "topic_id, topic_title, topic_concept_id",
+    };
+
+    const result = await DATABASE_TABLE2.query(queryParams);
+    
+    const filteredGroups = result.Items.filter(group => {
+        
+        return group.topic_concept_id.some(questionId => questionIds.includes(questionId));
+    });
+    console.log(filteredGroups)
+   
+    return filteredGroups || [];
+};
+
+exports.fetchBulkTopicsIDNameBlueprint = async (request) => {
+    const unit_topic_id = request.uniqueTopicIds;
+
+    console.log("unit_topic_id34", unit_topic_id);
+
+    if (unit_topic_id.length === 1) {
+
+        const params = {
+            TableName: TABLE_NAMES.upschool_topic_table,
+            KeyConditionExpression: "topic_id = :topic_id",
+            ExpressionAttributeValues: {
+                ":topic_id": unit_topic_id[0]
+            },
+        };
+
+        const topicData = await DATABASE_TABLE2.query(params);
+        return topicData.Items;
+    } else {
+        // Use BatchGetCommand for multiple topic IDs
+        const keys = unit_topic_id.map((id) => ({ topic_id: id }));
+        const params = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_topic_table]: {
+                    Keys: keys,
+                },
+            },
+        };
+
+        const data = await DATABASE_TABLE2.getByObjects(params);
+        return data.Responses[TABLE_NAMES.upschool_topic_table]; // Return the fetched chapters
+    }
+};

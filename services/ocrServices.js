@@ -4,10 +4,11 @@ const axios = require('axios');
 const s3Services = require("./s3Service");
 const fs = require('fs');
 const { OpenAI } = require('openai');
+const { schoolRepository } = require('../repository');
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
+  apiKey: process.env.OPENAI_KEY, 
 });
 
 exports.readScannedPage = async function (request, callback) {
@@ -88,35 +89,160 @@ async function convertImageToBase64(imageUrl) {
   }
   
   // Function to send the base64 image to OpenAI
-  async function extractTextAndEquations(imageUrl) {
-    try {
-      const base64Image = await convertImageToBase64(imageUrl);
-      // console.log({base64Image})
-      if (base64Image) {
-        // Send request to OpenAI with the base64 image
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4o',  // Replace with the actual model you're using
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'extract text and images and equations from image also read page number' },
-                { type: 'image_url', image_url: { url: base64Image } },
-              ],
-            },
-          ],
-        });
+  // async function extractTextAndEquations(imageUrl) {
+  //   try {
+  //     const base64Image = await convertImageToBase64(imageUrl);
+  //     // console.log({base64Image})
+  //     const predictiveText = true;
+  //     if (base64Image) {
+  //       // Send request to OpenAI with the base64 image
+  //       const response = await openai.chat.completions.create({
+  //         model: 'gpt-4o',  // Replace with the actual model you're using
+  //         messages: [
+  //           {
+  //             role: 'user',
+  //             content: [
+  //               { type: 'text', text: 'extract text and images and equations from image also read page number' },
+  //               { type: 'image_url', image_url: { url: base64Image } },
+  //             ],
+  //           },
+  //         ],
+  //       });
   
-        console.log('Analysis result:', response.choices[0].message);
-        return response.choices[0].message
-      }else {
-          console.error('Failed to convert image to base64');
-          return null;
+  //       console.log('Analysis result:', response.choices[0].message);
+  //       return response.choices[0].message
+  //     }else {
+  //         console.error('Failed to convert image to base64');
+  //         return null;
+  //       }
+  //   } catch (error) {
+  //     console.error('Error processing image:', error);
+  //   }
+  // }
+
+  const extractTextAndEquations = async (imageUrl ,predictiveText ) => {
+    try {
+
+      const base64Image = await convertImageToBase64(imageUrl);
+  
+      if (base64Image) {
+        let response ;
+        if( predictiveText && predictiveText === 'Yes')
+        {
+          response = await openai.chat.completions.create({
+            model: 'gpt-4o',  
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  { type: 'image_url', image_url: { url: base64Image } },
+                ],
+              },
+            ],
+          });
         }
+        else
+        {
+          response = await openai.chat.completions.create({
+            model: 'gpt-4o',  
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
+                  { type: 'image_url', image_url: { url: base64Image } },
+                ],
+              },
+            ],
+          });
+        }
+  
+        let extractedText = response?.choices[0].message;
+  
+          return extractedText;
+      } else {
+        console.error('Failed to convert image to base64');
+        return null;
+      }
     } catch (error) {
       console.error('Error processing image:', error);
+      return null;
     }
   }
+
+  // async function extractTextAndEquations(imageUrl ,predictiveText ) {
+  //   try {
+  //     const promptText = predictiveText && predictiveText === 'Yes'
+  //             ? 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).'
+  //             : 'Extract text, images, and equations from the image. Also, read the page number.';
+      
+  //     const base64Image = await convertImageToBase64(imageUrl);
+  
+  //     if (base64Image) {
+  //       const response = await openai.chat.completions.create({
+  //         model: 'gpt-4o',  
+  //         messages: [
+  //           {
+  //             role: 'user',
+  //             content: [
+  //               { type: 'text', text: promptText },
+  //               { type: 'image_url', image_url: { url: base64Image } },
+  //             ],
+  //           },
+  //         ],
+  //       });
+  
+  //       let extractedText = response.choices[0].message;
+  
+  //         return extractedText;
+  //     } else {
+  //       console.error('Failed to convert image to base64');
+  //       return null;
+  //     }
+  //   } catch (error) {
+  //     console.error('Error processing image:', error);
+  //     return null;
+  //   }
+  // }
+  
+
+  // async function extractTextAndEquations(imageUrl) {
+  //   try {
+  //     const base64Image = await convertImageToBase64(imageUrl);
+  //     const predictiveText = true;
+  
+  //     if (base64Image) {
+  //       const promptText = predictiveText
+  //         ? 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).'
+  //         : 'Extract text, images, and equations from the image. Also, read the page number.';
+  
+  //       const response = await openai.chat.completions.create({
+  //         model: 'gpt-4o', 
+  //         messages: [
+  //           {
+  //             role: 'user',
+  //             content: [
+  //               { type: 'text', text: promptText },
+  //               { type: 'image_url', image_url: { url: base64Image } },
+  //             ],
+  //           },
+  //         ],
+  //       });
+  
+  //       const extractedText = response.choices[0].message.content;
+  
+  //       return extractedText;
+  //     } else {
+  //       console.error('Failed to convert image to base64');
+  //       return null;
+  //     }
+  //   } catch (error) {
+  //     console.error('Error processing image:', error);
+  //     return null;
+  //   }
+  // }
+  
 
 // async function extractTextAndEquations(imageUrl) {
 //     const response = await openai.chat.completions.create({
@@ -142,13 +268,16 @@ async function convertImageToBase64(imageUrl) {
   exports.readOpenAiPage = async (request) => {
     try {
       const { Key } = request.data;
-      const imageUrl = await s3Services.getS3SignedUrl(Key);
+      const imageUrl = await s3Services.getS3SignedUrl("quiz_uploads/c2ddd828-ab47-5a7a-9128-9243f107f187/student_answered_sheets/5e7af638-6523-5cf6-844b-f68b03b1041b.png");
+      // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/21285864-6e00-5562-a19f-b5166d6393a0/student_answered_sheets/66d3e452-5341-5e38-9199-faf443fa5f29.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241206%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241206T141537Z&X-Amz-Expires=600&X-Amz-Signature=c605b8ee1d23f91ac44bfca9c197b050fd56ec20eea42472ab087c5bc1b31ce9&X-Amz-SignedHeaders=host";
+      
         console.log("IMAGE URL",imageUrl)
   
       // For testing, you can pass a hardcoded URL to extract text and equations
     //   const imageUrl = request.data.url; // Replace with your image URL
   
-      const response = await extractTextAndEquations(imageUrl);
+    const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+      const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
       
       console.log('Analysis result:', response);
       return response;
