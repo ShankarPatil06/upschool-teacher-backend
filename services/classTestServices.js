@@ -24,8 +24,10 @@ exports.addClassTest = async (request) => {
         //     url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
         // };
         const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+        console.log("qs.stringify(request) - ",qs.stringify(request));
         // const pdfData = await axios(options);
-        const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
+        // const pdfData = await postAPICall('http://13.233.9.196:3002/v1' + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
+        const pdfData = await postAPICall('http://localhost:3005/v1' + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
         request.data.question_paper_template = pdfData.data.question_paper_template;  
 
