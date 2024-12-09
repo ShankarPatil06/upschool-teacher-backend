@@ -17,17 +17,18 @@ exports.addClassTest = async (request) => {
     if (fetch_class_test_res.Items.length === 0) {
         request.data.class_test_id = helper.getRandomString();
         console.log("request.data.class_test_id - ",request.data.class_test_id);
-        // const options = {
-        //     method: 'POST',
-        //     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        //     data: qs.stringify(request),
-        //     url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-        // };
-        const headers = { 'content-type': 'application/x-www-form-urlencoded' }
         console.log("qs.stringify(request) - ",qs.stringify(request));
-        // const pdfData = await axios(options);
-        // const pdfData = await postAPICall('http://13.233.9.196:3002/v1' + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        const pdfData = await postAPICall('http://localhost:3005/v1' + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
+        const options = {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            data: qs.stringify(request),
+            url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
+        };
+        // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+        console.log("qs.stringify(request) - ",qs.stringify(request));
+        const pdfData = await axios(options);
+        // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
+        // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
         request.data.question_paper_template = pdfData.data.question_paper_template;  
 
