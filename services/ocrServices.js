@@ -135,7 +135,8 @@ async function convertImageToBase64(imageUrl) {
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  // { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -150,7 +151,8 @@ async function convertImageToBase64(imageUrl) {
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number.' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
