@@ -25,6 +25,7 @@ exports.addClassTest = async (request) => {
         // };
         const headers = { 'content-type': 'application/x-www-form-urlencoded' }
         // const pdfData = await axios(options);
+        console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
         request.data.question_paper_template = pdfData.data.question_paper_template;  
