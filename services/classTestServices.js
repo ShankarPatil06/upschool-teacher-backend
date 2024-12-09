@@ -24,6 +24,7 @@ exports.addClassTest = async (request) => {
         //     url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
         // };
         const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+        console.log("qs.stringify(request) - ",qs.stringify(request));
         // const pdfData = await axios(options);
         console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
