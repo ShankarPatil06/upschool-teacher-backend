@@ -917,16 +917,20 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         const answers = await helper.extractAnswersFromInput(scannedRes.content);
 
         console.log("PAGE DETAILS in openai: ", pageDetailsRes);
-        const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
+        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
+        // const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
+        // const pageNo = 1;
         const quizId = pageDetailsRes.find(item => item.label === 'Quiz ID')?.value;
-        const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value.replace(/\s+/g, '');
+        // const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value.replace(/\s+/g, '');
+        const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
         const set = pageDetailsRes.find(item => item.label === 'set')?.value;
         console.log("CHECK THESE VALUES",pageNo,quizId,rollNo,set);
         
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo;
+            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+            // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo;
             // quizPageMetadata.roll_no = rollNo;
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
