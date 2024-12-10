@@ -4,6 +4,7 @@ const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 const { nextTick } = require("process");
 const { response } = require("express");
+const { fetchPostTopicData2 } = require("../repository/topicRepository");
 
 
 exports.fetchTopicsBasedonChapterNew = async(request)=> {
@@ -32,9 +33,9 @@ exports.fetchTopicsBasedonChapterNew = async(request)=> {
     const pre_topic_response = await topicRepository.fetchPreTopicData2(single_chapter_response.Items[0]);
    
     const post_topic_response = await topicRepository.fetchPostTopicData2(single_chapter_response.Items[0]);
-  
-    const finalPreTopicData = await exports.appendPreTopicsArchivedStatus2(request, teacher_activity_details_res, pre_topic_response, constant.prePostConstans.preLearning);
-    const finalPostTopicData = await exports.appendPostTopicsArchivedStatus2(request, teacher_activity_details_res, post_topic_response, constant.prePostConstans.postLearning);
+    console.log(post_topic_response.Items)
+    const finalPreTopicData = pre_topic_response.Items === undefined?await exports.appendPreTopicsArchivedStatus2(request, teacher_activity_details_res, pre_topic_response, constant.prePostConstans.preLearning):await exports.appendPreTopicsArchivedStatus2(request, teacher_activity_details_res, pre_topic_response.Items, constant.prePostConstans.preLearning)
+    const finalPostTopicData = post_topic_response.Items === undefined? await exports.appendPostTopicsArchivedStatus2(request, teacher_activity_details_res, post_topic_response, constant.prePostConstans.postLearning): await exports.appendPostTopicsArchivedStatus2(request, teacher_activity_details_res, post_topic_response.Items, constant.prePostConstans.postLearning)
   
     request.data.learningType = constant.prePostConstans.preLearningVal;
     const quizData_res = await quizRepository.fetchQuizData2(request);
