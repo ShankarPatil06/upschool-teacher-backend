@@ -77,7 +77,7 @@ exports.startEvaluationProcess = async (request) => {
                 TableName: TABLE_NAMES.upschool_question_table,
                 projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type"]
             }
-            const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ quiz_id: val }));
+            const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
 
             const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "AND" })
             console.log("QUESTION DATA : ", questionDataRes.Items);
