@@ -929,9 +929,9 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+            // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
             // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo;
-            // quizPageMetadata.roll_no = rollNo;
+            quizPageMetadata.roll_no = rollNo;
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
                 url: request.data.Key,
