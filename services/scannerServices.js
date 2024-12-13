@@ -997,15 +997,10 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     };
 
                     console.log("UPDATE PAGE!");
-                    // console.log(fetchQuizResultResponse.Items[0].answer_metadata);
+                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    if (updateQuizDataResponse) {
-                        return 'Image Uploaded'
-                    } else {
-                        return 'Image Upload Issue'
-                    }
-                    // return updateQuizDataResponse;
+                    return updateQuizDataResponse;
 
                 }
             } else {
