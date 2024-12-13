@@ -122,9 +122,7 @@ async function convertImageToBase64(imageUrl) {
 
   const extractTextAndEquations = async (imageUrl ,predictiveText ) => {
     try {
-
       const base64Image = await convertImageToBase64(imageUrl);
-  
       if (base64Image) {
         let response ;
         if( predictiveText && predictiveText === 'Yes')
@@ -280,7 +278,9 @@ async function convertImageToBase64(imageUrl) {
     //   const imageUrl = request.data.url; // Replace with your image URL
   
     const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+    console.log("type",schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
       const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
+
       
       console.log('Analysis result:', response);
       return response;
