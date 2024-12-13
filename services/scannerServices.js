@@ -929,9 +929,9 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
             // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo;
-            quizPageMetadata.roll_no = rollNo;
+            // quizPageMetadata.roll_no = rollNo;
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
                 url: request.data.Key,
@@ -1000,11 +1000,10 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     // console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    console.log(updateQuizDataResponse)
                     if (updateQuizDataResponse) {
                         return 'Image Uploaded'
                     } else {
-                        return 'Image Upload Issue, Please Retake'
+                        return 'Image Upload Issue'
                     }
                     // return updateQuizDataResponse;
 
