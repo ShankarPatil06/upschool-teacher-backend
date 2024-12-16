@@ -1229,7 +1229,7 @@ exports.formatDate =(isoString) => {
       else if (line.includes('Subject Name')) processLine(line, "Subject Name");
       else if (line.includes('Test ID')) processLine(line, "Test ID");
       else if (line.includes('Roll No')) processLine(line, "Roll No");
-       else if (line.includes('Page No')) {
+       else if (line.includes('Page')) {
         const match = line.match(/Page No: (\d+)\/\d+/);
         if (match) {
           formattedLines.push({
