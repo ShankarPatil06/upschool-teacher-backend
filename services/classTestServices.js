@@ -327,7 +327,11 @@ exports.readStudentAnswerSheets = (request, callback) => {
     } entireStudentsData(0);
 }
 
-exports.fetchGetStudentData = async (request) => await classTestRepository.getStudentInfo(request);
+exports.fetchGetStudentData = async (request) => {
+    const studentData = await classTestRepository.getStudentInfo(request);
+    studentData?.Items?.sort((a, b) => a.roll_no.localeCompare(b.roll_no));
+    return studentData;
+  };
 
 
 exports.getResult = async (request) => {
