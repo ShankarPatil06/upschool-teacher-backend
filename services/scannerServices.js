@@ -484,92 +484,95 @@ exports.uploadAnswerSheets = async function (request, callback) {
 exports.uploadAnswerSheets2 = async (request) => {
     let pageMetadata = {};
 
-    try {
-        const scannedRes = await ocrServices.readScannedPage2(request);
-        console.log("Before Formatting:", scannedRes);
+    const scannedRes = await ocrServices.readOpenAiPage(request);
+    console.log("OPENAI scanned Data:", scannedRes);
+    if (scannedRes?.content) {
+        let pageDetailsRes = await helper.extractValuesFromInput(scannedRes.content);
+        const answers = await helper.extractAnswersFromInput(scannedRes.content);
 
-        if (scannedRes.data.text) {
-            const words = await helper.formattingAnswer(scannedRes.data.text);
-            const pageDetailsRes = await exports.setValues2(words);
+        console.log("PAGE DETAILS in openai: ", pageDetailsRes);
+        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
+        // const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
+        // const pageNo = 1;
+        const testId = pageDetailsRes.find(item => item.label === 'Test ID')?.value;
+        // const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value.replace(/\s+/g, '');
+        const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
+        console.log("CHECK THESE VALUES", pageNo, testId, rollNo);
 
-            console.log("PAGE DETAILS222 in uploadanswersheets2:", pageDetailsRes);
+        if (pageNo && testId && rollNo) {
+            pageMetadata = {
+                class_test_id: testId,
+                roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase(),
+                answer_metadata: [{
+                    page_no: pageNo,
+                    url: request.data.Key,
+                    confidence_rate: 0,
+                    studentAnswer: answers
+                }]
+            };
 
-            if (pageDetailsRes.page_no && pageDetailsRes.roll_no) {
-                pageMetadata = {
-                    class_test_id: pageDetailsRes.test_id,
-                    roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase(),
-                    answer_metadata: [{
-                        page_no: pageDetailsRes.page_no,
-                        url: request.data.Key,
-                        confidence_rate: scannedRes.data.confidence_rate,
-                        studentAnswer: words
-                    }]
-                };
+            request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: testId, answer_metadata: pageMetadata.answer_metadata };
 
-                request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: pageDetailsRes.test_id, answer_metadata: pageMetadata.answer_metadata };
+            const classTestData = await classTestRepository.fetchClassTestDataById2(request);
+            console.log("Test object:", classTestData);
 
-                const classTestData = await classTestRepository.fetchClassTestDataById2(request);
-                console.log("Test object:", classTestData);
+            if (helper.isEmptyObject(classTestData.Item)) {
+                throw new Error(constant.messages.COULDNT_READ_TEST_ID);
+            }
 
-                if (helper.isEmptyObject(classTestData.Item)) {
-                    throw new Error(constant.messages.COULDNT_READ_TEST_ID);
-                }
+            const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+            console.log("Student data:", studentData);
 
-                const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-                console.log("Student data:", studentData);
+            if (studentData.Items.length > 0) {
+                request.data.student_id = studentData.Items[0].student_id;
+                const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
 
-                if (studentData.Items.length > 0) {
-                    request.data.student_id = studentData.Items[0].student_id;
-                    const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
+                console.log("Test result data:", testResultData);
 
-                    console.log("Test result data:", testResultData);
-
-                    if (testResultData.Items.length === 0) {
-                        console.log("New Student Record for this test!");
-                        const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                        return insertResponse;
-                    } else {
-                        console.log("Existing Student Record - Updating metadata");
-
-                        let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
-
-                        if (!pageExists) {
-                            console.log("New Page!");
-                            testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
-                        } else {
-                            console.log("Page already exists!", testResultData.Items[0].answer_metadata);
-                            testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
-                                meta.page_no === pageMetadata.answer_metadata[0].page_no
-                                    ? { ...meta, ...pageMetadata.answer_metadata[0] }
-                                    : meta
-                            ));
-                        }
-
-                        const updateRequest = {
-                            data: {
-                                result_id: testResultData.Items[0].result_id,
-                                answer_metadata: testResultData.Items[0].answer_metadata,
-                            }
-                        };
-
-                        console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
-
-                        const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                        return updateResponse;
-                    }
+                if (testResultData.Items.length === 0) {
+                    console.log("New Student Record for this test!");
+                    const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
+                    return insertResponse;
                 } else {
-                    throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+                    console.log("Existing Student Record - Updating metadata");
+
+                    let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
+
+                    if (!pageExists) {
+                        console.log("New Page!");
+                        testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
+                    } else {
+                        console.log("Page already exists!", testResultData.Items[0].answer_metadata);
+                        testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
+                            meta.page_no === pageMetadata.answer_metadata[0].page_no
+                                ? { ...meta, ...pageMetadata.answer_metadata[0] }
+                                : meta
+                        ));
+                    }
+
+                    const updateRequest = {
+                        data: {
+                            result_id: testResultData.Items[0].result_id,
+                            answer_metadata: testResultData.Items[0].answer_metadata,
+                        }
+                    };
+
+                    console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
+
+                    const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
+                    return updateResponse;
                 }
             } else {
-                throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
+                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
             }
         } else {
-            throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+            throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
         }
-    } catch (error) {
-        console.error("Error in uploadAnswerSheets:", error.message || error);
-        throw error; // or return specific error handling if needed
     }
+    else {
+        throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+    }
+
 };
 
 // exports.uploadAnswerSheets2 = async (request) => {
@@ -924,8 +927,8 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         // const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value.replace(/\s+/g, '');
         const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
         const set = pageDetailsRes.find(item => item.label === 'set')?.value;
-        console.log("CHECK THESE VALUES",pageNo,quizId,rollNo,set);
-        
+        console.log("CHECK THESE VALUES", pageNo, quizId, rollNo, set);
+
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
@@ -935,9 +938,9 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
                 url: request.data.Key,
-                confidence_rate:0,
+                confidence_rate: 0,
                 studentAnswer: answers,
-                set:set
+                set: set
             }];
 
             request.data.roll_no = quizPageMetadata.roll_no;
@@ -947,7 +950,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             request.data.answer_metadata = quizPageMetadata.answer_metadata;
             console.log(request)
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-            console.log("quiz?",fetchQuizDataResponse)
+            console.log("quiz?", fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
                 throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
@@ -974,7 +977,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                             url: quizPageMetadata.answer_metadata[0].url,
                             confidence_rate: 0,
                             studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer,
-                            set:quizPageMetadata.answer_metadata[0].set
+                            set: quizPageMetadata.answer_metadata[0].set
                         });
                     } else {
                         await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
