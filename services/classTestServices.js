@@ -65,6 +65,9 @@ exports.startEvaluationProcess = async (request) => {
         let classTest = classTestRes.Items[0];
         const studentMetaRes = await testResultRepository.fetchStudentresultMetadata2(request)
         console.log("STUDENT METADATA : ", studentMetaRes);
+        if (studentMetaRes.Items.length === 0) {
+            throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
+        }
             request.data.question_paper_id = classTest.question_paper_id;
             const questionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request)
             console.log("QUESTION PAPER : ", questionPaperRes.Items);
