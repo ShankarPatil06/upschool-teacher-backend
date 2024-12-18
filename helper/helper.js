@@ -545,12 +545,13 @@ exports.getMarksDetailsFormat = async (secAndQues) => {
                     );
                 })
 
-                finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                // finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                finalDetials.push( ...questionArr );
                 i++;
                 secLoop(i);
             }
             else {
-                resolve(finalDetials);
+                resolve({qa_details : finalDetials});
             }
         }
         secLoop(0)
