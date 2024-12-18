@@ -712,7 +712,6 @@ exports.startQuizEvaluationProcess = async (request) => {
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
                 ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
-            console.log("userPrompt - ", userPrompt);
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
