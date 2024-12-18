@@ -122,9 +122,7 @@ async function convertImageToBase64(imageUrl) {
 
   const extractTextAndEquations = async (imageUrl ,predictiveText ) => {
     try {
-
       const base64Image = await convertImageToBase64(imageUrl);
-  
       if (base64Image) {
         let response ;
         if( predictiveText && predictiveText === 'Yes')
@@ -136,7 +134,7 @@ async function convertImageToBase64(imageUrl) {
                 role: 'user',
                 content: [
                   // { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -152,7 +150,7 @@ async function convertImageToBase64(imageUrl) {
                 role: 'user',
                 content: [
                   // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number.' },
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -272,7 +270,7 @@ async function convertImageToBase64(imageUrl) {
       const { Key } = request.data;
       const imageUrl = await s3Services.getS3SignedUrl(Key);
       // const imageUrl = await s3Services.getS3SignedUrl("quiz_uploads/c2ddd828-ab47-5a7a-9128-9243f107f187/student_answered_sheets/5e7af638-6523-5cf6-844b-f68b03b1041b.png");
-      // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/21285864-6e00-5562-a19f-b5166d6393a0/student_answered_sheets/66d3e452-5341-5e38-9199-faf443fa5f29.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241206%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241206T141537Z&X-Amz-Expires=600&X-Amz-Signature=c605b8ee1d23f91ac44bfca9c197b050fd56ec20eea42472ab087c5bc1b31ce9&X-Amz-SignedHeaders=host";
+      // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/144568c4-5cb6-5852-96a9-df46756f233f/student_answered_sheets/e9e38967-6113-4ebd-9f39-ec22010c9e50.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241213%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241213T042820Z&X-Amz-Expires=600&X-Amz-Signature=8040c9f039e230c5324ef262bac0c0ab0a75d920777201fcd29c0d8b3b12126f&X-Amz-SignedHeaders=host";
       
         console.log("IMAGE URL",imageUrl)
   
@@ -280,7 +278,9 @@ async function convertImageToBase64(imageUrl) {
     //   const imageUrl = request.data.url; // Replace with your image URL
   
     const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+    // console.log("type",schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
       const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
+
       
       console.log('Analysis result:', response);
       return response;

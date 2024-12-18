@@ -545,12 +545,13 @@ exports.getMarksDetailsFormat = async (secAndQues) => {
                     );
                 })
 
-                finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                // finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                finalDetials.push( ...questionArr );
                 i++;
                 secLoop(i);
             }
             else {
-                resolve(finalDetials);
+                resolve({qa_details : finalDetials});
             }
         }
         secLoop(0)
@@ -891,7 +892,7 @@ exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDup
                          
                       }else{
 
-                        resolve({questions_list, randomDupCheck, quiz_duration}); 
+                        resolve({questions_list, randomDupCheck, quiz_duration,group_list}); 
     
                       }
                   }; 
@@ -1229,7 +1230,7 @@ exports.formatDate =(isoString) => {
       else if (line.includes('Subject Name')) processLine(line, "Subject Name");
       else if (line.includes('Test ID')) processLine(line, "Test ID");
       else if (line.includes('Roll No')) processLine(line, "Roll No");
-       else if (line.includes('Page No')) {
+       else if (line.includes('Page')) {
         const match = line.match(/Page No: (\d+)\/\d+/);
         if (match) {
           formattedLines.push({
