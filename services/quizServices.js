@@ -676,8 +676,10 @@ exports.startQuizEvaluationProcess = async (request) => {
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
 
+        console.log("setsMarkFormat - ",setsMarkFormat);
+
+        let i = 0;
         for (let studentMarkDetail of studentMetaRes.Items) {
-            let i = 0;
             const studentData = studentMetaRes.Items[i++];
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 
@@ -708,9 +710,8 @@ exports.startQuizEvaluationProcess = async (request) => {
             const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. Mention only score(like 100 )even question number not needed and dont consider html and css which are provided in answer.`;
+                ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
-            // console.log("userPrompt - ", userPrompt);
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
@@ -730,7 +731,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             let totalExpectedMarks = 0;
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
-                console.log("type", questionAnswerPairs[index].question_type)
+                // console.log("type", questionAnswerPairs[index].question_type)
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
                     const range = 100 / Number(questionAnswerPairs[index].marks)
@@ -738,9 +739,10 @@ exports.startQuizEvaluationProcess = async (request) => {
                     else {
                         for (let i = 1; i <= questionAnswerPairs[index].marks; i++) {
                             if (scores[index] <= i * range) {
-                                console.log("questiondesc - ",scores[index], i);
+                                // console.log("questiondesc - ",scores[index], i);
                                 mark.obtained_marks = i;
                                 totalMarks += i;
+                                totalMarks -= (i-1);
                                 break;
                             }
                         }
@@ -748,7 +750,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 }
                 else {
                     if (scores[index] > 80) {
-                        console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
+                        // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         totalMarks += questionAnswerPairs[index].marks;
                     }
@@ -757,7 +759,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     }
                 }
 
-                console.log("scores[index] - ", scores[index]);
+                // console.log("scores[index] - ", scores[index]);
 
                 answerCompareArray.push({
                     question_id: questionAnswerPairs[index].question_id,
@@ -774,11 +776,11 @@ exports.startQuizEvaluationProcess = async (request) => {
             studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
         }
 
-        console.log("Answer Comparison Details: ", answerCompareArray);
+        // console.log("Answer Comparison Details: ", answerCompareArray);
 
         const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage);
 
-        console.log("markAssignRes - ", markAssignRes);
+        // console.log("markAssignRes - ", markAssignRes);
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
         return { status: 200 };
