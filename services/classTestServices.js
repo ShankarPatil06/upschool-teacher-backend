@@ -153,19 +153,21 @@ exports.startEvaluationProcess = async (request) => {
         const marksFormat = await  exports.assigningMarks(studentMetaRes.Items, questionPaperRes.Items[0], questionDataRes)
 
         // Process each student metadata
-        console.log("----------------",marksFormat);
+        // console.log("----------------",marksFormat);
 
-        console.log("-----==================== ",studentMetaRes.Items.length); 
+        // console.log("-----==================== ",studentMetaRes.Items.length); 
         let i=0;
         for (let studentMarkDetail of studentMetaRes.Items) {
-            console.log("studentMarkDetail - ",studentMarkDetail);
+            // console.log("studentMarkDetail - ",studentMarkDetail.marks_details);
+            if(!studentMarkDetail.marks_details)
+            studentMarkDetail.marks_details = [];
+            studentMarkDetail.marks_details = [marksFormat];
             const marksToUpdate = marksFormat.qa_details;
             // const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
             const getAnswerByQuestionNumber = ( questionNumber) => {
                 for (const metadata of studentMarkDetail.answer_metadata) {
                     for (const answerObj of metadata.studentAnswer) {
                         const normalizedDatasetQuestion = Number(answerObj.question.replace(/\./g, ""));
-                        console.log("normalizedDatasetQuestion - ",normalizedDatasetQuestion);
                         if (questionNumber === normalizedDatasetQuestion) {
                             // return {
                             //     question: answerObj.question,
@@ -182,7 +184,7 @@ exports.startEvaluationProcess = async (request) => {
             };
 
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
-                const studentAnswer = getAnswerByQuestionNumber(i);
+                const studentAnswer = getAnswerByQuestionNumber(i+1);
                 const correctAnswer = questionDataRes.find((q) => q.question_id === mark.question_id)
                     ?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
@@ -202,7 +204,7 @@ exports.startEvaluationProcess = async (request) => {
             const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content just return similarity scores as numbers without any additional keys or Question Nos.`;
+                ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
@@ -220,6 +222,8 @@ exports.startEvaluationProcess = async (request) => {
             let totalExpectedMarks = 0;
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
+
+                console.log("questionAnswerPairs[index].question_type - ",questionAnswerPairs[index].question_type);
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
@@ -244,6 +248,7 @@ exports.startEvaluationProcess = async (request) => {
                 }
             });
 
+            console.log("studentMarkDetail.marks_details - ",studentMarkDetail.marks_details);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
@@ -270,7 +275,7 @@ exports.assigningMarks = async (studResultData, questionPaper, quesAns) => {
         // Get the final data format
         const markDetails = await helper.getMarksDetailsFormat(questionPaper.questions);
         console.log("STUDENT RESULT STRUCTURE : ", markDetails);
-        studResultData[0].marks_details = [markDetails];
+        // studResultData[0].marks_details = [markDetails];
 
         // Get concatenated answers
         // const overallAns = await helper.concatAnswers(studResultData);
