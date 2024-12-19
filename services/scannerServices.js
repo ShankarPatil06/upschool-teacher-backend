@@ -532,11 +532,11 @@ exports.uploadAnswerSheets2 = async (request) => {
                 if (testResultData.Items.length === 0) {
                     console.log("New Student Record for this test!");
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                    if(insertResponse)
-                    {
+                    // if(insertResponse)
+                    // {
                         return("New Student Record sucessfully created")
-                    }else
-                    {return ("New Student Record Not Added")}
+                    // }else
+                    // {return ("New Student Record Not Added")}
                 } else {
                     console.log("Existing Student Record - Updating metadata");
 
@@ -564,11 +564,11 @@ exports.uploadAnswerSheets2 = async (request) => {
                     console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
 
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    if(updateResponse){
+                    // if(updateResponse){
                         console.log("Image Successfully updated");
-                    }else{
-                        console.log("Image Update Issue");
-                    }
+                    // }else{
+                    //     console.log("Image Update Issue");
+                    // }
                 }
             } else {
                 return(constant.messages.COULDNT_READ_ROLL_NUMBER);
@@ -973,11 +973,11 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 
                 if (fetchQuizResultResponse.Items.length === 0) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-                    if (insertQuizDataResponse) {
+                    // if (insertQuizDataResponse) {
                         return ("New Student sucessfully Inserted in quiz");
-                    } else {
-                        return ("New Student Insert issue in quiz");
-                    }
+                    // } else {
+                    //     return ("New Student Insert issue in quiz");
+                    // }
                     
                 } else {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
@@ -1016,9 +1016,10 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    if(updateQuizDataResponse){
-                    return ("Image Successfully uploaded")}
-                    else{return("error in updating image")}
+                    // if(updateQuizDataResponse){
+                    return ("Image Successfully uploaded")
+                // }
+                    // else{return("error in updating image")}
 
                 }
             } else {
