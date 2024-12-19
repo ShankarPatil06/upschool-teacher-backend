@@ -517,7 +517,7 @@ exports.uploadAnswerSheets2 = async (request) => {
             console.log("Test object:", classTestData);
 
             if (helper.isEmptyObject(classTestData.Item)) {
-                throw new Error(constant.messages.COULDNT_READ_TEST_ID);
+                return(constant.messages.COULDNT_READ_TEST_ID);
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
@@ -563,14 +563,14 @@ exports.uploadAnswerSheets2 = async (request) => {
                     return updateResponse;
                 }
             } else {
-                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+                return(constant.messages.COULDNT_READ_ROLL_NUMBER);
             }
         } else {
-            throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
+            return(constant.messages.COULDNT_READ_PAGE_DETAILS);
         }
     }
     else {
-        throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+        return(constant.messages.COULDNT_EXTRACT_TEXT);
     }
 
 };
@@ -953,7 +953,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             console.log("quiz?", fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
-                throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
+                return(constant.messages.COULDNOT_READ_QUIZ_ID);
             }
 
             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
@@ -1007,15 +1007,15 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 
                 }
             } else {
-                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+                return(constant.messages.COULDNT_READ_ROLL_NUMBER);
             }
         }
-        else { throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
+        else { return(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
 
 
     } else {
         console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-        throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
+        return(constant.messages.UNABLE_TO_EXTRACT_TEXT);
     }
 }
 
