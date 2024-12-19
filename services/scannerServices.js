@@ -517,7 +517,7 @@ exports.uploadAnswerSheets2 = async (request) => {
             console.log("Test object:", classTestData);
 
             if (helper.isEmptyObject(classTestData.Item)) {
-                throw new Error(constant.messages.COULDNT_READ_TEST_ID);
+                return(constant.messages.COULDNT_READ_TEST_ID);
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
@@ -532,7 +532,11 @@ exports.uploadAnswerSheets2 = async (request) => {
                 if (testResultData.Items.length === 0) {
                     console.log("New Student Record for this test!");
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                    return insertResponse;
+                    if(insertResponse)
+                    {
+                        return("New Student Record sucessfully created")
+                    }else
+                    {return ("New Student Record Not Added")}
                 } else {
                     console.log("Existing Student Record - Updating metadata");
 
@@ -560,17 +564,21 @@ exports.uploadAnswerSheets2 = async (request) => {
                     console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
 
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    return updateResponse;
+                    if(updateResponse){
+                        console.log("Image Successfully updated");
+                    }else{
+                        console.log("Image Update Issue");
+                    }
                 }
             } else {
-                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+                return(constant.messages.COULDNT_READ_ROLL_NUMBER);
             }
         } else {
-            throw new Error(constant.messages.COULDNT_READ_PAGE_DETAILS);
+            return(constant.messages.COULDNT_READ_PAGE_DETAILS);
         }
     }
     else {
-        throw new Error(constant.messages.COULDNT_EXTRACT_TEXT);
+        return(constant.messages.COULDNT_EXTRACT_TEXT);
     }
 
 };
@@ -953,9 +961,9 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             console.log("quiz?", fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
-                throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
+                return(constant.messages.COULDNOT_READ_QUIZ_ID);
             }
-
+            console.log(request.data.roll_no)
             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
             console.log("fetchStudentDataResponse - ", fetchStudentDataResponse);
             if (fetchStudentDataResponse.Items.length > 0) {
@@ -965,7 +973,12 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 
                 if (fetchQuizResultResponse.Items.length === 0) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-                    return insertQuizDataResponse;
+                    if (insertQuizDataResponse) {
+                        return ("New Student sucessfully Inserted in quiz");
+                    } else {
+                        return ("New Student Insert issue in quiz");
+                    }
+                    
                 } else {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
@@ -1003,19 +1016,21 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    return updateQuizDataResponse;
+                    if(updateQuizDataResponse){
+                    return ("Image Successfully uploaded")}
+                    else{return("error in updating image")}
 
                 }
             } else {
-                throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
+                return(constant.messages.COULDNT_READ_ROLL_NUMBER);
             }
         }
-        else { throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
+        else { return(constant.messages.UNABLE_TO_READ_PAGE_DETAILS); }
 
 
     } else {
         console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-        throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
+        return(constant.messages.UNABLE_TO_EXTRACT_TEXT);
     }
 }
 
