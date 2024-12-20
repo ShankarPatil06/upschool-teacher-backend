@@ -502,7 +502,7 @@ exports.uploadAnswerSheets2 = async (request) => {
         if (pageNo && testId && rollNo) {
             pageMetadata = {
                 class_test_id: testId,
-                roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase(),
+                roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim(),
                 answer_metadata: [{
                     page_no: pageNo,
                     url: request.data.Key,
@@ -532,11 +532,12 @@ exports.uploadAnswerSheets2 = async (request) => {
                 if (testResultData.Items.length === 0) {
                     console.log("New Student Record for this test!");
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                    // if(insertResponse)
-                    // {
+                    console.log("insertResponse - " ,insertResponse);
+                    if(insertResponse.$metadata.httpStatusCode  === 200)
+                    {
                         return("New Student Record sucessfully created")
-                    // }else
-                    // {return ("New Student Record Not Added")}
+                    }else
+                    {return ("New Student Record Not Added")}
                 } else {
                     console.log("Existing Student Record - Updating metadata");
 
@@ -564,11 +565,13 @@ exports.uploadAnswerSheets2 = async (request) => {
                     console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
 
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    // if(updateResponse){
+                    console.log("updateResponse - ",updateResponse);
+                    
+                    if(updateResponse.$metadata.httpStatusCode === 200 ){
                         console.log("Image Successfully updated");
-                    // }else{
-                    //     console.log("Image Update Issue");
-                    // }
+                    }else{
+                        console.log("Image Update Issue");
+                    }
                 }
             } else {
                 return(constant.messages.COULDNT_READ_ROLL_NUMBER);
@@ -940,8 +943,8 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
-            // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo;
+            // quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim().toLowerCase();
+            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim();
             // quizPageMetadata.roll_no = rollNo;
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
@@ -973,11 +976,11 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 
                 if (fetchQuizResultResponse.Items.length === 0) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-                    // if (insertQuizDataResponse) {
+                    if (insertQuizDataResponse.$metadata.httpStatusCode === 200) {
                         return ("New Student sucessfully Inserted in quiz");
-                    // } else {
-                    //     return ("New Student Insert issue in quiz");
-                    // }
+                    } else {
+                        return ("New Student Insert issue in quiz");
+                    }s
                     
                 } else {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
@@ -1016,10 +1019,10 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-                    // if(updateQuizDataResponse){
+                    if(updateQuizDataResponse.$metadata.httpStatusCode === 200){
                     return ("Image Successfully uploaded")
-                // }
-                    // else{return("error in updating image")}
+                }
+                    else{return("error in updating image")}
 
                 }
             } else {
