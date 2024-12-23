@@ -277,9 +277,17 @@ async function convertImageToBase64(imageUrl) {
       // For testing, you can pass a hardcoded URL to extract text and equations
     //   const imageUrl = request.data.url; // Replace with your image URL
   
-    const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
-    // console.log("type",schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
-      const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
+    // const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+    // // console.log("type",schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
+    //   const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
+    const schoolInfoPromise = schoolRepository.getSchoolDetailsById2(request);
+const responsePromise = schoolInfoPromise.then(schoolInfo => 
+  extractTextAndEquations(imageUrl, schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
+);
+
+// Wait for both promises to resolve
+const schoolInfo = await schoolInfoPromise;
+const response = await responsePromise;
 
       
       console.log('Analysis result:', response);
