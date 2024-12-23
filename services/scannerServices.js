@@ -535,7 +535,7 @@ exports.uploadAnswerSheets2 = async (request) => {
                     console.log("insertResponse - " ,insertResponse);
                     if(insertResponse.$metadata.httpStatusCode  === 200)
                     {
-                        return("New Student Record sucessfully created")
+                        return("Image Uploaded successfully")
                     }else
                     {return ("New Student Record Not Added")}
                 } else {
@@ -567,7 +567,7 @@ exports.uploadAnswerSheets2 = async (request) => {
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
                     console.log("updateResponse - ",updateResponse);
                     
-                    if(updateResponse.$metadata.httpStatusCode === 200 ){
+                    if(updateResponse){
                         console.log("Image Successfully updated");
                     }else{
                         console.log("Image Update Issue");
@@ -977,7 +977,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                 if (fetchQuizResultResponse.Items.length === 0) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
                     if (insertQuizDataResponse.$metadata.httpStatusCode === 200) {
-                        return ("New Student sucessfully Inserted in quiz");
+                        return ("Image Uploaded successfully");
                     } else {
                         return ("New Student Insert issue in quiz");
                     }s
