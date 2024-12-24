@@ -185,11 +185,29 @@ exports.startEvaluationProcess = async (request) => {
 
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
                 const studentAnswer = getAnswerByQuestionNumber(i+1);
-                const correctAnswer = questionDataRes.find((q) => q.question_id === mark.question_id)
-                    ?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
+                // const correctAnswer = questionDataRes.find((q) => q.question_id === mark.question_id)
+                //     ?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
+                let correctAnswer = "";
+
+const question = questionDataRes.find(
+    (q) => q.question_id === mark.question_id
+);
+
+if (question) {
+    if (question.question_type === "Descriptive") {
+        correctAnswer = question.answers_of_question
+            .map((ans) => ans.answer_content) // Extract all answer_content
+            .join(" ");
+            console.log("DESCRIPTIKJKJN",correctAnswer)
+    } else if (question.question_type === "Objective") {
+        correctAnswer = question.answers_of_question.find(
+            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+        )?.answer_content || ""; // Example: Default or custom fallback
+    } 
+}
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
-
+                console.log("correct answers:::",correctAnswer)
                 return {
                     question_id: mark.question_id,
                     studentAnswer: studentAnswer,
@@ -214,7 +232,7 @@ exports.startEvaluationProcess = async (request) => {
                 ],
             });
 
-            console.log("response - ", response.choices[0].message);
+            console.log("response - ",userPrompt, response.choices[0].message);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
 
