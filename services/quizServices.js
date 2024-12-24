@@ -692,10 +692,24 @@ exports.startQuizEvaluationProcess = async (request) => {
 
                 const studentAnswer = allStudentAnswers[i]?.answer;
 
-                const correctAnswer = questionDataRes.find(
-                    (q) => q.question_id === mark.question_id
-                )?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
+                let correctAnswer = "";
 
+const question = questionDataRes.find(
+    (q) => q.question_id === mark.question_id
+);
+
+if (question) {
+    if (question.question_type === "Descriptive") {
+        correctAnswer = question.answers_of_question
+            .map((ans) => ans.answer_content) // Extract all answer_content
+            .join(" ");
+            console.log("DESCRIPTIKJKJN",correctAnswer)
+    } else if (question.question_type === "Objective") {
+        correctAnswer = question.answers_of_question.find(
+            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+        )?.answer_content || ""; // Example: Default or custom fallback
+    } 
+}
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 return {
@@ -706,6 +720,8 @@ exports.startQuizEvaluationProcess = async (request) => {
                     question_type: type
                 };
             });
+
+            console.log("correct answers:::",correctAnswer)
 
             const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
                 questionAnswerPairs.map(
