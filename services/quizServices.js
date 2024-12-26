@@ -224,10 +224,9 @@ exports.viewQuizQuestionPaper = async (request) => {
             projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
         };
         const questionIds = fetchBulkCatReq.IdArray.map((val) => ({ question_id: val }));
-        const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "OR", TableName: fetchBulkCatReq.TableName });
-
+        const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
+        console.log("LENGTh",questionIds.length,fetchQuestionsRes.length)
         const questionsRes = await exports.setQuestionPaperView(questionIDs, fetchQuestionsRes);
-
         // return { Items: questionsRes ,predictive_evaluation : schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation};
         return { Items: questionsRes };
 
@@ -721,7 +720,7 @@ if (question) {
                 };
             });
 
-            console.log("correct answers:::",correctAnswer)
+            // console.log("correct answers:::",correctAnswer)
 
             const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
                 questionAnswerPairs.map(
