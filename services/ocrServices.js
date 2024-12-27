@@ -134,7 +134,9 @@ async function convertImageToBase64(imageUrl) {
                 role: 'user',
                 content: [
                   // { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+                  
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },//uncomment this
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Read the page number as Page No . Correct any spelling or grammar mistakes, and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>). For unclear handwriting, provide multiple possible interpretations of ambiguous words or phrases, presenting them in parentheses (e.g., word1/word2). Avoid extracting content that is scratched, scribbled over, or manually crossed out, as it should not be considered part of the student intended response. Ensure the output balances predictive assistance with accuracy.' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
@@ -150,7 +152,10 @@ async function convertImageToBase64(imageUrl) {
                 role: 'user',
                 content: [
                   // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
-                  { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No' },
+
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No' },//uncomment this
+
+                  { type: 'text', text: 'Extract text, images, and equations from the image. Read the page number as Page No. Provide multiple possible interpretations for ambiguous words or phrases, presenting them in parentheses (e.g., word1/word2), to assist evaluators in selecting the appropriate option. Avoid extracting content that is scratched, scribbled over, or manually crossed out, as it should not be considered part of the student intended response. Focus on precise extraction without applying predictive corrections, but ensure basic handwriting misinterpretations are minimized.' },
                   { type: 'image_url', image_url: { url: base64Image } },
                 ],
               },
