@@ -703,12 +703,14 @@ if (question) {
             .map((ans) => ans.answer_content) // Extract all answer_content
             .join(" ");
             console.log("DESCRIPTIKJKJN",correctAnswer)
-    } else if (question.question_type === "Objective") {
+    } else {
         correctAnswer = question.answers_of_question.find(
             (ans) => ans.answer_display === "Yes" || !ans.answer_display
         )?.answer_content || ""; // Example: Default or custom fallback
-    } 
+    }
+     
 }
+console.log("correct answers:::",correctAnswer)
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 return {
