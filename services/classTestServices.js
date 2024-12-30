@@ -224,10 +224,10 @@ if (question) {
             //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
             //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
-            const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each. Ignore HTML, CSS, and any unrelated technical syntax when comparing. Focus on semantic similarity and factual correctness.\n\n` +
+            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional text, labels, or keys'.`;
+                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or keys.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
