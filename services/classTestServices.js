@@ -196,13 +196,25 @@ const question = questionDataRes.find(
 if (question) {
     if (question.question_type === "Descriptive") {
         correctAnswer = question.answers_of_question
+            .filter((ans) => ans.answer_weightage > 0)
             .map((ans) => ans.answer_content) // Extract all answer_content
             .join(" ");
             console.log("DESCRIPTIKJKJN",correctAnswer)
-    } else  {
-        correctAnswer = question.answers_of_question.find(
+    } else if (question.question_type === "Objective") {
+        const index = question.answers_of_question.findIndex(
             (ans) => ans.answer_display === "Yes" || !ans.answer_display
-        )?.answer_content || ""; // Example: Default or custom fallback
+        );
+        const indexLetter = String.fromCharCode(97 + index);
+         correctAnswer = index !== -1 
+    ? `${question.answers_of_question[index].answer_content} or ${indexLetter}` 
+    : "";
+    } else  if (question.question_type === "Subjective"){
+        correctAnswer = question.answers_of_question
+        .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+        .map((ans) => ans.answer_content)               // Extract the answer_content
+        .join(" ");                                     // Join the answer contents into a single string
+    
+    console.log(correctAnswer);
     } 
 }
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
