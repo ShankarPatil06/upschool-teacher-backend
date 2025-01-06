@@ -1295,7 +1295,7 @@ exports.extractAnswersFromInput = async (input) => {
   
     console.log("Extracted answers:", answers);
     
-    return { answers };
+    return answers;
   };
   
   
