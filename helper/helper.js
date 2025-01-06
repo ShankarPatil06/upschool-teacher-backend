@@ -1243,12 +1243,43 @@ exports.formatDate =(isoString) => {
   
     return formattedLines;
   };
-  exports.extractAnswersFromInput = async (input) => {
+//   exports.extractAnswersFromInput = async (input) => {
+//     // Split the input by newline
+//     let lines = input.split('\n');
+    
+//     // Array to store the extracted question-answer pairs
+//     let answers = [];
+    
+//     // Iterate over each line and check for answer format
+//     lines.forEach((line) => {
+//       // Trim the line to remove extra spaces
+//       line = line.trim();
+      
+//       // Check if the line starts with a number followed by 'Ans:'
+//       const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
+      
+//       if (match) {
+//         // Extract question number and the corresponding answer
+//         const question = match[1] + '.'; // e.g., "2."
+//         const answer = match[2]; // e.g., "one"
+        
+//         // Push the question-answer pair to the array
+//         answers.push({ question, answer });
+//       }
+//     });
+    
+//     return answers;
+//   }
+
+exports.extractAnswersFromInput = async (input) => {
     // Split the input by newline
     let lines = input.split('\n');
     
     // Array to store the extracted question-answer pairs
     let answers = [];
+    
+    // Variable to store the multi-line answer if needed
+    let currentAnswer = '';
     
     // Iterate over each line and check for answer format
     lines.forEach((line) => {
@@ -1256,17 +1287,31 @@ exports.formatDate =(isoString) => {
       line = line.trim();
       
       // Check if the line starts with a number followed by 'Ans:'
-      const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
+      const match = line.match(/^(\d+)\.\s*Ans:(.*)$/);
       
       if (match) {
+        // If there's a current answer being accumulated, store it
+        if (currentAnswer) {
+          answers.push({ question: currentQuestion, answer: currentAnswer.trim() });
+        }
+  
         // Extract question number and the corresponding answer
-        const question = match[1] + '.'; // e.g., "2."
-        const answer = match[2]; // e.g., "one"
+        const question = match[1] + '.'; // e.g., "7."
+        currentAnswer = match[2].trim(); // Start accumulating the answer text
         
-        // Push the question-answer pair to the array
-        answers.push({ question, answer });
+        // Store the current question for the next answer
+        currentQuestion = question;
+      } else if (currentAnswer) {
+        // If it's a continuation of a multi-line answer, add to the current answer
+        currentAnswer += '\n' + line.trim();
       }
     });
+  
+    // Push the last accumulated answer if it exists
+    if (currentAnswer) {
+      answers.push({ question: currentQuestion, answer: currentAnswer.trim() });
+    }
     
     return answers;
-  }
+  };
+  

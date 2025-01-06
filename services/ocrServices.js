@@ -128,7 +128,8 @@ async function convertImageToBase64(imageUrl) {
         if( predictiveText && predictiveText === 'Yes')
         {
           response = await openai.chat.completions.create({
-            model: 'gpt-4o',  
+            model: 'gpt-4o',
+            temperature:0,  
             messages: [
               {
                 role: 'user',
@@ -146,7 +147,8 @@ async function convertImageToBase64(imageUrl) {
         else
         {
           response = await openai.chat.completions.create({
-            model: 'gpt-4o',  
+            model: 'gpt-4o',
+            temperature:0,  
             messages: [
               {
                 role: 'user',
