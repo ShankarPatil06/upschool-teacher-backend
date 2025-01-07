@@ -142,7 +142,8 @@ exports.startEvaluationProcess = async (request) => {
             projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type", "marks"],
         };
         // const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
-        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        // const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
 
         console.log(questionDataRes);
         if (questionDataRes.length === 0) {
