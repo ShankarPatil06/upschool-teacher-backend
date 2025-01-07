@@ -1271,32 +1271,89 @@ exports.formatDate =(isoString) => {
 //     return answers;
 //   }
 
-exports.extractAnswersFromInput = async (input) => {
+
+exports.extractAnswersFromInput1 = async (input) => {
+    console.log({input});
     
+    // Split the input by question numbers followed by '. Ans:'
     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
     
     let answers = [];
     
+    // Remove the first element which is before the first question
     sections.shift();
     
+    // Iterate over each section to process the answers
     sections.forEach((section, index) => {
       let trimmedSection = section.trim();
       
-      if (index < 6) {
-        let questionNumber = (index + 1) + '.';
-        let answer = trimmedSection.split("\n")[0].trim();
-        answers.push({ question: questionNumber, answer: answer });
-      } else {
-        let questionNumber = (index + 1) + '.';
-        let answer = trimmedSection;
-        answers.push({ question: questionNumber, answer: answer });
-      }
+      let questionNumber = (index + 1) + '.';
+      let answer = trimmedSection;
+      
+      // Push the full answer content for each question
+      answers.push({ question: questionNumber, answer: answer });
     });
-  
+    
     console.log("Extracted answers:", answers);
     
     return answers;
   };
+  exports.extractAnswersFromInput = async (input) => {
+    console.log({ input });
+  
+    // Split the input by question numbers followed by '. Ans:'
+    let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
+    
+    let answers = [];
+    
+    // Remove the first element which is before the first question
+    sections.shift();
+    
+    // Iterate over each section to process the answers
+    sections.forEach((section, index) => {
+      let trimmedSection = section.trim();
+      
+      let questionNumber = (index + 1) + '.';
+      
+      // Remove line breaks or replace them with a space to make the answer a complete string
+      let answer = trimmedSection.replace(/\n+/g, ' ').trim();
+      
+      // Push the full answer content as a single string for each question
+      answers.push({ question: questionNumber, answer: answer });
+    });
+    
+    console.log("Extracted answers:", answers);
+    
+    return answers;
+  };
+  
+  
+// exports.extractAnswersFromInput = async (input) => {
+//     console.log({input})
+//     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
+    
+//     let answers = [];
+    
+//     sections.shift();
+    
+//     sections.forEach((section, index) => {
+//       let trimmedSection = section.trim();
+      
+//       if (index < 6) {
+//         let questionNumber = (index + 1) + '.';
+//         let answer = trimmedSection.split("\n")[0].trim();
+//         answers.push({ question: questionNumber, answer: answer });
+//       } else {
+//         let questionNumber = (index + 1) + '.';
+//         let answer = trimmedSection;
+//         answers.push({ question: questionNumber, answer: answer });
+//       }
+//     });
+  
+//     console.log("Extracted answers:", answers);
+    
+//     return answers;
+//   };
   
   
   
