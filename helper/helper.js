@@ -1308,12 +1308,22 @@ exports.extractAnswersFromInput1 = async (input) => {
     
     // Remove the first element which is before the first question
     sections.shift();
+
+    let questionMatches = input.match(/\d+\.\s*Ans:/g); // Matches all question numbers followed by "Ans:"
+
+    // If no questions are found, we return empty answers
+    if (!questionMatches) {
+        console.log("No question found.");
+        return [];
+    }
     
     // Iterate over each section to process the answers
     sections.forEach((section, index) => {
       let trimmedSection = section.trim();
       
-      let questionNumber = (index + 1) + '.';
+      // Extract the question number from the questionMatches
+      let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
+
       
       // Remove line breaks or replace them with a space to make the answer a complete string
       let answer = trimmedSection.replace(/\n+/g, ' ').trim();
