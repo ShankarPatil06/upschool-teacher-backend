@@ -670,7 +670,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         };
 
         const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
-        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
 
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
@@ -700,15 +700,27 @@ const question = questionDataRes.find(
 if (question) {
     if (question.question_type === "Descriptive") {
         correctAnswer = question.answers_of_question
+            .filter((ans) => ans.answer_weightage > 0)
             .map((ans) => ans.answer_content) // Extract all answer_content
             .join(" ");
             console.log("DESCRIPTIKJKJN",correctAnswer)
     } else if (question.question_type === "Objective") {
-        correctAnswer = question.answers_of_question.find(
+        const index = question.answers_of_question.findIndex(
             (ans) => ans.answer_display === "Yes" || !ans.answer_display
-        )?.answer_content || ""; // Example: Default or custom fallback
+        );
+        const indexLetter = String.fromCharCode(97 + index);
+         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
+    console.log("objective",question.answers_of_question,correctAnswer)
+    } else  if (question.question_type === "Subjective"){
+        correctAnswer = question.answers_of_question
+        .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+        .map((ans) => ans.answer_content)               // Extract the answer_content
+        .join(" ");                                     // Join the answer contents into a single string
+    
+    console.log(correctAnswer);
     } 
 }
+console.log("correct answers:::",correctAnswer)
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 return {
@@ -722,10 +734,15 @@ if (question) {
 
             // console.log("correct answers:::",correctAnswer)
 
-            const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
+            // const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
+            //     questionAnswerPairs.map(
+            //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
+            //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
+
+            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
+                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels,keys or question number.Just Similarity Scores in specified format.`;
 
 
             const response = await openai.chat.completions.create({

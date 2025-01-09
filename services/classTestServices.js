@@ -142,7 +142,8 @@ exports.startEvaluationProcess = async (request) => {
             projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type", "marks"],
         };
         // const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
-        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        // const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: questionIds, condition: "AND" });
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
 
         console.log(questionDataRes);
         if (questionDataRes.length === 0) {
@@ -196,18 +197,29 @@ const question = questionDataRes.find(
 if (question) {
     if (question.question_type === "Descriptive") {
         correctAnswer = question.answers_of_question
+            .filter((ans) => ans.answer_weightage > 0)
             .map((ans) => ans.answer_content) // Extract all answer_content
             .join(" ");
             console.log("DESCRIPTIKJKJN",correctAnswer)
     } else if (question.question_type === "Objective") {
-        correctAnswer = question.answers_of_question.find(
+        const index = question.answers_of_question.findIndex(
             (ans) => ans.answer_display === "Yes" || !ans.answer_display
-        )?.answer_content || ""; // Example: Default or custom fallback
+        );
+        const indexLetter = String.fromCharCode(97 + index);
+         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
+    console.log("objective",question.answers_of_question,correctAnswer)
+    } else  if (question.question_type === "Subjective"){
+        correctAnswer = question.answers_of_question
+        .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+        .map((ans) => ans.answer_content)               // Extract the answer_content
+        .join(" ");                                     // Join the answer contents into a single string
+    
+    console.log(correctAnswer);
     } 
 }
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
-                console.log("correct answers:::",correctAnswer)
+                // console.log("correct answers:::",correctAnswer)
                 return {
                     question_id: mark.question_id,
                     studentAnswer: studentAnswer,
@@ -219,10 +231,15 @@ if (question) {
 
             console.log("+++++++++++++++",questionAnswerPairs);
 
-            const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
+            // const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
+            //     questionAnswerPairs.map(
+            //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
+            //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
+
+            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
                 questionAnswerPairs.map(
                     (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
+                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels,keys or question number.Just Similarity Scores in specified format.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
