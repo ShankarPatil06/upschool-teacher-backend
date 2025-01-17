@@ -416,3 +416,7 @@ functions:
           path: /v1/fetchBlueprintDetailsBasedonId
           method: POST
           cors: true    
+      - http:
+          path: /v1/topAndBottomPerformers
+          method: POST
+          cors: true    
