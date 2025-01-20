@@ -767,7 +767,7 @@ exports.viewClassReportQuestions = async (request) => {
            console.log("mark cal", marksInTotal);
            return count + 1;
         }
-        return count;
+        // return count;
       }, 0);
       question.correctAnswerPercentage =
         totalStudents > 0 ? (correct / totalStudents) * 100 : 0;
