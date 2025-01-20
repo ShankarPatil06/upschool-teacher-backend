@@ -662,7 +662,7 @@ exports.viewClassReportQuestions = async (request) => {
       questionMap[question_id].push(setName);
     }
   }
-
+  // console.log("QUESTIONS",quizData.Item.question_track_details)
   const uniqueArray = [
     ...new Set(Object.values(quizData.Item.question_track_details).flat()),
   ]; //all unique questions
@@ -671,21 +671,26 @@ exports.viewClassReportQuestions = async (request) => {
     question_id: questionId,
     sets: questionMap[questionId],
   }));
+  console.log("UNIQUE",uniqueArray.length)
   const questionIds = uniqueArray.map((item) => item.question_id);
   const conceptIds = uniqueArray.map((item) => item.concept_id);
   const topicIds = uniqueArray.map((item) => item.topic_id);
   //to get question_content and cognitive skillid
-  const questions = await new Promise((resolve, reject) => {
-    questionRepository.fetchBulkQuestionsNameById({ question_id: questionIds }, (err, res) => {
-      if (err) {
-        console.log(err);
-        return reject(err);
-      }
-      resolve(res);
-    });
+  // const questions = await new Promise((resolve, reject) => {
+  //   questionRepository.fetchBulkQuestionsNameById({ question_id: questionIds }, (err, res) => {
+  //     if (err) {
+  //       console.log(err);
+  //       return reject(err);
+  //     }
+  //     resolve(res);
+  //   });
+  // });
+  const questions = await questionRepository.fetchBulkQuestionsNameById2({
+    question_id: questionIds,
   });
+  console.log(questionIds.length,"Questions",questions.length)
   //concept,topic from conceptid,topicid and cognitiveskillid changed to its name and correctansweer
-  const cognitive_id = questions.Items.map((que) => que.cognitive_skill);
+  const cognitive_id = questions.map((que) => que.cognitive_skill);
   console.log({cognitive_id});
   
   const conceptNames =conceptIds.length && (await conceptRepository.fetchBulkConceptsIDName2({unit_Concept_id: conceptIds}));
@@ -700,7 +705,7 @@ exports.viewClassReportQuestions = async (request) => {
   });
   let marksInTotal = 0;
   let possiblemarks = 0;
-  questions.Items.map((question, i) => {
+  questions.map((question, i) => {
     possiblemarks = possiblemarks + question.marks
     question.questionNo = (i + 1)
     question.set = questionSet.find((q) => q.question_id == question.question_id).sets
@@ -738,9 +743,25 @@ exports.viewClassReportQuestions = async (request) => {
             Number(answer.modified_marks) === Number(question.marks))
         ) {
           console.log("mark", Number(answer.modified_marks), Number(answer.obtainedMarks))
-          marksInTotal = String(answer.modified_marks) !== 'N.A.' ? marksInTotal + Number(answer.modified_marks) : marksInTotal + Number(answer.obtainedMarks)
+          marksInTotal =
+            String(answer.obtained_marks) !== "N.A."
+              ? marksInTotal + Number(answer.obtained_marks)
+              : marksInTotal + 0;
           console.log("mark cal", marksInTotal)
           return count + 1;
+        }
+         else{
+           console.log(
+             "missibng mark",
+             Number(answer.modified_marks),
+             Number(answer.obtained_marks)
+           );
+           marksInTotal =
+             String(answer.modified_marks) !== "N.A."
+               ? marksInTotal + Number(answer.modified_marks)
+               : String(answer.obtained_marks) !== "N.A." ? marksInTotal + Number(answer.obtained_marks):marksInTotal +0;
+           console.log("mark cal", marksInTotal);
+           return count + 1;
         }
         return count;
       }, 0);
@@ -755,7 +776,7 @@ exports.viewClassReportQuestions = async (request) => {
     // });
   });
   //cognitive table and difficulty table data
-  const averageData = questions.Items.map((question) => ({
+  const averageData = questions.map((question) => ({
     skill: question.cognitive_skill,
     percentage: question.correctAnswerPercentage,
     level: question.difficulty_level,
@@ -794,7 +815,7 @@ exports.viewClassReportQuestions = async (request) => {
   const pieValue = (marksInTotal / (possiblemarks*totalStudents)) * 100
   console.log(pieValue, marksInTotal,possiblemarks, totalStudents);
 
-  return { questions: questions.Items, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
+  return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
 
 exports.viewClassReportFocusArea = async (request) => {
