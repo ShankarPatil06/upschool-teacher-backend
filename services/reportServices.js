@@ -743,9 +743,25 @@ exports.viewClassReportQuestions = async (request) => {
             Number(answer.modified_marks) === Number(question.marks))
         ) {
           console.log("mark", Number(answer.modified_marks), Number(answer.obtainedMarks))
-          marksInTotal = String(answer.modified_marks) !== 'N.A.' ? marksInTotal + Number(answer.modified_marks) : marksInTotal + Number(answer.obtainedMarks)
+          marksInTotal =
+            String(answer.obtained_marks) !== "N.A."
+              ? marksInTotal + Number(answer.obtained_marks)
+              : marksInTotal + 0;
           console.log("mark cal", marksInTotal)
           return count + 1;
+        }
+         else{
+           console.log(
+             "missibng mark",
+             Number(answer.modified_marks),
+             Number(answer.obtained_marks)
+           );
+           marksInTotal =
+             String(answer.modified_marks) !== "N.A."
+               ? marksInTotal + Number(answer.modified_marks)
+               : String(answer.obtained_marks) !== "N.A." ? marksInTotal + Number(answer.obtained_marks):marksInTotal +0;
+           console.log("mark cal", marksInTotal);
+           return count + 1;
         }
         return count;
       }, 0);

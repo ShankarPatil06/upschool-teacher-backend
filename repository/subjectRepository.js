@@ -65,3 +65,22 @@ exports.getSubjetByIdAndName = function (request, callback) {
         }
     });
 }
+
+exports.getSubjectById3 = async (request) => {
+    try {
+        const params = {
+            TableName: TABLE_NAMES.upschool_subject_table,
+            KeyConditionExpression: "subject_id = :subject_id",
+            ExpressionAttributeValues: {
+                ":subject_id": request.data.subject_id,
+            },
+            ProjectionExpression: "subject_unit_id", 
+        };
+
+        const result = await DATABASE_TABLE2.query(params);
+        return result.Items[0].subject_unit_id;; 
+    } catch (error) {
+        console.error("Error fetching subject unit ID:", error);
+        throw new Error("Failed to fetch subject unit ID.");
+    }
+};
