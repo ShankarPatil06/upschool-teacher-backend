@@ -149,7 +149,7 @@ app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 
 // Student Dashboard
 app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers);
-
+app.post("/v1/needAttention",studentController.needAttention);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

@@ -622,3 +622,32 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 };
 
 
+exports.fetchAllQuizBasedonChapter3 = async (request) => {
+    console.log("request", request);
+    let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":client_class_id": request.data.client_class_id,
+        ":subject_id": request.data.subject_id,
+        ":section_id": request.data.section_id,
+        ":quiz_status": "Active",
+    };
+
+    if (request.data.chapter_id !== undefined && request.data.chapter_id !== "") {
+        expressionAttributeValues[`:chapter_id`] = request.data.chapter_id;
+    }
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_quiz_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterExpression,
+        ExpressionAttributeValues: expressionAttributeValues
+    };
+
+    let result = await DATABASE_TABLE2.query(params);
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+    return sortedItems;
+};

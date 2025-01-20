@@ -42,3 +42,14 @@ exports.topAndBottomPerformers = (req, res, next) => {
     });
 };
 
+exports.needAttention = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.needAttention(request);
+        console.log("Fetch All Need Attention Students Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching need attention students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
