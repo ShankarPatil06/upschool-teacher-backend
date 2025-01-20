@@ -28,3 +28,28 @@ exports.fetchAllStudents = (req, res, next) => {
     });
 };
 
+exports.topAndBottomPerformers = (req, res, next) => {
+    let request = req.body;
+    request["token"] = req.header('Authorization');
+    
+    studentServices.topAndBottomPerformers(request, function (top_and_bottom_performers_err, fetch_top_and_bottom_performers_response) {
+        if (top_and_bottom_performers_err) {
+            res.status(top_and_bottom_performers_err).json(fetch_top_and_bottom_performers_response);
+        } else {
+            console.log("Fetching Top and Bottom Performers Successfull");
+            res.json(fetch_top_and_bottom_performers_response);
+        }
+    });
+};
+
+exports.needAttention = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.needAttention(request);
+        console.log("Fetch All Need Attention Students Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching need attention students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};

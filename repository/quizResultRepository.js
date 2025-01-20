@@ -32,20 +32,20 @@ exports.fetchQuizResultDataOfStudent = function (request, callback) {
 }
 
 exports.fetchQuizResultDataOfStudent2 = async (request) => {
-   
-        const params = {
-            TableName: TABLE_NAMES.upschool_quiz_result,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "quiz_id = :quiz_id AND student_id = :student_id",
-            ExpressionAttributeValues: {
-                ":quiz_id": request.data.quiz_id,
-                ":student_id": request.data.student_id,
-                ":common_id": constant.constValues.common_id
-            }
-        };
 
-       return await DATABASE_TABLE2.query(params);
+    const params = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id AND student_id = :student_id",
+        ExpressionAttributeValues: {
+            ":quiz_id": request.data.quiz_id,
+            ":student_id": request.data.student_id,
+            ":common_id": constant.constValues.common_id
+        }
+    };
+
+    return await DATABASE_TABLE2.query(params);
 };
 
 
@@ -81,24 +81,24 @@ exports.insertQuizDataOfStudent = function (request, callback) {
 }
 
 exports.insertQuizDataOfStudent2 = async (request) => {
- 
-        const insertQuizResultsParams = {
-            TableName: TABLE_NAMES.upschool_quiz_result,
-            Item: {
-                "result_id": helper.getRandomString(),
-                "student_id": request.data.student_id,
-                "quiz_id": request.data.quiz_id,
-                "answer_metadata": request.data.answer_metadata,
-                "common_id": constant.constValues.common_id,
-                "evaluated": "No",
-                "quiz_set": request.data.quiz_set,
-                "created_ts": helper.getCurrentTimestamp(),
-                "updated_ts": helper.getCurrentTimestamp(),
-            }
-        };
 
-        const result = await DATABASE_TABLE2.putItem(insertQuizResultsParams);
-        return result;
+    const insertQuizResultsParams = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+        Item: {
+            "result_id": helper.getRandomString(),
+            "student_id": request.data.student_id,
+            "quiz_id": request.data.quiz_id,
+            "answer_metadata": request.data.answer_metadata,
+            "common_id": constant.constValues.common_id,
+            "evaluated": "No",
+            "quiz_set": request.data.quiz_set,
+            "created_ts": helper.getCurrentTimestamp(),
+            "updated_ts": helper.getCurrentTimestamp(),
+        }
+    };
+
+    const result = await DATABASE_TABLE2.putItem(insertQuizResultsParams);
+    return result;
 
 };
 
@@ -138,22 +138,22 @@ exports.updateQuizDataOfStudent = function (request, callback) {
 
 exports.updateQuizDataOfStudent2 = async (request) => {
 
-        const updateParams = {
-            TableName: TABLE_NAMES.upschool_quiz_result,
-            Key: {
-                "result_id": request.data.result_id
-            },
-            UpdateExpression: "SET answer_metadata = :answer_metadata, updated_ts = :updated_ts, evaluated = :evaluated, quiz_set = :quiz_set",
-            ExpressionAttributeValues: {
-                ":answer_metadata": request.data.answer_metadata,
-                ":evaluated": "No",
-                ":updated_ts": helper.getCurrentTimestamp(),
-                ":quiz_set": request.data.quiz_set
-            },
-        };
+    const updateParams = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+        Key: {
+            "result_id": request.data.result_id
+        },
+        UpdateExpression: "SET answer_metadata = :answer_metadata, updated_ts = :updated_ts, evaluated = :evaluated, quiz_set = :quiz_set",
+        ExpressionAttributeValues: {
+            ":answer_metadata": request.data.answer_metadata,
+            ":evaluated": "No",
+            ":updated_ts": helper.getCurrentTimestamp(),
+            ":quiz_set": request.data.quiz_set
+        },
+    };
 
-        const result = await DATABASE_TABLE2.updateService(updateParams);
-        return result;
+    const result = await DATABASE_TABLE2.updateService(updateParams);
+    return result;
 
 };
 
@@ -234,14 +234,14 @@ exports.fetchStudentQuiRresultMetadata = function (request, callback) {
 exports.fetchStudentQuiRresultMetadata2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
-                ExpressionAttributeValues: {
-                    ":quiz_id": request.data.quiz_id,
-                    ":evaluated": "No",
-                    ":common_id": constant.constValues.common_id
-                }
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
+        ExpressionAttributeValues: {
+            ":quiz_id": request.data.quiz_id,
+            ":evaluated": "No",
+            ":common_id": constant.constValues.common_id
+        }
     };
 
     return await DATABASE_TABLE2.query(params);
@@ -332,8 +332,8 @@ exports.fetchBulkQuizResultsByID = function (request, callback) {
     });
 }
 exports.fetchBulkQuizResultsByID3 = async (request) => {
-     const fromatedRequest = await helper.getDataByFilterKey(request);   
-    console.log("testrequest",request);
+    const fromatedRequest = await helper.getDataByFilterKey(request);
+    console.log("testrequest", request);
     const params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
         IndexName: Indexes.common_id_index,
@@ -342,12 +342,12 @@ exports.fetchBulkQuizResultsByID3 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
     };
 
-    console.log({params});   
+    console.log({ params });
 
     try {
         const result = await DATABASE_TABLE2.query(params);
-        console.log({result});
-        
+        console.log({ result });
+
         return result.Items;
     } catch (error) {
         console.error(`Error fetching quiz results:`, error);
@@ -374,6 +374,23 @@ exports.fetchBulkQuizResultsByID2 = async (request) => {
         ExpressionAttributeValues: expressionAttributeValues,
     };
 
-        const result = await DATABASE_TABLE2.query(params);
-        return result.Items;
+    const result = await DATABASE_TABLE2.query(params);
+    return result.Items;
 };
+
+exports.fetchStudentQuiRresultMetadata3 = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+                IndexName: Indexes.common_id_index,
+                KeyConditionExpression: "common_id = :common_id",
+                FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
+                ExpressionAttributeValues: {
+                    ":quiz_id": request.quiz_id,
+                    ":evaluated": "Yes",
+                    ":common_id": constant.constValues.common_id
+                }
+    };
+
+    let result= await DATABASE_TABLE2.query(params);
+    return result.Items;
+}

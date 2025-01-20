@@ -195,6 +195,28 @@ exports.fetchStudentresultMetadata2 = async (request) => {
     return data;
 }
 
+exports.fetchStudentresultMetadata3 = async (request) => {
+    const class_test_id = [...new Set(request.class_test_id)]; // Remove duplicates
+    const common_id = constant.constValues.common_id;
+
+    // Create filter expression for multiple class_test_id
+    const filterExpression = class_test_id.map((_, index) => `class_test_id = :class_test_id${index}`).join(" OR ");
+    const expressionAttributeValues = class_test_id.reduce((acc, testId, index) => {
+        acc[`:class_test_id${index}`] = testId;
+        return acc;
+    }, { ":common_id": common_id });
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_test_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterExpression,
+        ExpressionAttributeValues: expressionAttributeValues,
+    };
+
+    const result = await DATABASE_TABLE2.query(params);
+    return result.Items;
+};
 
 exports.changeTestEvaluationStatus = function (request, callback) {
 
