@@ -596,6 +596,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
     const questions = await questionRepository.fetchBulkQuestionsNameById2({
       question_id: questionIds,
     });
+console.log({ questions });
 
     const topicNames = await topicRepository.fetchBulkTopicsIDName2({
       unit_Topic_id: topicIds,
@@ -621,8 +622,11 @@ exports.viewAnalysisIndividualReport = async (request) => {
         que.cognitive_skill = cognitive_skill?.cognitive_name || "";
 
         const question = studentsDataRes.Items[0].marks_details[0].qa_details.find((val) => val.question_id == que.question_id);
-        que.obtained_marks = question.modified_marks ? question.modified_marks : question.obtained_marks;
+        que.obtained_marks = 
+          question.modified_marks !== "N.A." ? question.modified_marks : question.obtained_marks !== "N.A." ? question.obtained_marks : 0;
 
+        console.log(que.obtained_marks);
+        
         await Promise.all(
           que.answers_of_question.map(async (ans) => {
             if (
@@ -763,7 +767,7 @@ exports.viewClassReportQuestions = async (request) => {
            console.log("mark cal", marksInTotal);
            return count + 1;
         }
-        return count;
+        // return count;
       }, 0);
       question.correctAnswerPercentage =
         totalStudents > 0 ? (correct / totalStudents) * 100 : 0;
