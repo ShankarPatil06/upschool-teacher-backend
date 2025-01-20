@@ -147,6 +147,8 @@ app.post("/v1/getActionsAndRecommendations",reportController.getActionsAndRecomm
 app.post("/v1/getActionsAndRecommendationDetail",reportController.getActionsAndRecommendationDetail);
 app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 
+//student dashboard
+app.post("/v1/needAttention",studentController.needAttention);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

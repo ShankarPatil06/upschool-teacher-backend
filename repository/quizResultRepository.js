@@ -377,3 +377,20 @@ exports.fetchBulkQuizResultsByID2 = async (request) => {
         const result = await DATABASE_TABLE2.query(params);
         return result.Items;
 };
+
+exports.fetchStudentQuiRresultMetadata3 = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+                IndexName: Indexes.common_id_index,
+                KeyConditionExpression: "common_id = :common_id",
+                FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
+                ExpressionAttributeValues: {
+                    ":quiz_id": request.quiz_id,
+                    ":evaluated": "Yes",
+                    ":common_id": constant.constValues.common_id
+                }
+    };
+
+    let result= await DATABASE_TABLE2.query(params);
+    return result.Items;
+}
