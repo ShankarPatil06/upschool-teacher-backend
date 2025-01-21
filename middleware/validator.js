@@ -72,7 +72,7 @@ exports.validScannerUser = (req, res, next) => {
 
                             let calculateTime = (currentTime - previousJWTTime) / (1000 * 60);
 
-                            if (calculateTime <= 30) {
+                            if (calculateTime <= 120) {
                                 next();
                             } else {
                                 res.status(400).json(constant.messages.SESSION_EXPIRED);
