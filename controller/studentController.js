@@ -53,3 +53,14 @@ exports.needAttention = async (req, res, next) => {
         res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
     }
 };
+exports.studentPerformance = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentPerformance(request);
+        console.log("Fetch studentPerformance Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching studentPerformance students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
