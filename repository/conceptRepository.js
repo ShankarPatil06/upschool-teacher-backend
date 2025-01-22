@@ -289,3 +289,63 @@ exports.fetchConceptDatabasedonQuestionID3 = async function (uniqueQuestionArr) 
     
     return filteredGroups || [];
 };
+
+exports.fetchConceptUsingTopicId = async (request) => {
+    try {
+        if (!Array.isArray(request) || request.length === 0) {
+            throw new Error("Invalid or empty request format. Expected a non-empty array.");
+        }
+
+        const allResults = [];
+
+        for (const topic of request) {
+            if (!topic.topic_concept_id || !Array.isArray(topic.topic_concept_id)) {
+                console.warn("Skipping invalid topic:", topic);
+                continue;
+            }
+
+            if (topic.topic_concept_id.length === 1) {
+                const params = {
+                    TableName: TABLE_NAMES.upschool_concept_blocks_table,
+                    KeyConditionExpression: "concept_id = :concept_id",
+                    ExpressionAttributeValues: {
+                        ":concept_id": topic.topic_concept_id[0],
+                    },
+                    ProjectionExpression: "concept_id, concept_title, display_name,concept_question_id",
+                };
+
+                const result = await DATABASE_TABLE2.query(params);
+                if (result.Items) allResults.push(...result.Items);
+
+            } else if (topic.topic_concept_id.length > 1) {
+                const keys = topic.topic_concept_id.map((id) => ({ concept_id: id }));
+                const batches = [];
+                for (let i = 0; i < keys.length; i += 100) {
+                    batches.push(keys.slice(i, i + 100));
+                }
+
+                for (const batch of batches) {
+                    const params = {
+                        RequestItems: {
+                            [TABLE_NAMES.upschool_concept_blocks_table]: {
+                                Keys: batch,
+                                ProjectionExpression: "concept_id, concept_title, display_name,concept_question_id",
+                            },
+                        },
+                    };
+
+                    const result = await DATABASE_TABLE2.getByObjects(params);
+                    if (result.Responses && result.Responses[TABLE_NAMES.upschool_concept_blocks_table]) {
+                        allResults.push(...result.Responses[TABLE_NAMES.upschool_concept_blocks_table]);
+                    }
+                }
+            }
+        }
+
+        return allResults;
+
+    } catch (error) {
+        console.error("Error in fetchConceptUsingTopicId:", error);
+        throw new Error(`Failed to fetch concepts: ${error.message}`);
+    }
+};

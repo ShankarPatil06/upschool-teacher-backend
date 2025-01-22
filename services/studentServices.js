@@ -1,12 +1,13 @@
 const fs = require("fs");
 const dynamoDbCon = require('../awsConfig');
-const { studentRepository, quizRepository, quizResultRepository, questionRepository, classTestRepository , chapterRepository, subjectRepository, unitRepository  } = require("../repository");
+const { studentRepository, quizRepository, quizResultRepository, questionRepository, classTestRepository, chapterRepository, subjectRepository, unitRepository, classRepository, testQuestionPaperRepository, testResultRepository, topicRepository, conceptRepository, schoolRepository } = require("../repository");
 const commonServices = require("../services/commonServices");
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 const { nextTick } = require("process");
 const { response } = require("express");
 const { fetchStudentresultMetadata3 } = require("../repository/testResultRepository");
+const { get, request } = require("http");
 
 
 exports.fetchAllStudents = function (request, callback) {
@@ -70,20 +71,20 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         }
                     });
                 });
-        
+
                 if (fetch_bulk_questions_response.Items?.length) {
                     totalMarks = fetch_bulk_questions_response.Items.reduce((sum, question) => sum + question.marks, 0);
                 }
-        
+
                 let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
                 if (!singleStudent) continue;
-        
+
                 if (quizType === "preLearning") {
                     studentEntry.preLearning = true;
                 } else if (quizType === "postLearning") {
                     studentEntry.postLearning = true;
                 }
-        
+
                 const student = {
                     student_id: singleStudent.student_id,
                     student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
@@ -92,7 +93,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                     studentEntry: studentEntry,
                     percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
                 };
-        
+
                 if (!studentMap.has(student.student_id)) {
                     studentMap.set(student.student_id, student);
                 } else {
@@ -157,34 +158,302 @@ exports.topAndBottomPerformers = async function (request, callback) {
         callback(error, null);
     }
 };
-
 exports.needAttention = async (request) => {
     try {
-        const subjectUnitID = await subjectRepository.getSubjectById3(request);
-        console.log({ subjectUnitID });
-        // subjectUnitID.forEach(async (unitId) => {
-        //     console.log({ unitId });
+        let needAttention = [];
+        const schoolDetails = await schoolRepository.getSchoolDetailsById2(request)
+        console.log({ schoolDetails: schoolDetails.Items });
+        const pre_quiz_config = schoolDetails.Items[0].pre_quiz_config
+        const post_quiz_config = schoolDetails.Items[0].post_quiz_config
+        const test_config = schoolDetails.Items[0].test_config
 
-            const chapterIDs = await unitRepository.fetchUnitData2({subject_unit_id: subjectUnitID});
-            console.log({ chapterIDs });
-            chapterIDs.forEach(async (chapterUnitId) => {
-                const chapterDetails = await chapterRepository.fetchBulkChaptersIDName2(chapterUnitId);
-                console.log({ chapterDetails });
-                chapterDetails.forEach(async (chapterId) => {
-                    request.data.chapter_id = chapterId.chapter_id;
-                    const quizDetails = await quizRepository.fetchAllQuizBasedonChapter3(request);
-                    const testDetails = await quizRepository.fetchAllQuizBasedonChapter3(request);
-                    console.log({ quizDetails });
-                    quizDetails.forEach(async (element) => {
-                        const quizId = element.quiz_id;
-                        const quizResults = await quizResultRepository.fetchStudentQuiRresultMetadata3({quiz_id: quizId});
-                        
+        const studentData = await studentRepository.getStudentsData2(request)
+        console.log({ studentData });
+
+        const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+        console.log({ testDetails });
+
+        const quizDetails = await quizRepository.fetchAllQuizBasedOnSubject3(request);
+        console.log({ quizDetails });
+
+        const [recentQuiz, recentTest] = await Promise.all([
+            getRecentQuiz(quizDetails),
+            getRecentTest(testDetails)
+        ]);
+        console.log({ recentQuiz, recentTest });
+
+        if (!recentQuiz && !recentTest) {
+            console.log("No recent Quiz or Test found");
+        } else {
+            if (recentQuiz && recentTest) {
+                const quizDate = recentQuiz?.created_ts ? new Date(recentQuiz.created_ts) : new Date("1900-12-18T10:56:11.143Z");
+                const testDate = recentTest?.created_ts ? new Date(recentTest.created_ts) : new Date("1900-12-18T10:56:11.143Z");//new Date(recentTest.created_ts)
+                if (quizDate > testDate) {
+                    // LOGIC FOR QUIZ
+                    request.data['chapter_id'] = recentQuiz.chapter_id
+                    const chapter = await chapterRepository.fetchChapterByID2(request)
+                    const chapterDetails = chapter.Items[0];
+                    const [pretopicDetails, posttopicDetails] = await Promise.all([
+                        topicRepository.fetchPreTopicData2(chapterDetails),
+                        topicRepository.fetchPostTopicData2(chapterDetails),
+                    ]);
+
+                    let preConceptDetails = [];
+                    let postConceptDetails = [];
+                    if (Array.isArray(pretopicDetails) && pretopicDetails.length > 0) {
+                        preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(pretopicDetails);
+                    }
+                    if (Array.isArray(posttopicDetails) && posttopicDetails.length > 0) {
+                        postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(posttopicDetails);
+                    }
+
+                    const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: recentQuiz.quiz_id });
+                    console.log({ recentQuiz });
+                    console.log(recentQuiz.learningType);
+                    if (recentQuiz.learningType === 'postLearning') {
+                        console.log(recentQuiz.learningType);
+                        for (const quizResult of quizResults) {
+                            console.log({quizResult});
+                            console.log(studentData.Items);
+                            const singleStudentDetails = studentData.Items.filter(student => student.student_id == quizResult.student_id);
+                            if (singleStudentDetails.length === 0) continue;
+                            console.log({singleStudentDetails});
+                            let matchedConcepts = [];
+                            console.log({singleStudentDetails});
+                            for (const mark of quizResult.marks_details[0].qa_details) {
+                                for (const concept of postConceptDetails) {
+                                    console.log({concept:concept.concept_question_id});
+                                    if (concept.concept_question_id.includes(mark.question_id)) {
+                                        console.log({que_id:mark.question_id});
+                                        const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
+
+                                        const markValue = mark.modified_marks !== 'N.A.' ? mark.modified_marks : (mark.obtained_marks !== 'N.A.' ? mark.obtained_marks : 0);
+
+                                        if (existingConcept) {
+                                            existingConcept.question_id.push(mark.question_id);
+                                            existingConcept.marks.push(markValue);
+                                        } else {
+                                            matchedConcepts.push({
+                                                concept_id: concept.concept_id,
+                                                concept_title: concept.concept_title,
+                                                question_id: [mark.question_id],
+                                                marks: [markValue],
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            console.log({ matchedConcepts })
+                            if (matchedConcepts.length > 0) {
+                                for (const matchConcept of matchedConcepts) {
+                                    let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
+                                    const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
+                                    const totalConceptMarks = matchConcept.marks.reduce((total, mark) => total + mark, 0);
+                                    console.log({totalQuestionMarks});
+                                    console.log({totalConceptMarks});
+                                    console.log(post_quiz_config.pct_of_student_for_reteach);
+                                    console.log(matchConcept.marks);
+                                    if (((totalConceptMarks / totalQuestionMarks) * 100) < post_quiz_config.pct_of_student_for_reteach) {
+                                        needAttention.push({
+                                            student_id: singleStudentDetails[0].student_id,
+                                            student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                            class_test_id: quizResult.quiz_id,
+                                            chapter_id: [chapterDetails.chapter_id],
+                                            chapter_name: [chapterDetails.chapter_name],
+                                            concept_id: matchConcept.concept_id,
+                                            concept_title: matchConcept.concept_title,
+                                            total_question_marks: totalQuestionMarks,
+                                            total_concept_marks: totalConceptMarks,
+                                            pct_of_student_for_reteach: post_quiz_config.pct_of_student_for_reteach,
+                                        });
+                                        break;
+                                    }
+                                }
+                            }
                         }
-                    );
-                    });
+                    } else {
+                        for (const quizResult of quizResults) {
+                            const singleStudentDetails = studentData.Items.filter(student => student.student_id === quizResult.student_id);
+                            if (singleStudentDetails.length === 0) continue;
+                            let matchedConcepts = [];
+                            for (const mark of quizResult.marks_details[0].qa_details) {
+                                for (const concept of preConceptDetails) {
+                                    if (concept.concept_question_id.includes(mark.question_id)) {
+                                        const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
+
+                                        const markValue = mark.modified_marks !== 'N.A.' ? mark.modified_marks : (mark.obtained_marks !== 'N.A.' ? mark.obtained_marks : 0);
+
+                                        if (existingConcept) {
+                                            existingConcept.question_id.push(mark.question_id);
+                                            existingConcept.marks.push(markValue);
+                                        } else {
+                                            matchedConcepts.push({
+                                                concept_id: concept.concept_id,
+                                                concept_title: concept.concept_title,
+                                                question_id: [mark.question_id],
+                                                marks: [markValue],
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            if (matchedConcepts.length > 0) {
+                                for (const matchConcept of matchedConcepts) {
+                                    let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
+                                    const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
+                                    const totalConceptMarks = matchConcept.marks.reduce((total, mark) => total + mark, 0);
+
+                                    if (((totalConceptMarks / totalQuestionMarks) * 100) < pre_quiz_config.pct_of_student_for_reteach) {
+                                        needAttention.push({
+                                            student_id: singleStudentDetails[0].student_id,
+                                            student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                            class_test_id: quizResult.class_test_id,
+                                            chapter_id: [chapterDetails.chapter_id],
+                                            chapter_name: [chapterDetails.chapter_name],
+                                            concept_id: matchConcept.concept_id,
+                                            concept_title: matchConcept.concept_title,
+                                            total_question_marks: totalQuestionMarks,
+                                            total_concept_marks: totalConceptMarks,
+                                            pct_of_student_for_reteach: pre_quiz_config.pct_of_student_for_reteach,
+                                        });
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // LOGIC FOR TEST
+                    request.data['question_paper_id'] = recentTest.question_paper_id
+
+                    const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById2(request);
+
+                    const testResults = await testResultRepository.fetchTestResultOfAllStudent(recentTest)
+                    console.log({ testResults });
+
+                    for (const chapterId of questionPaper.data[0].chapter_id) {
+                        request.data['chapter_id'] = chapterId
+                        const chapter = await chapterRepository.fetchChapterByID2(request)
+                        const chapterDetails = chapter.Items[0]
+
+                        const [pretopicDetails, posttopicDetails] = await Promise.all([
+                            topicRepository.fetchPreTopicData2(chapterDetails),
+                            topicRepository.fetchPostTopicData2(chapterDetails),
+                        ]);
+
+                        let preConceptDetails = [];
+                        let postConceptDetails = [];
+                        let allConcept = [];
+                        if (Array.isArray(pretopicDetails) && pretopicDetails.length > 0) {
+                            preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(pretopicDetails);
+                        }
+                        if (Array.isArray(posttopicDetails) && posttopicDetails.length > 0) {
+                            postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(posttopicDetails);
+                        }
+                        allConcept = [...preConceptDetails, ...postConceptDetails]
+
+                        for (const testResult of testResults) {
+                            const singleStudentDetails = studentData.Items.filter(student => student.student_id === testResult.student_id);
+                            if (singleStudentDetails.length === 0) continue;
+                            let matchedConcepts = [];
+                            for (const mark of testResult.marks_details[0].qa_details) {
+                                for (const concept of allConcept) {
+                                    if (concept.concept_question_id.includes(mark.question_id)) {
+                                        const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
+
+                                        const markValue = mark.modified_marks !== 'N.A.' ? mark.modified_marks : mark.obtained_marks;
+
+                                        if (existingConcept) {
+                                            existingConcept.question_id.push(mark.question_id);
+                                            existingConcept.marks.push(markValue);
+                                        } else {
+                                            matchedConcepts.push({
+                                                concept_id: concept.concept_id,
+                                                concept_title: concept.concept_title,
+                                                question_id: [mark.question_id],
+                                                marks: [markValue],
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            console.log({ matchedConcepts })
+                            if (matchedConcepts.length > 0) {
+                                for (const matchConcept of matchedConcepts) {
+                                    let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
+                                    const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
+                                    const totalConceptMarks = matchConcept.marks.reduce((total, mark) => total + mark, 0);
+
+                                    if (((totalConceptMarks / totalQuestionMarks) * 100) < test_config.pct_of_student_for_reteach) {
+                                        const existingStudent = needAttention.find(attention => attention.student_id === singleStudentDetails[0].student_id);
+
+                                        if (existingStudent) {
+                                            if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
+                                                existingStudent.chapter_id.push(chapterDetails.chapter_id);
+                                            }
+                                            if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
+                                                existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                            }
+                                        } else {
+                                            console.log({chapterDetails});
+                                            needAttention.push({
+                                                student_id: singleStudentDetails[0].student_id,
+                                                student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                                class_test_id: testResult.class_test_id,
+                                                chapter_id: [chapterDetails.chapter_id],
+                                                chapter_name: [chapterDetails.chapter_title],
+                                                // concept_id: matchConcept.concept_id,
+                                                // concept_title: matchConcept.concept_title,
+                                                // total_question_marks: totalQuestionMarks,
+                                                // total_concept_marks: totalConceptMarks,
+                                                // pct_of_student_for_reteach: test_config.pct_of_student_for_reteach,
+                                            });
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            );
-    } catch (error) {
+            }
+        }
+        console.log({needAttention});
+        return {needAttention};
+    }
+    catch (error) {
         throw error;
+    }
+}
+
+const getRecentQuiz = async (quizDetails) => {
+    console.log({ quizDetails });
+    let recentQuiz;
+    for (const quiz of quizDetails) {
+        const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
+        if (quizResults.length > 0) {
+            recentQuiz = quiz;
+            break;
+        }
+    }
+    return recentQuiz;
+}
+
+const getRecentTest = async (testDetails) => {
+    let recentTest;
+    for (const test of testDetails) {
+        const testResults = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
+        if (testResults.length > 0) {
+            recentTest = test
+        }
+    }
+    return recentTest;
+}
+
+exports.studentPerformance=async (request) => {
+    try{
+        let studentPerformance = [];
+        
+    }catch(error){
     }
 }

@@ -263,3 +263,21 @@ exports.changeTestEvaluationStatus2 = async (request) => {
     const data = (await DATABASE_TABLE2.updateService(params)).$metadata.httpStatusCode;
     return data;
 }
+
+exports.fetchTestResultOfAllStudent = async (request) => {
+
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_test_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "class_test_id = :class_test_id  AND evaluated=:evaluated",
+        ExpressionAttributeValues: {
+            ":class_test_id": request.class_test_id,
+            ":common_id": constant.constValues.common_id,
+            ":evaluated": "Yes",
+        }
+    };
+
+    const result = await DATABASE_TABLE2.query(readParams);
+    return result.Items;
+};
