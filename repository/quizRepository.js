@@ -622,9 +622,8 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 };
 
 
-exports.fetchAllQuizBasedonChapter3 = async (request) => {
-    console.log("request", request);
-    let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";
+exports.fetchAllQuizBasedOnSubject3 = async (request) => {
+    let filterExpression = "quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
         ":client_class_id": request.data.client_class_id,
@@ -632,10 +631,6 @@ exports.fetchAllQuizBasedonChapter3 = async (request) => {
         ":section_id": request.data.section_id,
         ":quiz_status": "Active",
     };
-
-    if (request.data.chapter_id !== undefined && request.data.chapter_id !== "") {
-        expressionAttributeValues[`:chapter_id`] = request.data.chapter_id;
-    }
 
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_table,

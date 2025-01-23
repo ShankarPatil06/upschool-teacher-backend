@@ -378,7 +378,7 @@ exports.fetchBulkQuizResultsByID2 = async (request) => {
     return result.Items;
 };
 
-exports.fetchStudentQuiRresultMetadata3 = async (request) => {
+exports.fetchStudentQuizResultMetadata3 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
                 IndexName: Indexes.common_id_index,

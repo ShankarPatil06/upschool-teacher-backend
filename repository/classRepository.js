@@ -112,3 +112,20 @@ exports.modifyStudentMarks2 = async (request) => {
     const data = await DATABASE_TABLE2.updateService(params);
     return data;
 }
+
+exports.fetchTestResultUsingClassTestId = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_test_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "class_test_id = :class_test_id AND evaluated = :evaluated",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":evaluated":'Yes',
+            ":class_test_id": request.class_test_id
+        }
+    };
+
+    const data = await DATABASE_TABLE2.query(params);
+    return data.Items;
+}

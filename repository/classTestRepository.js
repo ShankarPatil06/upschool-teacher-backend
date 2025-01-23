@@ -323,3 +323,20 @@ exports.updateClassTestStatus2 = async (request) => {
     const data = (await DATABASE_TABLE2.updateService(params)).$metadata.httpStatusCode;
     return data;
 }
+
+exports.fetchAllTestBasedOnSubject = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: ":client_class_id=client_class_id AND subject_id = :subject_id AND section_id = :section_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":section_id": request.data.section_id,
+            ":subject_id": request.data.subject_id,
+            ":client_class_id": request.data.client_class_id,
+        },
+    };
+    const result = await DATABASE_TABLE2.query(params);
+    return result.Items;
+}
