@@ -311,7 +311,7 @@ exports.fetchConceptUsingTopicId = async (request) => {
                     ExpressionAttributeValues: {
                         ":concept_id": topic.topic_concept_id[0],
                     },
-                    ProjectionExpression: "concept_id, concept_title, display_name,concept_question_id",
+                    ProjectionExpression: "concept_id, concept_title, display_name,concept_question_id,concept_group_id",
                 };
 
                 const result = await DATABASE_TABLE2.query(params);
