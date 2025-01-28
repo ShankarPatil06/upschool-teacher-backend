@@ -428,3 +428,11 @@ functions:
           path: /v1/studentChaptersPerformance
           method: POST
           cors: true    
+      - http:
+          path: /v1/customWorksheetGenerated
+          method: POST
+          cors: true    
+      - http:
+          path: /v1/fetchCustomWorksheet
+          method: POST
+          cors: true    

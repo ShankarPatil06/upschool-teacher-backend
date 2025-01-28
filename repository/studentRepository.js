@@ -147,20 +147,20 @@ exports.getAllStudents = function (request, callback) {
 
 
 exports.getAllStudents2 = async (request) => {
-        const readParams = {
-            TableName: TABLE_NAMES.upschool_student_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_status = :user_status AND student_id = :student_id",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_status": "Active",
-                ":student_id": request,
-            }
-        };
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_student_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_status = :user_status AND student_id = :student_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_status": "Active",
+            ":student_id": request,
+        }
+    };
 
-        const result = await DATABASE_TABLE2.query(readParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(readParams);
+    return result;
 
 };
 
@@ -173,7 +173,7 @@ exports.getStudentsByIdName2 = async function (request) {
         const readParams = {
             TableName: TABLE_NAMES.upschool_student_info,
             KeyConditionExpression: "student_id = :student_id",
-            ExpressionAttributeValues: { 
+            ExpressionAttributeValues: {
                 ":student_id": studentArray[0]
             },
             ProjectionExpression: "student_id, user_firstname,user_lastname",
@@ -200,3 +200,15 @@ exports.getStudentsByIdName2 = async function (request) {
 
 
 
+exports.getParentDetailsById = async (request) => {
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_parent_info,
+        KeyConditionExpression: "parent_id = :parent_id",
+        ExpressionAttributeValues: {
+            ":parent_id": request.data.parent_id
+        }
+    };
+
+    const result = await DATABASE_TABLE2.query(readParams);
+    return result.Items[0];
+}

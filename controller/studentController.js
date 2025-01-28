@@ -64,3 +64,36 @@ exports.studentChaptersPerformance = async (req, res, next) => {
         res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
     }
 };
+exports.customWorksheetGenerated = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.customWorksheetGenerated(request);
+        console.log("generated customWorksheetGenerated Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error generated customWorksheetGenerated students:", error);
+        res.status(500).json({ message: "An error occurred while generated data.", details: error.message });
+    }
+};
+exports.fetchCustomWorksheet = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.fetchCustomWorksheet(request);
+        console.log(" fetch CustomWorksheet Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching  CustomWorksheet students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+exports.sendEmailToParent = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.sendEmailToParent(request);
+        console.log(" sent email Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error while sending  email:", error);
+        res.status(500).json({ message: "An error occurred while sending  email.", details: error.message });
+    }
+};
