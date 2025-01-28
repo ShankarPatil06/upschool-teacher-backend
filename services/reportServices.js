@@ -1800,7 +1800,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
     const totalMarksForThisQuiz = relatedQuiz.question_track_details.qp_set_a.reduce(
       (total, question) => {
-        const questionDetail = questions.Items.find(q => q.question_id === question.question_id);
+        const questionDetail = questions.find(q => q.question_id === question.question_id);
         return questionDetail ? total + questionDetail.marks : total;
       }, 0
     );
