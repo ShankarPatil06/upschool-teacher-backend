@@ -416,3 +416,15 @@ functions:
           path: /v1/fetchBlueprintDetailsBasedonId
           method: POST
           cors: true    
+      - http:
+          path: /v1/topAndBottomPerformers
+          method: POST
+          cors: true    
+      - http:
+          path: /v1/needAttention
+          method: POST
+          cors: true    
+      - http:
+          path: /v1/studentChaptersPerformance
+          method: POST
+          cors: true    

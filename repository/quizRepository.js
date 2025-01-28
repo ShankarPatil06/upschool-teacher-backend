@@ -389,11 +389,12 @@ exports.modifyStudentMarks2 = async (request) => {
                 Key: {
                     "result_id": request.data.result_id
                 },
-                UpdateExpression: "set marks_details = :marks_details, updated_ts = :updated_ts, isPassed = :isPassed",
+        UpdateExpression: "set marks_details = :marks_details, updated_ts = :updated_ts, isPassed = :isPassed, individual_group_performance = :individual_group_performance",
                 ExpressionAttributeValues: {
                     ":marks_details": request.data.marks_details,
                     ":isPassed": request.data.passStatus,
-                    ":updated_ts": helper.getCurrentTimestamp()
+                    ":updated_ts": helper.getCurrentTimestamp(),
+                    ":individual_group_performance": request.data.individual_group_performance,
                 },
     };
     const data = await DATABASE_TABLE2.updateService(params);
@@ -622,3 +623,27 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 };
 
 
+exports.fetchAllQuizBasedOnSubject3 = async (request) => {
+    let filterExpression = "quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":client_class_id": request.data.client_class_id,
+        ":subject_id": request.data.subject_id,
+        ":section_id": request.data.section_id,
+        ":quiz_status": "Active",
+    };
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_quiz_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterExpression,
+        ExpressionAttributeValues: expressionAttributeValues
+    };
+
+    let result = await DATABASE_TABLE2.query(params);
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+    return sortedItems;
+};

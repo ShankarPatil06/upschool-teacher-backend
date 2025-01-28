@@ -80,15 +80,17 @@ exports.getQuizResult = async (request) => {
 }
 
 
-exports.editStudentQuizMarks = async (request) => {
+exports.editStudentQuizMarks = async (request) => {    
     try {
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
+        console.log("quizTestRes", quizTestRes.Item.question_track_details);        
 
         if (quizTestRes.Item.quiz_status !== "Active") {
             throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
         }
 
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+        console.log("schoolDataRes", schoolDataRes);
 
         let classPassPercentage = 0;
         let passPassPercentage = 0;
@@ -104,14 +106,18 @@ exports.editStudentQuizMarks = async (request) => {
         }
 
         const questionIds = request.data.marks_details[0].qa_details.map(qDetails => qDetails.question_id);
+        console.log("questionIds", questionIds);
+        
         const fetchBulkQtnReq = {
             IdArray: questionIds,
             fetchIdName: "question_id",
             TableName: TABLE_NAMES.upschool_question_table,
             projectionExp: ["question_id", "marks"]
         };
+
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
+console.log("questionDataRes", questionDataRes);
 
         const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes, classPassPercentage, passPassPercentage);
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
@@ -133,28 +139,45 @@ exports.editStudentQuizMarks = async (request) => {
             }
         });
 
+        let questionSetData = [];
+
+        request.data.marks_details.forEach((req) => {
+            const { set_key } = req;
+            if (quizTestRes.Item.question_track_details[set_key]) {
+                questionSetData = quizTestRes.Item.question_track_details[set_key];
+                req.qa_details.forEach((question) => {
+                    const matchingQuestion = questionSetData.find(q => q.question_id === question.question_id);
+                    if (matchingQuestion) {
+                        question.type = matchingQuestion.type;
+                    }
+                });
+            } else {
+                console.log(`set_key: ${set_key} not found in quizTestRes`);
+            }
+        });
+
         request.data.marks_details.forEach(markDetail => {
             markDetail.qa_details.forEach((question) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
-                console.log("question - ", question);
-                console.log("marksPerQuestion - ", marksPerQuestion);
-                console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
+                // console.log("question - ", question);
+                // console.log("marksPerQuestion - ", marksPerQuestion);
+                // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
                 switch (question.type) {
-                    case 'basic':
+                    case 'Basic':
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'intermediate':
+                    case 'Intermediate':
                         intermediateQuestions += 1;
                         intermediateMarks += marksPerQuestion;
-                        intermediateObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        intermediateObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'advanced':
+                    case 'Advanced':
                         advancedQuestions += 1;
                         advancedMarks += marksPerQuestion;
-                        advancedObtained += question.modified_marks ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        advancedObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                 }
             });
