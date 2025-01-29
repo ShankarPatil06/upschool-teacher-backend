@@ -151,6 +151,9 @@ app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers);
 app.post("/v1/needAttention",studentController.needAttention);
 app.post("/v1/studentChaptersPerformance",studentController.studentChaptersPerformance);
+app.post("/v1/customWorksheetGenerated",studentController.customWorksheetGenerated);
+app.post("/v1/fetchCustomWorksheet",studentController.fetchCustomWorksheet);
+app.post("/v1/sendEmailToParent",studentController.sendEmailToParent);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

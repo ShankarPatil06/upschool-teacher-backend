@@ -80,17 +80,19 @@ exports.getQuizResult = async (request) => {
 }
 
 
-exports.editStudentQuizMarks = async (request) => {    
+exports.editStudentQuizMarks = async (request) => { 
+    console.log("request000", request.data.marks_details[0].qa_details);
+       
     try {
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
-        console.log("quizTestRes", quizTestRes.Item.question_track_details);        
+        // console.log("quizTestRes", quizTestRes.Item.question_track_details);        
 
         if (quizTestRes.Item.quiz_status !== "Active") {
             throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
         }
 
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
-        console.log("schoolDataRes", schoolDataRes);
+        console.log("schoolDataRes", schoolDataRes.Items[0].pre_quiz_config);
 
         let classPassPercentage = 0;
         let passPassPercentage = 0;
@@ -98,15 +100,15 @@ exports.editStudentQuizMarks = async (request) => {
         if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
             classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
-            groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.test_matrix
+            groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
         } else {
             classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
-            groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.test_matrix
+            groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.group_pass_percentage
         }
 
         const questionIds = request.data.marks_details[0].qa_details.map(qDetails => qDetails.question_id);
-        console.log("questionIds", questionIds);
+        // console.log("questionIds", questionIds);
         
         const fetchBulkQtnReq = {
             IdArray: questionIds,
@@ -116,6 +118,8 @@ exports.editStudentQuizMarks = async (request) => {
         };
 
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
+        console.log("quizIds", quizIds);
+        
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
 console.log("questionDataRes", questionDataRes);
 
@@ -133,8 +137,11 @@ console.log("questionDataRes", questionDataRes);
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
 
         const questionMarksMap = {};
+        
         questionDataRes?.forEach(question => {
             if (question.question_id && typeof question.marks === 'number') {
+                console.log("question.question_id", question.question_id);
+                
                 questionMarksMap[question.question_id] = question.marks;
             }
         });
@@ -160,7 +167,7 @@ console.log("questionDataRes", questionDataRes);
             markDetail.qa_details.forEach((question) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
-                // console.log("question - ", question);
+                console.log("question - ", question);
                 // console.log("marksPerQuestion - ", marksPerQuestion);
                 // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
                 switch (question.type) {
@@ -182,9 +189,12 @@ console.log("questionDataRes", questionDataRes);
                 }
             });
         });
-
+        console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
+        console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
+        console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
+        
         const individualGroupPerformance = {
-            Basic: {
+            Basic: {                
                 Ispassed: basicObtained >= basicMarks * basicThreshold,
                 no_of_questions: basicQuestions,
                 total_mark: basicMarks,

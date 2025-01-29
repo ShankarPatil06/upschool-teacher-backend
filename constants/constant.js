@@ -239,6 +239,7 @@ exports.testFolder = {
     questionPapers: 'test_uploads/**REPLACE**/question_paper_template/',
     answerSheets: 'test_uploads/**REPLACE**/answer_sheet_template/',
     studAnswerSheets: 'test_uploads/**REPLACE**/student_answered_sheets',
+    customQuestionPapers: 'custom_uploads/**REPLACE**/question_paper_template/',
 }
 
 exports.quizFolder = {
