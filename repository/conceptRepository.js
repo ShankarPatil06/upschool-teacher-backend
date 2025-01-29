@@ -147,7 +147,7 @@ exports.fetchConceptIDDisplayName2 = async (request) => {
                 ":concept_id": conceptArray[0],
                 ":concept_status": "Active",
             },
-            ProjectionExpression: "concept_id, concept_title, display_name",
+            ProjectionExpression: "concept_id, concept_title, display_name, concept_question_id",
         };
 
         const result = await DATABASE_TABLE2.query(readParams);
@@ -161,7 +161,7 @@ exports.fetchConceptIDDisplayName2 = async (request) => {
             RequestItems: {
                 [TABLE_NAMES.upschool_concept_blocks_table]: {
                     Keys: keys,
-                    ProjectionExpression: "concept_id, concept_title, display_name, concept_status",
+                    ProjectionExpression: "concept_id, concept_title, display_name, concept_status,concept_question_id",
                 },
             },
         };

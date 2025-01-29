@@ -8,7 +8,9 @@ const { nextTick } = require("process");
 const { response } = require("express");
 const { fetchStudentresultMetadata3 } = require("../repository/testResultRepository");
 const { get, request } = require("http");
-
+const qs = require('qs');
+const axios = require('axios');
+const s3Services = require("./s3Service");
 
 exports.fetchAllStudents = function (request, callback) {
     /** FETCH USER BY EMAIL **/
@@ -533,9 +535,9 @@ exports.studentChaptersPerformance = async (request) => {
 
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
-                        matchConcept.scoredPercentage = (scoredPercentage % 1 === 0) 
-                        ? parseInt(scoredPercentage) 
-                        : parseFloat(scoredPercentage.toFixed(2));
+                        matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
+                            ? parseInt(scoredPercentage)
+                            : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of allTopics) {
                             if (topic.topic_concept_id.includes(matchConcept.concept_id)) {
@@ -567,9 +569,9 @@ exports.studentChaptersPerformance = async (request) => {
                     for (const topic of matchedTopics) {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
-                            topic.scoredPercentage = (scoredPercentage % 1 === 0) 
-                            ? parseInt(scoredPercentage) 
-                            : parseFloat(scoredPercentage.toFixed(2));
+                            topic.scoredPercentage = (scoredPercentage % 1 === 0)
+                                ? parseInt(scoredPercentage)
+                                : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
                                 expectedPerformances.Topics.push(topic)
@@ -577,7 +579,8 @@ exports.studentChaptersPerformance = async (request) => {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
                                     chapter_title: chapterDetails.chapter_title,
-                                    Topics: [topic]
+                                    Topics: [topic],
+                                    student_id: request.data.student_id
                                 });
                             }
                         }
@@ -652,9 +655,9 @@ exports.studentChaptersPerformance = async (request) => {
                         const scoredPercentage = ((totalConceptMarks / totalQuestionMarks) * 100)
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
-                        matchConcept.scoredPercentage = (scoredPercentage % 1 === 0) 
-                        ? parseInt(scoredPercentage) 
-                        : parseFloat(scoredPercentage.toFixed(2));
+                        matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
+                            ? parseInt(scoredPercentage)
+                            : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of pretopicDetails) {
                             if (topic.topic_concept_id.includes(matchConcept.concept_id)) {
@@ -678,14 +681,13 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
-                console.log({ matchedTopics });
                 if (matchedTopics.length > 0) {
                     for (const topic of matchedTopics) {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
-                            topic.scoredPercentage = (scoredPercentage % 1 === 0) 
-                            ? parseInt(scoredPercentage) 
-                            : parseFloat(scoredPercentage.toFixed(2));
+                            topic.scoredPercentage = (scoredPercentage % 1 === 0)
+                                ? parseInt(scoredPercentage)
+                                : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
                                 expectedPerformances.Topics.push(topic)
@@ -693,7 +695,8 @@ exports.studentChaptersPerformance = async (request) => {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
                                     chapter_title: chapterDetails.chapter_title,
-                                    Topics: [topic]
+                                    Topics: [topic],
+                                    student_id: request.data.student_id
                                 });
                             }
                         }
@@ -765,9 +768,9 @@ exports.studentChaptersPerformance = async (request) => {
                     for (const topic of matchedTopics) {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
-                            topic.scoredPercentage = (scoredPercentage % 1 === 0) 
-                            ? parseInt(scoredPercentage) 
-                            : parseFloat(scoredPercentage.toFixed(2));
+                            topic.scoredPercentage = (scoredPercentage % 1 === 0)
+                                ? parseInt(scoredPercentage)
+                                : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
                                 expectedPerformances.Topics.push(topic)
@@ -775,7 +778,8 @@ exports.studentChaptersPerformance = async (request) => {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
                                     chapter_title: chapterDetails.chapter_title,
-                                    Topics: [topic]
+                                    Topics: [topic],
+                                    student_id: request.data.student_id
                                 });
                             }
                         }
@@ -784,6 +788,198 @@ exports.studentChaptersPerformance = async (request) => {
             }
         }
         return { studentChaptersPerformance };
+    } catch (error) {
+        throw error;
+    }
+}
+
+
+exports.customWorksheetGenerated = async (request) => {
+    try {
+        let allQuestions = [];
+        const inValidChapters = [];
+        for (const chapter of request.data.chapters) {
+            const uniqueQuestionsSet = new Set();
+            const conceptDetails = await conceptRepository.fetchConceptIDDisplayName2({ concept_array: chapter.concept_ids });
+            conceptDetails.forEach((concept) => {
+                concept.concept_question_id.forEach((questionId) => {
+                    uniqueQuestionsSet.add(questionId);
+                });
+            });
+            const chapterQuestions = uniqueQuestionsSet.size
+            if (chapterQuestions < chapter?.numberOfQuestion) {
+                inValidChapters.push({
+                    chapter_id: chapter.chapter_id,
+                    chapter_name: chapter.chapter_name
+                })
+            }
+            allQuestions = Array.from(new Set([
+                ...allQuestions,
+                ...conceptDetails.flatMap(item => item.concept_question_id),
+            ]))
+        }
+
+        if (inValidChapters.length > 0) {
+            if (inValidChapters.length === 1) {
+                throw new Error(`There is not enough questions for the chapter: ${inValidChapters[0].chapter_name}.`);
+            } else {
+                throw new Error(`There are not enough questions for the following chapters: ${inValidChapters.map(i => i.chapter_name).join(', ')}.`);
+            }
+        }
+        if (allQuestions.length < request.data.numberOfQuestionWorksheet) {
+            throw new Error(`There are not enough questions to generate for worksheets.`);
+        }
+        const studentCustomWorksheet = await testQuestionPaperRepository.fetchStudentWorksheetBasedOnTestId(request)
+        if (studentCustomWorksheet?.Items?.[0]) throw new Error(`Already Worksheet Generated for this student`);
+        let numberOfQuestionsForWorksheet = request.data.numberOfQuestionWorksheet;
+        let questions = [];
+        let totalQuestions = 0;
+        let chapterIndex = 0;
+        let conceptQuestionTracker = {};
+        while (totalQuestions < numberOfQuestionsForWorksheet) {
+            let chapter = request.data.chapters[chapterIndex];
+            let chapterQuestions = 0;
+            let conceptDetails = await conceptRepository.fetchConceptIDDisplayName2({ concept_array: chapter.concept_ids });
+            const conceptQuestions = conceptDetails.map((concept) => concept.concept_question_id);
+
+            const totalConcepts = conceptDetails.length;
+
+            let chapterMaxQuestions = chapter.numberOfQuestion;
+            if (chapterMaxQuestions === null) {
+                chapterMaxQuestions = numberOfQuestionsForWorksheet - totalQuestions;
+            }
+
+            for (let i = 0; i < totalConcepts; i++) {
+                let questionList = conceptQuestions[i];
+
+                if (questionList && questionList.length > 0) {
+                    let lastUsedIndex = conceptQuestionTracker[chapter.chapter_id]?.[i] || 0;
+
+                    const questionId = questionList[lastUsedIndex];
+
+                    if (questionId !== undefined && !questions.includes(questionId)) {
+                        questions.push(questionId);
+                        totalQuestions++;
+                        chapterQuestions++;
+
+                        if (!conceptQuestionTracker[chapter.chapter_id]) {
+                            conceptQuestionTracker[chapter.chapter_id] = {};
+                        }
+                        conceptQuestionTracker[chapter.chapter_id][i] = (lastUsedIndex + 1) % questionList.length;
+
+                        if (totalQuestions >= numberOfQuestionsForWorksheet) {
+                            break;
+                        }
+                    }
+                }
+            }
+            if (chapterQuestions >= chapterMaxQuestions || totalQuestions < numberOfQuestionsForWorksheet) {
+                console.log(chapter.chapter_name);
+                chapterIndex = (chapterIndex + 1) % request.data.chapters.length;
+            }
+        }
+        console.log({ questions });
+        const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheet(request)
+        console.log({ studentWorksheet });
+        if (questions.length > 0) {
+            const studentFirstName = request.data.student_name.split(' ')[0];
+            const existingName = studentWorksheet.Items[0]?.question_paper_name || `${studentFirstName}_worksheet_0`;
+            const nameParts = existingName.match(/^(.*?)(_(\d+))?$/);
+            const baseName = nameParts[1];
+            const currentNumber = nameParts[3] ? parseInt(nameParts[3], 10) : 0;
+            const question_paper_name = `${baseName}_${currentNumber + 1}`;
+
+
+            request.data["questions"] = questions
+            request.data["question_paper_status"] = "Active"
+            request.data["question_paper_name"] = question_paper_name
+            request.data["blueprint_type"] = "customWorksheet"
+
+            if (studentWorksheet.Items.length > 0 && studentWorksheet.Items) {
+                request.data["question_paper_id"] = studentWorksheet.Items[0].question_paper_id
+                await testQuestionPaperRepository.updateCustomWorkSheetQuestionPaper(request)
+            } else {
+                request.data["question_paper_id"] = await helper.getRandomString();
+                await testQuestionPaperRepository.insertCustomWorkSheetQuestionPaper(request)
+            }
+
+            request.data.class_test_id = request.data.test_id;
+
+            let resultPdf = await createPDFandUpdateTemplateDetails(request);
+            console.log(resultPdf.data);
+
+            request.data["question_paper_template"] = resultPdf.data
+
+            await testQuestionPaperRepository.updateTemplateDetails(request)
+            return 200
+        }
+    } catch (error) {
+        throw error;
+    }
+}
+
+const createPDFandUpdateTemplateDetails = async (request) => {
+    try {
+        const options = {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            data: qs.stringify(request),
+            url: process.env.PDF_GENERATION_URL + '/createCustomWorksheet',
+        };
+
+        const pdfData = await axios(options);
+        // console.log("PDFs Generated!", pdfData);
+
+        return pdfData;
+    } catch (err) {
+        console.error("Error in EC2:", err);
+        return { status: 400, error: err };
+    }
+};
+
+exports.fetchCustomWorksheet = async (request) => {
+    try {
+        const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheetBasedOnTestId(request)
+        if (studentWorksheet?.Items?.[0]) {
+            let questionPaperTEmp = studentWorksheet.Items[0]?.question_paper_template || 'N.A.';
+            let questionUrlCheck = constant.testFolder.customQuestionPapers.split("/")[0];
+            console.log({ questionPaperTEmp }, studentWorksheet.Items[0], questionUrlCheck);
+
+            studentWorksheet.Items[0].worksheet_template_url = questionPaperTEmp.includes(questionUrlCheck)
+                ? await s3Services.getS3SignedUrl(questionPaperTEmp)
+                : "N.A.";
+            return studentWorksheet.Items[0];
+        }
+        return { status: 404, message: "No worksheet is available for this test for this student" };
+    } catch (error) {
+        throw error;
+    }
+}
+
+exports.sendEmailToParent = async (request) => {
+    try {
+        const student_id = request.data.student_id;
+        const studentDetails = await studentRepository.getAllStudents2(student_id);
+        console.log({ studentDetails: studentDetails.Items[0] });
+        if (studentDetails?.Items?.[0]) {
+            request.data['parent_id'] = studentDetails.Items[0].parent_id;
+            const parentDetails = await studentRepository.getParentDetailsById(request)
+            console.log({ parentDetails });
+            if (parentDetails.user_email) throw new Error('There is no parent email associated with the student');
+            const emailData = {
+                from: 'Your Email',
+                to: parentDetails.user_email,
+                subject: 'Your Test Results',
+                text: 'Your test results are ready. Please download and review.',
+                attachments: [
+                    {
+                        filename: 'test_results.pdf',
+                        path: request.data.question_paper_template,
+                        contentType: 'application/pdf',
+                    },
+                ],
+            };
+        }
     } catch (error) {
         throw error;
     }
