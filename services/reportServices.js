@@ -1030,6 +1030,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
   console.log({ chapter_ids });
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter2(request, chapter_ids);
+  
   const quizids = quizDataRes.Items.map(q => q.quiz_id)
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     let overallMarks = 0;
@@ -1048,11 +1049,11 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
       });
     });
     // Calculate overall marks
-    // console.log("considered",questions.Items.length);
+    // console.log("considered",questions);
 
     // overallMarks = questions.Items.reduce((total, question) => total + question.marks, 0);
 
-    return { quizId: quizData.quiz_id, overallMarks: questions.Items };
+    return { quizId: quizData.quiz_id, overallMarks: questions };
   }));
   const quizResultDataRes = quizids.length && await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizids })
   const totalStudentsforAllChapters = quizResultDataRes.length
