@@ -11,6 +11,7 @@ const { get, request } = require("http");
 const qs = require('qs');
 const axios = require('axios');
 const s3Services = require("./s3Service");
+let sendMail = require("./emailService");
 
 exports.fetchAllStudents = function (request, callback) {
     /** FETCH USER BY EMAIL **/
@@ -950,7 +951,7 @@ exports.fetchCustomWorksheet = async (request) => {
                 : "N.A.";
             return studentWorksheet.Items[0];
         }
-        return { status: 404, message: "No worksheet is available for this test for this student" };
+        return { status: 404, message: "There is no worksheet available for this student" };
     } catch (error) {
         throw error;
     }
@@ -959,27 +960,43 @@ exports.fetchCustomWorksheet = async (request) => {
 exports.sendEmailToParent = async (request) => {
     try {
         const student_id = request.data.student_id;
-        const studentDetails = await studentRepository.getAllStudents2(student_id);
-        console.log({ studentDetails: studentDetails.Items[0] });
-        if (studentDetails?.Items?.[0]) {
-            request.data['parent_id'] = studentDetails.Items[0].parent_id;
-            const parentDetails = await studentRepository.getParentDetailsById(request)
-            console.log({ parentDetails });
-            if (parentDetails.user_email) throw new Error('There is no parent email associated with the student');
-            const emailData = {
-                from: 'Your Email',
-                to: parentDetails.user_email,
-                subject: 'Your Test Results',
-                text: 'Your test results are ready. Please download and review.',
-                attachments: [
-                    {
-                        filename: 'test_results.pdf',
-                        path: request.data.question_paper_template,
-                        contentType: 'application/pdf',
+        const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
+        const schoolName = schoolDetails.Items[0].school_name
+        let worksheet = await exports.fetchCustomWorksheet(request);
+        if (worksheet?.worksheet_template_url) {
+            const studentDetails = await studentRepository.getAllStudents2(student_id);
+            console.log({ studentDetails: studentDetails.Items[0] });
+            if (studentDetails?.Items?.[0]) {
+                request.data['parent_id'] = studentDetails.Items[0].parent_id;
+                const parentDetails = await studentRepository.getParentDetailsById(request)
+                console.log({ parentDetails });
+                if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
+                let fileKey = worksheet.question_paper_template
+                const fileBuffer = await s3Services.getFileBufferFromS3(fileKey);
+                const pdfBase64 = fileBuffer.toString("base64");
+
+                const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
+                const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
+                const chapterNames = request?.data.chapter_name?.join(',')
+                const toMail = parentDetails?.user_email
+                const mailPayload = {
+                    subject: subject,
+                    toMail: toMail,
+                    attachment: {
+                        filename: `${worksheet?.question_paper_name}.pdf`,
+                        content: pdfBase64
                     },
-                ],
+                    schoolName: schoolName,
+                    studentName: studentName,
+                    chapterNames: chapterNames,
+                    mailFor: "customWorksheetSender",
+                };
+                let dataEmail = await sendMail.process(mailPayload);
+                console.log({ dataEmail });
+                return dataEmail.httpStatusCode
             };
         }
+        throw new Error('There is no worksheet available for this student');
     } catch (error) {
         throw error;
     }
