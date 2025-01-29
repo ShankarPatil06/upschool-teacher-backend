@@ -355,7 +355,8 @@ exports.fetchBulkQuestionsNameById = function (request, callback) {
                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
             } else {
-                let keys = question_id.map(id => ({ question_id: id }));
+                let uniqueIds = [...new Set(question_id)];
+                let keys = uniqueIds.map(id => ({ question_id: id }));
 
                 let read_params = {
                     RequestItems: {
