@@ -652,18 +652,26 @@ exports.viewClassReportQuestions = async (request) => {
     quizRepository.fetchQuizDataById2(request),
     quizResultRepository.fetchQuizResultByQuizId(request),
   ]);
-  // console.log("QUIZRESULT", quizResult.Items);
+  // console.log("QUIZRESULT", quizResult.Items[1].marks_details[0]);
   // console.log("quizData", quizData);
 
   const quizResultMarksData = quizResult.Items.map(
     (item) => item.marks_details[0].qa_details
   );
-  // console.log("quizResultMarksData", quizResultMarksData);
-  const totalMarkObtainedByStudents = quizResult.Items.reduce(
-    (acc, item) => acc + item.marks_details[0].totalMark,
-    0
-    );
+  // console.log("quizResultMarksData", quizResultMarksData);  
+
+  const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = quizResult.Items.reduce(
+    (acc, item) => {
+      acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
+      acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      return acc;
+    },
+    { totalMarkObtainedByStudents: 0, totalMarkExpectedFromStudents: 0 }
+  );
+
+
   // console.log("totalMarkObtainedByStudents", totalMarkObtainedByStudents);
+  // console.log("totalMarkExpectedFromStudents", totalMarkExpectedFromStudents);
 
   const totalStudents = quizResultMarksData.length;
   const questionMap = {};
@@ -679,14 +687,14 @@ exports.viewClassReportQuestions = async (request) => {
   }
   // console.log("QUESTIONS",quizData.Item.question_track_details)
   const uniqueArray = [
-    ...new Set(Object.values(quizData.Item.question_track_details.qp_set_c).flat()),
+    ...new Set(Object.values(quizData.Item.question_track_details).flat()),
   ]; //all unique questions
   const uniqueArray1 = [...new Set(Object.keys(questionMap))]; //which set the questions belong to
   const questionSet = uniqueArray1.map((questionId) => ({
     question_id: questionId,
     sets: questionMap[questionId],
   }));
-  // console.log("UNIQUE", uniqueArray.length)
+  // console.log("UNIQUE", uniqueArray)
   const questionIds = new Set(uniqueArray.map((item) => item.question_id));
 
   const conceptIds = uniqueArray.map((item) => item.concept_id);
@@ -841,10 +849,10 @@ exports.viewClassReportQuestions = async (request) => {
     noOfQuestions: levelTotals[level].count,
   }));
   // console.log("possiblemarks", possiblemarks);
-  console.log("marksInTotal", marksInTotal);
+  // console.log("marksInTotal", marksInTotal);
   // console.log("totalStudents", totalStudents);
 
-  const pieValue = (totalMarkObtainedByStudents / (possiblemarks * totalStudents)) * 100
+  const pieValue = (totalMarkObtainedByStudents / totalMarkExpectedFromStudents) * 100
 
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
