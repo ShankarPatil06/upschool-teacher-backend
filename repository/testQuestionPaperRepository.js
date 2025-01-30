@@ -444,7 +444,7 @@ exports.insertCustomWorkSheetQuestionPaper = async (request) => {
 };
 
 exports.fetchStudentWorksheet = async (request) => {
-    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id";
+    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND question_paper_status=:question_paper_status";
 
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
@@ -453,6 +453,7 @@ exports.fetchStudentWorksheet = async (request) => {
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
         ":blueprint_type": "customWorksheet",
+        ":question_paper_status": "customActive",
     };
 
     let params = {
@@ -502,7 +503,7 @@ exports.updateTemplateDetails = async (request) => {
 }
 
 exports.fetchStudentWorksheetBasedOnTestId = async (request) => {
-    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND test_id=:test_id";
+    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND test_id=:test_id AND question_paper_status = :question_paper_status";
 
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
@@ -511,6 +512,7 @@ exports.fetchStudentWorksheetBasedOnTestId = async (request) => {
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
         ":test_id": request.data.test_id,
+        ":question_paper_status": "customActive",
         ":blueprint_type": "customWorksheet",
     };
 

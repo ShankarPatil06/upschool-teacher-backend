@@ -437,6 +437,10 @@ functions:
           method: POST
           cors: true    
       - http:
+          path: /v1/sendEmailToParent
+          method: POST
+          cors: true    
+      - http:
           path: /v1/studentAvgVsClassAvgChapterWise
           method: POST
           cors: true    

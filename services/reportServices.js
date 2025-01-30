@@ -652,11 +652,26 @@ exports.viewClassReportQuestions = async (request) => {
     quizRepository.fetchQuizDataById2(request),
     quizResultRepository.fetchQuizResultByQuizId(request),
   ]);
-  console.log("QUIZRESULT", quizResult.Items[1].marks_details[0].qa_details);
+  // console.log("QUIZRESULT", quizResult.Items[1].marks_details[0]);
+  // console.log("quizData", quizData);
 
   const quizResultMarksData = quizResult.Items.map(
     (item) => item.marks_details[0].qa_details
   );
+  // console.log("quizResultMarksData", quizResultMarksData);  
+
+  const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = quizResult.Items.reduce(
+    (acc, item) => {
+      acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
+      acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      return acc;
+    },
+    { totalMarkObtainedByStudents: 0, totalMarkExpectedFromStudents: 0 }
+  );
+
+
+  // console.log("totalMarkObtainedByStudents", totalMarkObtainedByStudents);
+  // console.log("totalMarkExpectedFromStudents", totalMarkExpectedFromStudents);
 
   const totalStudents = quizResultMarksData.length;
   const questionMap = {};
@@ -679,7 +694,7 @@ exports.viewClassReportQuestions = async (request) => {
     question_id: questionId,
     sets: questionMap[questionId],
   }));
-  console.log("UNIQUE", uniqueArray.length)
+  // console.log("UNIQUE", uniqueArray)
   const questionIds = new Set(uniqueArray.map((item) => item.question_id));
 
   const conceptIds = uniqueArray.map((item) => item.concept_id);
@@ -697,7 +712,7 @@ exports.viewClassReportQuestions = async (request) => {
   const questions = await questionRepository.fetchBulkQuestionsNameById2({
     question_id: questionIds,
   });
-  console.log(questionIds.length, "Questions", questions)
+  // console.log(questionIds.length, "Questions", questions)
   //concept,topic from conceptid,topicid and cognitiveskillid changed to its name and correctansweer
   const cognitive_id = questions.map((que) => que.cognitive_skill);
   console.log({ cognitive_id });
@@ -716,8 +731,8 @@ exports.viewClassReportQuestions = async (request) => {
   let marksInTotal = 0;
   let possiblemarks = 0;
   questions.map((question, i) => {
-    console.log("question", question);
-    console.log("questionSet", questionSet);
+    // console.log("question", question);
+    // console.log("questionSet", questionSet);
 
     possiblemarks = possiblemarks + question.marks
     question.questionNo = (i + 1)
@@ -778,7 +793,7 @@ exports.viewClassReportQuestions = async (request) => {
                 ? Number(answer.obtained_marks)
                 : 0;
 
-          console.log("mark cal", marksInTotal);
+          // console.log("mark cal", marksInTotal);
           return count;
         }
       }, 0);
@@ -833,11 +848,11 @@ exports.viewClassReportQuestions = async (request) => {
     averagePercentage: levelTotals[level].total / levelTotals[level].count,
     noOfQuestions: levelTotals[level].count,
   }));
-  console.log("possiblemarks", possiblemarks);
-  console.log("marksInTotal", marksInTotal);
-  console.log("totalStudents", totalStudents);
+  // console.log("possiblemarks", possiblemarks);
+  // console.log("marksInTotal", marksInTotal);
+  // console.log("totalStudents", totalStudents);
 
-  const pieValue = (marksInTotal / (possiblemarks * totalStudents)) * 100
+  const pieValue = (totalMarkObtainedByStudents / totalMarkExpectedFromStudents) * 100
 
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
