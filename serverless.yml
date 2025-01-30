@@ -436,3 +436,7 @@ functions:
           path: /v1/fetchCustomWorksheet
           method: POST
           cors: true    
+      - http:
+          path: /v1/studentAvgVsClassAvgChapterWise
+          method: POST
+          cors: true    

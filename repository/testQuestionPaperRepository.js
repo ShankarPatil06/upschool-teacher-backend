@@ -248,6 +248,45 @@ exports.getTestQuestionPaperById2 = async (request) => {
     }
 };
 
+exports.getTestQuestionPaperById3 = async (request) => {
+    const question_paper_ids = [...new Set(request.question_paper_ids)]; // Remove duplicates
+
+    if (question_paper_ids.length === 0) {
+        return { statusCode: 400, message: "No question paper IDs provided" };
+    }
+
+    if (question_paper_ids.length === 1) {
+        // Query directly if only one question_paper_id exists
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            KeyConditionExpression: "question_paper_id = :question_paper_id",
+            ExpressionAttributeValues: {
+                ":question_paper_id": question_paper_ids[0]
+            }
+        };
+
+        return await DATABASE_TABLE2.query(readParams);
+    } else {
+        // Construct filter expression dynamically for multiple IDs
+        let filterExpression = question_paper_ids
+            .map((_, index) => `question_paper_id = :question_paper_id${index}`)
+            .join(" OR ");
+
+        let expressionAttributeValues = {};
+        question_paper_ids.forEach((id, index) => {
+            expressionAttributeValues[`:question_paper_id${index}`] = id;
+        });
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            FilterExpression: filterExpression,
+            ExpressionAttributeValues: expressionAttributeValues
+        };
+
+        return await DATABASE_TABLE2.scan(readParams);
+    }
+};
+
 exports.getClassTestsBasedonIds = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
