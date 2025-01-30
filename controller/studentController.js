@@ -64,6 +64,31 @@ exports.studentChaptersPerformance = async (req, res, next) => {
         res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
     }
 };
+
+exports.studentAvgVsClassAvg = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentAvgVsClassAvg(request);
+        console.log("Fetch student and class average Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching student and class average students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+
+exports.studentAvgVsClassAvgChapterWise = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentAvgVsClassAvgChapterWise(request);
+        console.log("Fetch student and class average Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching student and class average students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+
 exports.customWorksheetGenerated = async (req, res, next) => {
     let request = req.body;
     try {
