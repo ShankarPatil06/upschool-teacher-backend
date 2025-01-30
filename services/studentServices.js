@@ -892,7 +892,7 @@ exports.customWorksheetGenerated = async (request) => {
 
 
             request.data["questions"] = questions
-            request.data["question_paper_status"] = "Active"
+            request.data["question_paper_status"] = "customActive"
             request.data["question_paper_name"] = question_paper_name
             request.data["blueprint_type"] = "customWorksheet"
 
