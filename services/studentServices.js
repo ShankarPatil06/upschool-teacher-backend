@@ -29,6 +29,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
     try {
         const allquizs = await quizRepository.getQuizBasedonStatus2(request);
         const studentMap = new Map();
+        const studentData = await studentRepository.getStudentsData2(request);
         if (allquizs?.length) {
             // console.log('No quizzes found');
             // return callback(0, []);
@@ -41,7 +42,6 @@ exports.topAndBottomPerformers = async function (request, callback) {
                 return new Date(b.created_ts) - new Date(a.created_ts);
             });
     
-            const studentData = await studentRepository.getStudentsData2(request);
     
             for (const qResult of quiz_results) {
                 const quizType = allquizs.find(quiz => quiz.quiz_id === qResult.quiz_id)?.learningType;
