@@ -15,7 +15,7 @@ let sendMail = require("./emailService");
 
 exports.fetchAllStudents = function (request, callback) {
     /** FETCH USER BY EMAIL **/
-    studentRepository.getAllStudentsData(request, function (fetch_teacher_section_students_err, fetch_teacher_section_students_response) {
+    studentRepository.getStudentsData(request, function (fetch_teacher_section_students_err, fetch_teacher_section_students_response) {
         if (fetch_teacher_section_students_err) {
             console.log(fetch_teacher_section_students_err);
             callback(fetch_teacher_section_students_err, fetch_teacher_section_students_response);
@@ -90,9 +90,9 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         student_id: singleStudent.student_id,
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
-                        totalMarks: expectedMarks || totalMarks,
+                        totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                         studentEntry: studentEntry,
-                        percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
+                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2)
                     };
     
                     if (!studentMap.has(student.student_id)) {
@@ -804,6 +804,334 @@ exports.studentChaptersPerformance = async (request) => {
     }
 }
 
+exports.studentAvgVsClassAvg = async (request) => {
+    const allquizs = await quizRepository.getQuizBasedonStatus2(request);
+    if (!allquizs?.length) {
+        console.log('No quizzes found');
+        return callback(0, []);
+    }
+
+    const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
+    request["unit_Quiz_id"] = quiz_Ids;
+
+    const studentData = await studentRepository.getStudentsData2(request);
+    let quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+
+    const questionIds = quiz_results.flatMap(quiz =>
+        quiz.marks_details.flatMap(mark =>
+            mark.qa_details.map(qa => qa.question_id)
+        )
+    );
+
+    const questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+        question_id: [...new Set(questionIds)],
+    });
+
+    const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+
+    const test_Ids = testDetails.map(test => test.class_test_id);
+    request["class_test_id"] = test_Ids;
+
+    const testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+
+    const quizDataMap = new Map();
+
+    for (const qResult of quiz_results) {
+        let currentQuiz = allquizs.find(quiz => quiz.quiz_id === qResult.quiz_id);
+        if (!currentQuiz) continue;
+
+        if (!quizDataMap.has(qResult.quiz_id)) {
+            quizDataMap.set(qResult.quiz_id, {
+                quiz_id: qResult.quiz_id,
+                quiz_name: currentQuiz.quiz_name,
+                total_marks: 0,
+                total_obtained_marks: 0,
+                students: []
+            });
+        }
+
+        let quizEntry = quizDataMap.get(qResult.quiz_id);
+
+        for (const mark_details of qResult.marks_details) {
+            const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
+            const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
+
+            const studentMark = mark_details.totalMark;
+            const expectedMarks = mark_details.expectedMarks;
+            let totalMarks = filteredQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+
+            let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
+            if (!singleStudent) continue;
+
+            const student = {
+                student_id: singleStudent.student_id,
+                student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                studentMark: studentMark,
+                totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+            };
+
+            quizEntry.students.push(student);
+            quizEntry.total_marks += student.totalMarks;
+            quizEntry.total_obtained_marks += studentMark;
+        }
+        quizDataMap.set(qResult.quiz_id, quizEntry);
+    }
+
+    for (const tResult of testResult) {
+        let currentTest = testDetails.find(test => test.class_test_id === tResult.class_test_id);
+        if (!currentTest) continue;
+
+        if (!quizDataMap.has(tResult.class_test_id)) {
+            quizDataMap.set(tResult.class_test_id, {
+                quiz_id: tResult.class_test_id,
+                quiz_name: currentTest.class_test_name,
+                total_marks: 0,
+                total_obtained_marks: 0,
+                students: []
+            });
+        }
+        let quizEntry = quizDataMap.get(tResult.class_test_id);
+        for (const mark_details of tResult?.marks_details) {
+            const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
+            const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
+            let totalMarks = filteredQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+
+            const studentMark = mark_details.totalMark;
+            const expectedMarks = mark_details.expectedMarks;
+            let singleStudent = studentData.Items.find(student => student.student_id === tResult.student_id);
+            if (!singleStudent) continue;
+            const student = {
+                student_id: tResult.student_id,
+                student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                studentMark: studentMark,
+                totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+            };
+            quizEntry.students.push(student);
+            quizEntry.total_marks += student.totalMarks;
+            quizEntry.total_obtained_marks += studentMark;
+        }
+    }
+
+    const quizDataArray = Array.from(quizDataMap.values());
+    quizDataArray.forEach(quiz => {
+        quiz.class_average = ((quiz.total_obtained_marks / quiz.total_marks) * 100).toFixed(2);
+    });
+
+    return quizDataArray
+}
+
+exports.studentAvgVsClassAvgChapterWise = async (request) => {
+    const allquizs = await quizRepository.getQuizBasedonStatus2(request);
+    if (!allquizs?.length) {
+        console.log('No quizzes found');
+        return callback(0, []);
+    }
+
+    const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
+    request["unit_Quiz_id"] = quiz_Ids;
+
+    const chapterMap = allquizs.reduce((acc, quiz) => {
+        if (!acc[quiz.chapter_id]) {
+            acc[quiz.chapter_id] = new Set();
+        }
+        acc[quiz.chapter_id].add(quiz.quiz_id);
+        return acc;
+    }, {});
+
+    const uniqueChapters = Object.entries(chapterMap).map(([chapter_id, quizIds]) => ({
+        chapter_id: chapter_id,
+        quiz_ids: [...quizIds]
+    }));
+
+    const chapter_Ids = [...new Set(allquizs.map(quiz => quiz.chapter_id))];
+    request["unit_chapter_id"] = chapter_Ids;
+
+    const studentData = await studentRepository.getStudentsData2(request);
+    const quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+    const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+
+    const question_paper_ids = testDetails.map(test => test.question_paper_id);
+    const test_ids = testDetails.map(test => test.class_test_id);
+
+    request['class_test_id'] = test_ids
+    request['question_paper_ids'] = question_paper_ids;
+
+    const testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+    const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
+
+    const testChapterMap = {};
+    for (const paper of questionPaper.Items) {
+        if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
+            // Find all matching test_ids for the question_paper_id
+            const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
+
+            for (const chapter of paper.chapter_id) {
+                if (!testChapterMap[chapter]) {
+                    testChapterMap[chapter] = new Set();
+                }
+
+                // Add all test_ids linked to the question_paper_id
+                for (const test of matchingTests) {
+                    testChapterMap[chapter].add(test.class_test_id);
+                }
+            }
+        }
+    }
+
+    const uniqueTestChapters = Object.entries(testChapterMap).map(([chapter_id, testIds]) => ({
+        chapter_id: chapter_id,
+        test_ids: [...testIds]
+    }));
+
+    const questionIds = quiz_results.flatMap(quiz =>
+        quiz.marks_details.flatMap(mark =>
+            mark.qa_details.map(qa => qa.question_id)
+        )
+    );
+
+    let questionDetails = [];
+    if (questionIds.length > 0) {
+        questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+            question_id: [...new Set(questionIds)],
+        });
+    }
+
+    let chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+
+    const chapterResults = [];
+    for (const uniqueChapter of uniqueChapters) {
+        let total_marks = 0;
+        let total_obtained_marks = 0;
+        const studentMap = new Map();
+
+        const current_chapter = chapter_details.find(chapter => chapter.chapter_id === uniqueChapter.chapter_id);
+
+        for (const qResult of quiz_results) {
+            if (uniqueChapter.quiz_ids.includes(qResult.quiz_id)) {
+                for (const mark_details of qResult.marks_details) {
+                    const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
+                    const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
+
+                    const studentMark = mark_details.totalMark;
+                    const expectedMarks = mark_details.expectedMarks;
+                    let totalMarks = filteredQuestions[0]?.marks || 0;
+                    total_marks += (typeof mark_details.expectedMarks === "string" ? filteredQuestions[0]?.marks : mark_details.expectedMarks || filteredQuestions[0]?.marks) || 0;
+                    total_obtained_marks += studentMark;
+
+                    let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
+                    if (!singleStudent) continue;
+
+                    const student = {
+                        student_id: singleStudent.student_id,
+                        student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                        studentMark: studentMark,
+                        totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
+                        percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
+                    };
+
+                    if (!studentMap.has(student.student_id)) {
+                        studentMap.set(student.student_id, student);
+                    } else {
+                        const existingStudent = studentMap.get(student.student_id);
+                        existingStudent.studentMark += student.studentMark;
+                        existingStudent.totalMarks += student.totalMarks;
+                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+                        studentMap.set(student.student_id, existingStudent);
+                    }
+                }
+            }
+        }
+        chapterResults.push({
+            chapter_id: uniqueChapter.chapter_id,
+            chapter_name: current_chapter?.display_name || '',
+            total_marks,
+            total_obtained_marks,
+            class_average: ((total_obtained_marks / total_marks) * 100).toFixed(2),
+            students: Array.from(studentMap.values()),
+        });
+    }
+
+    const chapterTestResults = [];
+    for (const chapter of uniqueTestChapters) {
+        let total_marks = 0;
+        let total_obtained_marks = 0;
+        const studentMap = new Map();
+
+        const current_chapter = chapter_details.find(ch => ch.chapter_id === chapter.chapter_id);
+
+        for (const test of testResult) {
+            if (chapter.test_ids.includes(test.class_test_id)) {
+                for (const marks of test.marks_details) {
+                    total_marks += marks.expectedMarks || 0;
+                    total_obtained_marks += marks.totalMark || 0;
+
+                    let student = studentData.Items.find(s => s.student_id === test.student_id);
+                    if (!student) continue;
+
+                    const studentEntry = {
+                        student_id: student.student_id,
+                        student_name: `${student.user_firstname} ${student.user_lastname}`,
+                        studentMark: marks.totalMark,
+                        totalMarks: marks.expectedMarks || 0,
+                        percentage: (((marks.totalMark / (marks.expectedMarks || 1)) * 100).toFixed(2))
+                    };
+
+                    if (!studentMap.has(student.student_id)) {
+                        studentMap.set(student.student_id, studentEntry);
+                    } else {
+                        let existing = studentMap.get(student.student_id);
+                        existing.studentMark += studentEntry.studentMark;
+                        existing.totalMarks += studentEntry.totalMarks;
+                        existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
+                        studentMap.set(student.student_id, existing);
+                    }
+                }
+            }
+        }
+
+        chapterTestResults.push({
+            chapter_id: chapter.chapter_id,
+            chapter_name: current_chapter?.display_name || '',
+            total_marks,
+            total_obtained_marks,
+            class_average: ((total_obtained_marks / total_marks) * 100).toFixed(2),
+            students: Array.from(studentMap.values())
+        });
+    }
+    const mergedResults = {};
+
+    for (const result of [...chapterResults, ...chapterTestResults]) {
+        const { chapter_id, total_marks, total_obtained_marks, students } = result;
+
+        if (!mergedResults[chapter_id]) {
+            mergedResults[chapter_id] = { ...result };
+        } else {
+            mergedResults[chapter_id].total_marks = (parseFloat(mergedResults[chapter_id].total_marks) || 0) + (parseFloat(total_marks) || 0);
+            mergedResults[chapter_id].total_obtained_marks += total_obtained_marks;
+            mergedResults[chapter_id].class_average = ((mergedResults[chapter_id].total_obtained_marks / mergedResults[chapter_id].total_marks) * 100).toFixed(2);
+
+            const existingStudents = new Map(mergedResults[chapter_id].students.map(s => [s.student_id, s]));
+
+            for (const student of students) {
+                if (existingStudents.has(student.student_id)) {
+                    const existing = existingStudents.get(student.student_id);
+                    existing.studentMark += student.studentMark;
+                    existing.totalMarks = parseFloat(existing.totalMarks) + parseFloat(student.totalMarks);
+                    existing.percentage = ((existing.studentMark / existing.totalMarks) * 100).toFixed(2);
+                } else {
+                    existingStudents.set(student.student_id, { ...student });
+                }
+            }
+            mergedResults[chapter_id].students = Array.from(existingStudents.values());
+        }
+    }
+
+    // Convert object back to array
+    const finalResults = Object.values(mergedResults);
+    return finalResults;
+}
 
 exports.customWorksheetGenerated = async (request) => {
     try {
