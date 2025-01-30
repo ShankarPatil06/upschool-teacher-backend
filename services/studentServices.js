@@ -90,9 +90,9 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         student_id: singleStudent.student_id,
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
-                        totalMarks: expectedMarks || totalMarks,
+                        totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                         studentEntry: studentEntry,
-                        percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
+                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2)
                     };
     
                     if (!studentMap.has(student.student_id)) {
