@@ -455,7 +455,7 @@ const getRecentQuiz = async (quizDetails) => {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
         if (quizResults.length > 0) {
             recentQuiz = quiz;
-            break;
+            return recentQuiz;
         }
     }
     return recentQuiz;
@@ -467,6 +467,7 @@ const getRecentTest = async (testDetails) => {
         const testResults = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
         if (testResults.length > 0) {
             recentTest = test
+            return recentTest
         }
     }
     return recentTest;
