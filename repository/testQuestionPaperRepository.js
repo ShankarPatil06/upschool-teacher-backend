@@ -248,6 +248,45 @@ exports.getTestQuestionPaperById2 = async (request) => {
     }
 };
 
+exports.getTestQuestionPaperById3 = async (request) => {
+    const question_paper_ids = [...new Set(request.question_paper_ids)]; // Remove duplicates
+
+    if (question_paper_ids.length === 0) {
+        return { statusCode: 400, message: "No question paper IDs provided" };
+    }
+
+    if (question_paper_ids.length === 1) {
+        // Query directly if only one question_paper_id exists
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            KeyConditionExpression: "question_paper_id = :question_paper_id",
+            ExpressionAttributeValues: {
+                ":question_paper_id": question_paper_ids[0]
+            }
+        };
+
+        return await DATABASE_TABLE2.query(readParams);
+    } else {
+        // Construct filter expression dynamically for multiple IDs
+        let filterExpression = question_paper_ids
+            .map((_, index) => `question_paper_id = :question_paper_id${index}`)
+            .join(" OR ");
+
+        let expressionAttributeValues = {};
+        question_paper_ids.forEach((id, index) => {
+            expressionAttributeValues[`:question_paper_id${index}`] = id;
+        });
+
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_test_question_paper,
+            FilterExpression: filterExpression,
+            ExpressionAttributeValues: expressionAttributeValues
+        };
+
+        return await DATABASE_TABLE2.scan(readParams);
+    }
+};
+
 exports.getClassTestsBasedonIds = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -405,7 +444,7 @@ exports.insertCustomWorkSheetQuestionPaper = async (request) => {
 };
 
 exports.fetchStudentWorksheet = async (request) => {
-    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id";
+    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND question_paper_status=:question_paper_status";
 
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
@@ -414,6 +453,7 @@ exports.fetchStudentWorksheet = async (request) => {
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
         ":blueprint_type": "customWorksheet",
+        ":question_paper_status": "customActive",
     };
 
     let params = {
@@ -463,7 +503,7 @@ exports.updateTemplateDetails = async (request) => {
 }
 
 exports.fetchStudentWorksheetBasedOnTestId = async (request) => {
-    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND test_id=:test_id";
+    let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND test_id=:test_id AND question_paper_status = :question_paper_status";
 
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
@@ -472,6 +512,7 @@ exports.fetchStudentWorksheetBasedOnTestId = async (request) => {
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
         ":test_id": request.data.test_id,
+        ":question_paper_status": "customActive",
         ":blueprint_type": "customWorksheet",
     };
 

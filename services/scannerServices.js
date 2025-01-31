@@ -1007,6 +1007,8 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                         });
                     }
 
+                    fetchQuizResultResponse.Items[0].answer_metadata.sort((a, b) => a.page_no - b.page_no);
+
                     let updateRequest = {
                         data: {
                             result_id: fetchQuizResultResponse.Items[0].result_id,
