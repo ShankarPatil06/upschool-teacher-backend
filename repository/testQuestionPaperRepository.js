@@ -265,25 +265,24 @@ exports.getTestQuestionPaperById3 = async (request) => {
             }
         };
 
-        return await DATABASE_TABLE2.query(readParams);
+        const results =  await DATABASE_TABLE2.query(readParams);
+        return { statusCode: 200, data: results.Items };
     } else {
-        // Construct filter expression dynamically for multiple IDs
-        let filterExpression = question_paper_ids
-            .map((_, index) => `question_paper_id = :question_paper_id${index}`)
-            .join(" OR ");
-
-        let expressionAttributeValues = {};
-        question_paper_ids.forEach((id, index) => {
-            expressionAttributeValues[`:question_paper_id${index}`] = id;
+        const queryPromises = question_paper_ids.map((id) => {
+            const readParams = {
+                TableName: TABLE_NAMES.upschool_test_question_paper,
+                KeyConditionExpression: "question_paper_id = :question_paper_id",
+                ExpressionAttributeValues: {
+                    ":question_paper_id": id
+                }
+            };
+            return DATABASE_TABLE2.query(readParams);
         });
 
-        const readParams = {
-            TableName: TABLE_NAMES.upschool_test_question_paper,
-            FilterExpression: filterExpression,
-            ExpressionAttributeValues: expressionAttributeValues
-        };
+        const results = await Promise.all(queryPromises);
+        const mergedResults = results.flatMap(result => result.Items || []);
 
-        return await DATABASE_TABLE2.scan(readParams);
+        return { statusCode: 200, data: mergedResults };
     }
 };
 
