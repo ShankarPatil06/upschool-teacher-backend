@@ -329,14 +329,18 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         TableName: TABLE_NAMES.upschool_class_test_table,
         IndexName: Indexes.common_id_index,
         KeyConditionExpression: "common_id = :common_id",
-        FilterExpression: ":client_class_id=client_class_id AND subject_id = :subject_id AND section_id = :section_id",
+        FilterExpression: ":client_class_id=client_class_id AND subject_id = :subject_id AND section_id = :section_id AND class_test_status = :class_test_status",
         ExpressionAttributeValues: {
             ":common_id": constant.constValues.common_id,
             ":section_id": request.data.section_id,
             ":subject_id": request.data.subject_id,
             ":client_class_id": request.data.client_class_id,
+            ":class_test_status": "Active",
         },
     };
     const result = await DATABASE_TABLE2.query(params);
-    return result.Items;
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+    return sortedItems;
 }
