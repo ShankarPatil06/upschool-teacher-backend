@@ -27,39 +27,53 @@ exports.fetchAllStudents = function (request, callback) {
 
 exports.topAndBottomPerformers = async function (request, callback) {
     try {
-        const allquizs = await quizRepository.getQuizBasedonStatus2(request);
+        const allquizs = await quizRepository.fetchAllQuizBasedOnSubject3(request);
         const studentMap = new Map();
         const studentData = await studentRepository.getStudentsData2(request);
+        const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
+        request["unit_Quiz_id"] = quiz_Ids;
+
+        let quiz_results = [];
+        let recentQuiz;
         if (allquizs?.length) {
-            // console.log('No quizzes found');
-            // return callback(0, []);
-            const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
-            request["unit_Quiz_id"] = quiz_Ids;
-    
-            let quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
-    
-            quiz_results = quiz_results.sort((a, b) => {
-                return new Date(b.created_ts) - new Date(a.created_ts);
-            });
-    
-    
+            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+            if (request.data.isRecent) {
+                const { quiz, quizResults } = await getRecentQuizForMe(allquizs);
+                quiz_results = quizResults;
+                recentQuiz = quiz;
+            } else {
+                quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+            }
+        }
+
+        const allTestResponse = await classTestRepository.fetchAllTestBasedOnSubject(request);
+        console.log({ firstttt: allTestResponse })
+        const allTests = allTestResponse;
+        let testResults;
+        const test_Ids = allTests.map(test => test.class_test_id);
+        request["class_test_id"] = test_Ids;
+        let recentTest;
+        if (allTests?.length) {
+            if (request.data.isRecent) {
+                const { test, test_results } = await getRecentTestForMe(allTests);
+                testResults = test_results;
+                recentTest = test;
+            } else {
+                testResults = await fetchStudentresultMetadata3(request);
+            }
+        }
+
+        const quizDate = recentQuiz?.created_ts ? new Date(recentQuiz.created_ts) : new Date("1900-12-18T10:56:11.143Z");
+        const testDate = recentTest?.created_ts ? new Date(recentTest.created_ts) : new Date("1900-12-18T10:56:11.143Z");
+
+        const isQuizRecent = quizDate > testDate;
+
+        const processQuizResults = async () => {
             for (const qResult of quiz_results) {
-                const quizType = allquizs.find(quiz => quiz.quiz_id === qResult.quiz_id)?.learningType;
-    
-                const studentEntry = studentMap.get(qResult.student_id)?.studentEntry || {
-                    preLearning: null,
-                    postLearning: null,
-                };
-    
-                if (request.data.isRecent && (quizType === "preLearning" && studentEntry.preLearning) ||
-                    (quizType === "postLearning" && studentEntry.postLearning)) {
-                    continue;
-                }
-    
                 for (const mark_details of qResult.marks_details) {
                     const questionIds = mark_details.qa_details.map(q => q.question_id);
                     request["question_id"] = questionIds;
-    
+
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
                     let totalMarks = 0;
@@ -72,29 +86,22 @@ exports.topAndBottomPerformers = async function (request, callback) {
                             }
                         });
                     });
-    
+
                     if (fetch_bulk_questions_response.Items?.length) {
                         totalMarks = fetch_bulk_questions_response.Items.reduce((sum, question) => sum + question.marks, 0);
                     }
-    
+
                     let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
                     if (!singleStudent) continue;
-    
-                    if (quizType === "preLearning") {
-                        studentEntry.preLearning = true;
-                    } else if (quizType === "postLearning") {
-                        studentEntry.postLearning = true;
-                    }
-    
+
                     const student = {
                         student_id: singleStudent.student_id,
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                        studentEntry: studentEntry,
                         percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2)
                     };
-    
+
                     if (!studentMap.has(student.student_id)) {
                         studentMap.set(student.student_id, student);
                     } else {
@@ -102,62 +109,63 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
                         existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
-                        existingStudent.studentEntry = studentEntry;
                         studentMap.set(student.student_id, existingStudent);
                     }
                 }
+                if (request.data.isRecent) {
+                    return;
+                }
             }
         }
-        classTestRepository.getClassTestsBasedonStatus(request, async function (allTestErr, allTestResponse) {
-            if (allTestErr) {
-                console.log(allTestErr);
-                callback(allTestErr, allTestResponse);
-            } else {
-                console.log(allTestResponse);
-                const allTests = allTestResponse.Items;
-                if (allTests?.length) {
-                    console.log({ allTests });
-                    const test_Ids = allTests.map(test => test.class_test_id);
-                    request["class_test_id"] = test_Ids;
-                    const testResults = await fetchStudentresultMetadata3(request);
 
-                    testResults.forEach(testResult => {
-                        let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
-                        const testData = {
-                            student_id: testResult.student_id,
-                            student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
-                            studentMark: testResult?.marks_details[0]?.totalMark,
-                            totalMarks: testResult?.marks_details[0]?.expectedMarks,
-                            percentage: (((testResult?.marks_details[0]?.totalMark / testResult?.marks_details[0]?.expectedMarks) || 0) * 100).toFixed(2),
-                        };
-                        if (!studentMap.has(testResult.student_id)) {
-                            studentMap.set(testResult.student_id, testData);
-                        } else {
-                            const existingStudent = studentMap.get(testData.student_id);
-                            existingStudent.studentMark += testData.studentMark;
-                            existingStudent.totalMarks += testData.totalMarks;
-                            existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
-
-                            studentMap.set(testData.student_id, existingStudent);
-                        }
-                        if (request.data.isRecent) {
-                            return;
-                        }
-                    })
-                }
-                const studentsArray = Array.from(studentMap.values());
-                studentsArray.sort((a, b) => b.percentage - a.percentage);
-
-                const topStudents = studentsArray.slice(0, 5);
-                const bottomStudents = studentsArray.slice(-5);
-
-                const result = {
-                    topPerformers: topStudents,
-                    bottomPerformers: bottomStudents.reverse(),
+        const processTestResults = async () => {
+            testResults.forEach(testResult => {
+                let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
+                const testData = {
+                    student_id: testResult.student_id,
+                    student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
+                    studentMark: testResult?.marks_details[0]?.totalMark,
+                    totalMarks: testResult?.marks_details[0]?.expectedMarks,
+                    percentage: (((testResult?.marks_details[0]?.totalMark / testResult?.marks_details[0]?.expectedMarks) || 0) * 100).toFixed(2),
                 };
-                callback(0, result);
+                if (!studentMap.has(testResult.student_id)) {
+                    studentMap.set(testResult.student_id, testData);
+                } else {
+                    const existingStudent = studentMap.get(testData.student_id);
+                    existingStudent.studentMark += testData.studentMark;
+                    existingStudent.totalMarks += testData.totalMarks;
+                    existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+
+                    studentMap.set(testData.student_id, existingStudent);
+                }
+                if (request.data.isRecent) {
+                    return;
+                }
+            })
+        }
+
+        if (request.data.isRecent) {
+            if (isQuizRecent) {
+                processQuizResults();
+            } else {
+                processTestResults();
             }
-        });
+        } else {
+            processQuizResults();
+            processTestResults();
+        }
+
+        const studentsArray = Array.from(studentMap.values());
+        studentsArray.sort((a, b) => b.percentage - a.percentage);
+
+        const topStudents = studentsArray.slice(0, 5);
+        const bottomStudents = studentsArray.slice(-5);
+
+        const result = {
+            topPerformers: topStudents,
+            bottomPerformers: bottomStudents.reverse(),
+        };
+        callback(0, result);
     } catch (error) {
         console.error('Error in topAndBottomPerformers:', error);
         callback(error, null);
@@ -462,6 +470,26 @@ const getRecentTest = async (testDetails) => {
         }
     }
     return recentTest;
+}
+
+const getRecentQuizForMe = async (quizDetails) => {
+    let recentQuiz;
+    for (const quiz of quizDetails) {
+        const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
+        if (quizResults.length > 0) {
+            return { quiz, quizResults };
+        }
+    }
+    return recentQuiz;
+}
+
+const getRecentTestForMe = async (testDetails) => {
+    for (const test of testDetails) {
+        const test_results = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
+        if (test_results.length > 0) {
+            return { test, test_results };
+        }
+    }
 }
 
 exports.studentChaptersPerformance = async (request) => {
@@ -962,7 +990,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
 
     const testChapterMap = {};
-    for (const paper of questionPaper.Items) {
+    for (const paper of questionPaper.data) {
         if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
             // Find all matching test_ids for the question_paper_id
             const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
