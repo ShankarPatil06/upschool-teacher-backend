@@ -76,7 +76,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
 
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
-                    let totalMarks = 0;
+                    let totalMarks = 1;
                     const fetch_bulk_questions_response = await new Promise((resolve, reject) => {
                         questionRepository.fetchBulkQuestionsNameById(request, (err, response) => {
                             if (err) {
@@ -108,12 +108,9 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         const existingStudent = studentMap.get(student.student_id);
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
-                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2) || 0;
                         studentMap.set(student.student_id, existingStudent);
                     }
-                }
-                if (request.data.isRecent) {
-                    return;
                 }
             }
         }
@@ -138,21 +135,18 @@ exports.topAndBottomPerformers = async function (request, callback) {
 
                     studentMap.set(testData.student_id, existingStudent);
                 }
-                if (request.data.isRecent) {
-                    return;
-                }
             })
         }
 
         if (request.data.isRecent) {
             if (isQuizRecent) {
-                processQuizResults();
+                await processQuizResults();
             } else {
-                processTestResults();
+                await processTestResults();
             }
         } else {
-            processQuizResults();
-            processTestResults();
+            await processQuizResults();
+            await processTestResults();
         }
 
         const studentsArray = Array.from(studentMap.values());
@@ -897,7 +891,7 @@ exports.studentAvgVsClassAvg = async (request) => {
                 student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
             };
 
             quizEntry.students.push(student);
@@ -935,7 +929,7 @@ exports.studentAvgVsClassAvg = async (request) => {
                 student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
             };
             quizEntry.students.push(student);
             quizEntry.total_marks += student.totalMarks;
@@ -1057,7 +1051,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                        percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
+                        percentage: (((studentMark / (expectedMarks || 1))) * 100).toFixed(2),
                     };
 
                     if (!studentMap.has(student.student_id)) {
@@ -1066,7 +1060,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                         const existingStudent = studentMap.get(student.student_id);
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
-                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 1) * 100).toFixed(2);
                         studentMap.set(student.student_id, existingStudent);
                     }
                 }
