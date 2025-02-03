@@ -200,11 +200,15 @@ exports.fetchStudentresultMetadata3 = async (request) => {
     const common_id = constant.constValues.common_id;
 
     // Create filter expression for multiple class_test_id
-    const filterExpression = class_test_id.map((_, index) => `class_test_id = :class_test_id${index}`).join(" OR ");
+    const filterExpression = `(${class_test_id.map((_, index) => `class_test_id = :class_test_id${index}`).join(" OR ")}) AND evaluated = :evaluated`;
+    
     const expressionAttributeValues = class_test_id.reduce((acc, testId, index) => {
         acc[`:class_test_id${index}`] = testId;
         return acc;
-    }, { ":common_id": common_id });
+    }, { 
+        ":common_id": common_id,
+        ":evaluated": "Yes"
+    });
 
     const params = {
         TableName: TABLE_NAMES.upschool_test_result,

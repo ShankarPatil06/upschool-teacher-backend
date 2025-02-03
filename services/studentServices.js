@@ -33,10 +33,13 @@ exports.topAndBottomPerformers = async function (request, callback) {
         const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
         request["unit_Quiz_id"] = quiz_Ids;
 
+        let questionDetails = [];
+        let quiz_question_ids = [];
+        let test_question_ids = [];
         let quiz_results = [];
         let recentQuiz;
         if (allquizs?.length) {
-            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID3(request);
             if (request.data.isRecent) {
                 const { quiz, quizResults } = await getRecentQuizForMe(allquizs);
                 quiz_results = quizResults;
@@ -44,10 +47,14 @@ exports.topAndBottomPerformers = async function (request, callback) {
             } else {
                 quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
             }
+            quiz_question_ids = await quiz_results.flatMap(quiz =>
+                quiz.marks_details.flatMap(mark =>
+                    mark.qa_details.map(qa => qa.question_id)
+                )
+            );
         }
 
         const allTestResponse = await classTestRepository.fetchAllTestBasedOnSubject(request);
-        console.log({ firstttt: allTestResponse })
         const allTests = allTestResponse;
         let testResults;
         const test_Ids = allTests.map(test => test.class_test_id);
@@ -61,8 +68,19 @@ exports.topAndBottomPerformers = async function (request, callback) {
             } else {
                 testResults = await fetchStudentresultMetadata3(request);
             }
+            test_question_ids = await testResults.flatMap(test =>
+                test.marks_details.flatMap(mark =>
+                    mark.qa_details.map(qa => qa.question_id)
+                )
+            );
         }
-
+        let allQuestionIds = [...quiz_question_ids, ...test_question_ids];
+        if (allQuestionIds.length > 0) {
+            questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+                question_id: [...new Set(allQuestionIds)],
+            });
+        }
+        console.log({ firstttt: test_question_ids })
         const quizDate = recentQuiz?.created_ts ? new Date(recentQuiz.created_ts) : new Date("1900-12-18T10:56:11.143Z");
         const testDate = recentTest?.created_ts ? new Date(recentTest.created_ts) : new Date("1900-12-18T10:56:11.143Z");
 
@@ -74,22 +92,12 @@ exports.topAndBottomPerformers = async function (request, callback) {
                     const questionIds = mark_details.qa_details.map(q => q.question_id);
                     request["question_id"] = questionIds;
 
+                    const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
+                    const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
+
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
-                    let totalMarks = 1;
-                    const fetch_bulk_questions_response = await new Promise((resolve, reject) => {
-                        questionRepository.fetchBulkQuestionsNameById(request, (err, response) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(response);
-                            }
-                        });
-                    });
-
-                    if (fetch_bulk_questions_response.Items?.length) {
-                        totalMarks = fetch_bulk_questions_response.Items.reduce((sum, question) => sum + question.marks, 0);
-                    }
+                    let totalMarks = filteredQuestions.reduce((sum, question) => sum + question.marks, 0);
 
                     let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
                     if (!singleStudent) continue;
@@ -99,7 +107,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2)
+                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2)
                     };
 
                     if (!studentMap.has(student.student_id)) {
@@ -108,7 +116,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                         const existingStudent = studentMap.get(student.student_id);
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
-                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2) || 0;
+                        existingStudent.percentage = ((existingStudent.studentMark / (existingStudent.totalMarks || 1)) * 100).toFixed(2) || 0;
                         studentMap.set(student.student_id, existingStudent);
                     }
                 }
@@ -123,7 +131,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                     student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
                     studentMark: testResult?.marks_details[0]?.totalMark,
                     totalMarks: testResult?.marks_details[0]?.expectedMarks,
-                    percentage: (((testResult?.marks_details[0]?.totalMark / testResult?.marks_details[0]?.expectedMarks) || 0) * 100).toFixed(2),
+                    percentage: (((testResult?.marks_details[0]?.totalMark / (testResult?.marks_details[0]?.expectedMarks || 1))) * 100).toFixed(2),
                 };
                 if (!studentMap.has(testResult.student_id)) {
                     studentMap.set(testResult.student_id, testData);
@@ -131,7 +139,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                     const existingStudent = studentMap.get(testData.student_id);
                     existingStudent.studentMark += testData.studentMark;
                     existingStudent.totalMarks += testData.totalMarks;
-                    existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+                    existingStudent.percentage = (((existingStudent.studentMark / (existingStudent.totalMarks || 1))) * 100).toFixed(2);
 
                     studentMap.set(testData.student_id, existingStudent);
                 }
@@ -1039,7 +1047,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
-                    let totalMarks = filteredQuestions[0]?.marks || 0;
+                    let totalMarks = filteredQuestions.reduce((sum, question) => sum + question.marks, 0);
                     total_marks += (typeof mark_details.expectedMarks === "string" ? filteredQuestions[0]?.marks : mark_details.expectedMarks || filteredQuestions[0]?.marks) || 0;
                     total_obtained_marks += studentMark;
 
