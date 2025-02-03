@@ -233,7 +233,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0].concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -298,7 +298,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0]?.concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                                     console.log({ conceptDetails });
 
                                     if (existingConcept) {
@@ -385,7 +385,7 @@ exports.needAttention = async (request) => {
                                 if (concept.concept_question_id.includes(mark.question_id)) {
                                     const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                                    const markValue = mark.modified_marks !== 'N.A.' ? mark.modified_marks : (mark.obtained_marks !== ' N.A.' ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== 'N.A.' ? parseInt(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseInt(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -539,7 +539,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (concept.concept_question_id.includes(mark.question_id)) {
                             const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
 
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
@@ -661,7 +661,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = preConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -743,7 +743,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = postConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
