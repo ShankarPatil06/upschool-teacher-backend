@@ -378,6 +378,33 @@ exports.fetchBulkQuizResultsByID2 = async (request) => {
     return result.Items;
 };
 
+exports.fetchBulkQuizResultsByID3 = async (request) => {
+    const unit_Quiz_id = [...new Set(request.unit_Quiz_id)]; // Remove duplicates
+    const common_id = constant.constValues.common_id;
+
+    // Create filter expression for multiple quiz_id
+    const filterExpression = `(${unit_Quiz_id.map((_, index) => `quiz_id = :quiz_id${index}`).join(" OR ")}) AND evaluated = :evaluated`;
+
+    const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
+        acc[`:quiz_id${index}`] = quizId;
+        return acc;
+    }, { 
+        ":common_id": common_id,
+        ":evaluated": "Yes" // Added evaluated condition
+    });
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterExpression,
+        ExpressionAttributeValues: expressionAttributeValues,
+    };
+
+    const result = await DATABASE_TABLE2.query(params);
+    return result.Items;
+};
+
 exports.fetchStudentQuizResultMetadata3 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
