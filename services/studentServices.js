@@ -371,11 +371,9 @@ exports.needAttention = async (request) => {
                         topicRepository.fetchPreTopicData2(chapterDetails),
                         topicRepository.fetchPostTopicData2(chapterDetails),
                     ]);
-
-                    if (chapterDetails.chapter_title === 'Karnataka History') {
-                        pretopicDetails = pretopicDetails.Items;
-                        posttopicDetails = posttopicDetails.Items
-                    }
+                    
+                    pretopicDetails = pretopicDetails?.Items ? pretopicDetails.Items : pretopicDetails;
+                    posttopicDetails = posttopicDetails?.Items ? posttopicDetails.Items : posttopicDetails;
 
                     let preConceptDetails = [];
                     let postConceptDetails = [];
@@ -527,10 +525,13 @@ exports.studentChaptersPerformance = async (request) => {
                 const chapterDetails = chapterItem.Items[0]
                 let allTopics = [];
 
-                const [pretopicDetails, posttopicDetails] = await Promise.all([
+                let [pretopicDetails, posttopicDetails] = await Promise.all([
                     topicRepository.fetchPreTopicData2(chapterDetails),
                     topicRepository.fetchPostTopicData2(chapterDetails),
                 ]);
+
+                pretopicDetails = pretopicDetails.Items ? pretopicDetails.Items : pretopicDetails;
+                posttopicDetails = posttopicDetails.Items ? posttopicDetails.Items : posttopicDetails;
 
                 allTopics = [...pretopicDetails, ...posttopicDetails]
 
