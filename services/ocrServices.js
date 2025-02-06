@@ -289,7 +289,7 @@ async function convertImageToBase64(imageUrl) {
     //   const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
     const schoolInfoPromise = schoolRepository.getSchoolDetailsById2(request);
 const responsePromise = schoolInfoPromise.then(schoolInfo => 
-  extractTextAndEquations(imageUrl, schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
+  extractTextAndEquations(imageUrl, schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation ? schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation : 'NO' )
 );
 
 // Wait for both promises to resolve
