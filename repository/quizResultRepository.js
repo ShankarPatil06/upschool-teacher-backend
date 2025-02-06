@@ -378,7 +378,7 @@ exports.fetchBulkQuizResultsByID2 = async (request) => {
     return result.Items;
 };
 
-exports.fetchBulkQuizResultsByID3 = async (request) => {
+exports.fetchBulkQuizResultsByID4 = async (request) => {
     const unit_Quiz_id = [...new Set(request.unit_Quiz_id)]; // Remove duplicates
     const common_id = constant.constValues.common_id;
 
@@ -388,7 +388,7 @@ exports.fetchBulkQuizResultsByID3 = async (request) => {
     const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
         acc[`:quiz_id${index}`] = quizId;
         return acc;
-    }, { 
+    }, {
         ":common_id": common_id,
         ":evaluated": "Yes" // Added evaluated condition
     });
@@ -408,16 +408,16 @@ exports.fetchBulkQuizResultsByID3 = async (request) => {
 exports.fetchStudentQuizResultMetadata3 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
-                ExpressionAttributeValues: {
-                    ":quiz_id": request.quiz_id,
-                    ":evaluated": "Yes",
-                    ":common_id": constant.constValues.common_id
-                }
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id AND evaluated = :evaluated",
+        ExpressionAttributeValues: {
+            ":quiz_id": request.quiz_id,
+            ":evaluated": "Yes",
+            ":common_id": constant.constValues.common_id
+        }
     };
 
-    let result= await DATABASE_TABLE2.query(params);
+    let result = await DATABASE_TABLE2.query(params);
     return result.Items;
 }

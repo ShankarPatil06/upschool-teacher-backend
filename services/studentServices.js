@@ -39,7 +39,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
         let quiz_results = [];
         let recentQuiz;
         if (allquizs?.length) {
-            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID3(request);
+            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID4(request);
             if (request.data.isRecent) {
                 const { quiz, quizResults } = await getRecentQuizForMe(allquizs);
                 quiz_results = quizResults;
