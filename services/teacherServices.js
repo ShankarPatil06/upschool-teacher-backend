@@ -24,7 +24,7 @@ exports.getTeacherClasses = async (request) => {
   }
   const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ "client_class_id": val.client_class_id }));
   const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: "OR" })
-  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling ? false : schoolDetails.Items[0]?.school_logoURL }
+  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === 'Upschool' ? false : schoolDetails.Items[0]?.school_logoURL }
   return teacherResponse2;
 };
 exports.getTeacherSectionsBasedonClass = async (request) => {
