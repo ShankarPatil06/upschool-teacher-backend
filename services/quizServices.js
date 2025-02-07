@@ -66,7 +66,22 @@ const checkDuplicateTopics = async (resTopics, checkTopics) => {
     return dupTopics;
 }
 
-exports.fetchQuizBasedonStatus = async (request) => await quizRepository.getQuizBasedonStatus2(request)
+exports.fetchQuizBasedonStatus = async (request) => {
+    try {
+        return await new Promise((resolve) => {
+            quizRepository.getQuizBasedonStatus(request, (status, response) => {
+                if (response?.Items?.length > 0) {
+                    resolve(response?.Items);
+                } else {
+                    resolve(response?.Items);
+                }
+            });
+        });
+    } catch (error) {
+        console.error("Error in fetchQuizBasedonStatus:", error);
+        throw error;
+    }
+}
 
 exports.getQuizResult = async (request) => {
 
@@ -369,9 +384,9 @@ const mergeStudentAnswers = (answerMetadata) => {
 function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage) {
     // console.log("questionDataRes", questionDataRes);
     const questionMarksMap = {};
-    
+
     markAssignRes[0].answer_metadata = mergeStudentAnswers(markAssignRes[0].answer_metadata);
-    
+
     questionDataRes?.Items?.forEach(question => {
         if (question.question_id && typeof question.marks === 'number') {
             questionMarksMap[question.question_id] = question.marks;
@@ -739,7 +754,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
 
-        console.log("setsMarkFormat - ",setsMarkFormat);
+        console.log("setsMarkFormat - ", setsMarkFormat);
 
         let i = 0;
         for (let studentMarkDetail of studentMetaRes.Items) {
