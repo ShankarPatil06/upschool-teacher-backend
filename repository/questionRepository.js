@@ -154,24 +154,29 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
 // }
 
 
+const chunkArray = (array, size) => {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+    }
+    return result;
+};
+
 exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (request, callback) {
     try {
         const { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
 
         const uniqueIds = [...new Set(IdArray)];
-        const expressionValues = {
-            ':question_status': questionStatus.toString(),
-        };
 
         if (uniqueIds.length === 0) {
             console.log("EMPTY BULK ID");
-            return callback(0, { Items: [] });
+            return callback(null, { Items: [] });
         }
 
         if (uniqueIds.length === 1) {
             const getParams = {
                 TableName,
-                Key: { [fetchIdName]: uniqueIds[0] }, 
+                Key: { [fetchIdName]: uniqueIds[0] },
                 ProjectionExpression: projectionExp.join(', '),
             };
 
@@ -182,25 +187,30 @@ exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (reque
             return callback(null, { Items: [] });
         }
 
-        const keys = uniqueIds.map((id) => ({
-            [fetchIdName]: id,
-        }));
+        // ** Split into batches of 100 to avoid AWS limit **
+        const idChunks = chunkArray(uniqueIds, 100);
+        let allItems = [];
 
-        const batchParams = {
-            RequestItems: {
-                [TableName]: {
-                    Keys: keys,
-                    ProjectionExpression: projectionExp.join(', '),
+        for (const chunk of idChunks) {
+            const keys = chunk.map((id) => ({ [fetchIdName]: id }));
+            const batchParams = {
+                RequestItems: {
+                    [TableName]: {
+                        Keys: keys,
+                        ProjectionExpression: projectionExp.join(', '),
+                    },
                 },
-            },
-        };
+            };
 
-        const batchResponse = await DATABASE_TABLE2.getByObjects(batchParams);
-        const items = batchResponse.Responses[TableName] || [];
+            const batchResponse = await DATABASE_TABLE2.getByObjects(batchParams);
+            const items = batchResponse.Responses?.[TableName] || [];
 
-        const filteredItems = items.filter((item) => item.question_status === questionStatus);
+            // **Filter only items that match the question_status**
+            const filteredItems = items.filter((item) => item.question_status === questionStatus);
+            allItems = allItems.concat(filteredItems);
+        }
 
-        callback(null, { Items: filteredItems });
+        callback(null, { Items: allItems });
     } catch (error) {
         console.error("Error fetching questions:", error);
         callback(500, error.message || "Error fetching questions.");

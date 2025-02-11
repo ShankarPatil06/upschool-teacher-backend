@@ -1848,9 +1848,9 @@ exports.activeAndArchiveDigicardsInTopic = async function (request) {
     }
 
     if (request.data.learningType === "Pre") {
-      digicardActivity[0].pre_learning = prePostActivity;
+      digicardActivity[0]["pre_learning"] = prePostActivity;
     } else {
-      digicardActivity[0].post_learning = prePostActivity;
+      digicardActivity[0]["post_learning"] = prePostActivity;
     }
 
     if (digicardActivity.length > 0) {

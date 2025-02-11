@@ -234,16 +234,19 @@ exports.getQuizBasedonStatus = function (request, callback) {
                 TableName: TABLE_NAMES.upschool_quiz_table,
                 IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "quiz_status = :quiz_status AND client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND chapter_id = :chapter_id",
+                FilterExpression: "quiz_status = :quiz_status AND client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id",
                 ExpressionAttributeValues: {
                     ":common_id": constant.constValues.common_id,
                     ":client_class_id": request.data.client_class_id,
                     ":section_id": request.data.section_id,
                     ":subject_id": request.data.subject_id,
-                    ":chapter_id": request.data.chapter_id,
                     ":quiz_status": request.data.quiz_status
                 },
                 ProjectionExpression: ["quizMode", "quiz_status", "learningType", "quiz_id", "quiz_name", "chapter_id"],
+            }
+            if (request?.data?.chapter_id) {
+                read_params.FilterExpression += " AND chapter_id = :chapter_id";
+                read_params.ExpressionAttributeValues[":chapter_id"] = request.data.chapter_id;
             }
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
