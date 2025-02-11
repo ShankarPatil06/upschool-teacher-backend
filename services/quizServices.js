@@ -862,8 +862,8 @@ exports.startQuizEvaluationProcess = async (request) => {
                             if (scores[index] <= i * range) {
                                 // console.log("questiondesc - ",scores[index], i);
                                 mark.obtained_marks = i;
-                                totalMarks += i;
-                                totalMarks -= (i - 1);
+                                // totalMarks += i;
+                                // totalMarks -= (i - 1);
                                 break;
                             }
                         }
@@ -873,12 +873,14 @@ exports.startQuizEvaluationProcess = async (request) => {
                     if (scores[index] > 80) {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
-                        totalMarks += questionAnswerPairs[index].marks;
+                        // totalMarks += questionAnswerPairs[index].marks;
                     }
                     if (scores[index] === NaN) {
                         mark.obtained_marks = 0;
                     }
                 }
+
+                totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
 
                 // console.log("scores[index] - ", scores[index]);
 
