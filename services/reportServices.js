@@ -1333,12 +1333,19 @@ exports.fetchIndividualQuizReport = async (request) => {
   allStudentsData.Items.forEach((studentData) => {
     let performance = quizResultsMap.get(studentData.student_id);
     if (performance) {
-      if (!quizResults?.Items.includes(studentData.student_id)) {
-        performance["Basic"]["Ispassed"] = "N.A."
-        performance["Intermediate"]["Ispassed"] = "N.A."
-        performance["Advanced"]["Ispassed"] = "N.A."
-      }
       studentData.individual_group_performance = performance;
+    } else {
+      studentData.individual_group_performance = {
+        Basic: {
+          Ispassed: "N.A.",
+        },
+        Intermediate: {
+          Ispassed: "N.A.",
+        },
+        Advanced: {
+          Ispassed: "N.A.",
+        },
+      };
     }
   });
 
