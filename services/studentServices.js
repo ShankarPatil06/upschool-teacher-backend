@@ -1005,7 +1005,9 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const quiz_chapter_ids = [...new Set(allquizs.map(quiz => quiz.chapter_id))];
     const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
 
-    const chapter_Ids = [...new Set([...quiz_chapter_ids, ...test_chapter_ids])];
+    let chapter_Ids = [...new Set([...quiz_chapter_ids, ...test_chapter_ids])];
+
+    chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
 
     request["unit_chapter_id"] = chapter_Ids;
 

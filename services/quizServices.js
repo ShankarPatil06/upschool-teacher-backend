@@ -66,7 +66,22 @@ const checkDuplicateTopics = async (resTopics, checkTopics) => {
     return dupTopics;
 }
 
-exports.fetchQuizBasedonStatus = async (request) => await quizRepository.getQuizBasedonStatus2(request)
+exports.fetchQuizBasedonStatus = async (request) => {
+    try {
+        return await new Promise((resolve) => {
+            quizRepository.getQuizBasedonStatus(request, (status, response) => {
+                if (response?.Items?.length > 0) {
+                    resolve(response?.Items);
+                } else {
+                    resolve(response?.Items);
+                }
+            });
+        });
+    } catch (error) {
+        console.error("Error in fetchQuizBasedonStatus:", error);
+        throw error;
+    }
+}
 
 exports.getQuizResult = async (request) => {
 
@@ -80,9 +95,9 @@ exports.getQuizResult = async (request) => {
 }
 
 
-exports.editStudentQuizMarks = async (request) => { 
+exports.editStudentQuizMarks = async (request) => {
     console.log("request000", request.data.marks_details[0].qa_details);
-       
+
     try {
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
         // console.log("quizTestRes", quizTestRes.Item.question_track_details);        
@@ -109,7 +124,7 @@ exports.editStudentQuizMarks = async (request) => {
 
         const questionIds = request.data.marks_details[0].qa_details.map(qDetails => qDetails.question_id);
         // console.log("questionIds", questionIds);
-        
+
         const fetchBulkQtnReq = {
             IdArray: questionIds,
             fetchIdName: "question_id",
@@ -119,9 +134,9 @@ exports.editStudentQuizMarks = async (request) => {
 
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
         console.log("quizIds", quizIds);
-        
+
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
-console.log("questionDataRes", questionDataRes);
+        console.log("questionDataRes", questionDataRes);
 
         const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes, classPassPercentage, passPassPercentage);
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
@@ -137,11 +152,11 @@ console.log("questionDataRes", questionDataRes);
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
 
         const questionMarksMap = {};
-        
+
         questionDataRes?.forEach(question => {
             if (question.question_id && typeof question.marks === 'number') {
                 console.log("question.question_id", question.question_id);
-                
+
                 questionMarksMap[question.question_id] = question.marks;
             }
         });
@@ -192,9 +207,9 @@ console.log("questionDataRes", questionDataRes);
         console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
         console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
         console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
-        
+
         const individualGroupPerformance = {
-            Basic: {                
+            Basic: {
                 Ispassed: basicObtained >= basicMarks * basicThreshold,
                 no_of_questions: basicQuestions,
                 total_mark: basicMarks,
@@ -258,7 +273,7 @@ exports.viewQuizQuestionPaper = async (request) => {
         };
         const questionIds = fetchBulkCatReq.IdArray.map((val) => ({ question_id: val }));
         const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
-        console.log("LENGTh",questionIds.length,fetchQuestionsRes.length)
+        console.log("LENGTh", questionIds.length, fetchQuestionsRes.length)
         const questionsRes = await exports.setQuestionPaperView(questionIDs, fetchQuestionsRes);
         // return { Items: questionsRes ,predictive_evaluation : schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation};
         return { Items: questionsRes };
@@ -336,10 +351,41 @@ exports.resetQuizEvaluationStatus = async (request) => await quizResultRepositor
 
 
 /** EVALUATION API'S **/
+const mergeStudentAnswers = (answerMetadata) => {
+    const lastOccurrence = {};
+    const mergedAnswers = {};
+
+    // Step 1: Track the latest occurrence of each question and collect answers
+    answerMetadata.forEach(meta => {
+        meta.studentAnswer.forEach(ans => {
+            if (!mergedAnswers[ans.question]) {
+                mergedAnswers[ans.question] = { page_no: meta.page_no, answer: ans.answer };
+            } else {
+                mergedAnswers[ans.question].answer += " " + ans.answer; // Merge answers
+                mergedAnswers[ans.question].page_no = meta.page_no; // Update latest page_no
+            }
+        });
+    });
+
+    // Step 2: Distribute answers back to their latest occurrence
+    return answerMetadata.map(meta => {
+        return {
+            ...meta,
+            studentAnswer: meta.studentAnswer
+                .filter(ans => mergedAnswers[ans.question].page_no === meta.page_no)
+                .map(ans => ({
+                    question: ans.question,
+                    answer: mergedAnswers[ans.question].answer
+                }))
+        };
+    });
+};
 
 function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage) {
     // console.log("questionDataRes", questionDataRes);
     const questionMarksMap = {};
+
+    markAssignRes[0].answer_metadata = mergeStudentAnswers(markAssignRes[0].answer_metadata);
 
     questionDataRes?.Items?.forEach(question => {
         if (question.question_id && typeof question.marks === 'number') {
@@ -708,7 +754,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
 
-        console.log("setsMarkFormat - ",setsMarkFormat);
+        console.log("setsMarkFormat - ", setsMarkFormat);
 
         let i = 0;
         for (let studentMarkDetail of studentMetaRes.Items) {
@@ -719,41 +765,51 @@ exports.startQuizEvaluationProcess = async (request) => {
             studentMarkDetail.marks_details = markDetails;
             const marksToUpdate = studentMarkDetail.marks_details[0].qa_details;
             const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
-            console.log({ allStudentAnswers })
+
+            const mergedAnswers = allStudentAnswers.reduce((acc, curr) => {
+                const existing = acc.find(item => item.question === curr.question);
+                if (existing) {
+                    existing.answer += ' ' + curr.answer; // Merge answers with a space
+                } else {
+                    acc.push({ ...curr });
+                }
+                return acc;
+            }, []);
+
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
 
-                const studentAnswer = allStudentAnswers[i]?.answer;
+                const studentAnswer = mergedAnswers[i]?.answer;
 
                 let correctAnswer = "";
 
-const question = questionDataRes.find(
-    (q) => q.question_id === mark.question_id
-);
+                const question = questionDataRes.find(
+                    (q) => q.question_id === mark.question_id
+                );
 
-if (question) {
-    if (question.question_type === "Descriptive") {
-        correctAnswer = question.answers_of_question
-            .filter((ans) => ans.answer_weightage > 0)
-            .map((ans) => ans.answer_content) // Extract all answer_content
-            .join(" ");
-            console.log("DESCRIPTIKJKJN",correctAnswer)
-    } else if (question.question_type === "Objective") {
-        const index = question.answers_of_question.findIndex(
-            (ans) => ans.answer_display === "Yes" || !ans.answer_display
-        );
-        const indexLetter = String.fromCharCode(97 + index);
-         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
-    console.log("objective",question.answers_of_question,correctAnswer)
-    } else  if (question.question_type === "Subjective"){
-        correctAnswer = question.answers_of_question
-        .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-        .map((ans) => ans.answer_content)               // Extract the answer_content
-        .join(" ");                                     // Join the answer contents into a single string
-    
-    console.log(correctAnswer);
-    } 
-}
-console.log("correct answers:::",correctAnswer)
+                if (question) {
+                    if (question.question_type === "Descriptive") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_weightage > 0)
+                            .map((ans) => ans.answer_content) // Extract all answer_content
+                            .join(" ");
+                        console.log("DESCRIPTIKJKJN", correctAnswer)
+                    } else if (question.question_type === "Objective") {
+                        const index = question.answers_of_question.findIndex(
+                            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+                        );
+                        const indexLetter = String.fromCharCode(97 + index);
+                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        console.log("objective", question.answers_of_question, correctAnswer)
+                    } else if (question.question_type === "Subjective") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+                            .map((ans) => ans.answer_content)               // Extract the answer_content
+                            .join(" ");                                     // Join the answer contents into a single string
+
+                        console.log(correctAnswer);
+                    }
+                }
+                console.log("correct answers:::", correctAnswer)
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 return {
@@ -828,6 +884,8 @@ console.log("correct answers:::",correctAnswer)
                         mark.obtained_marks = 0;
                     }
                 }
+
+                totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
 
                 // console.log("scores[index] - ", scores[index]);
 

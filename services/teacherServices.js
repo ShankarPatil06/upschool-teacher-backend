@@ -11,9 +11,21 @@ let sendMail = require("./emailService");
 
 exports.getTeacherClasses = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
+  request.data['school_id'] = individual_teacher_response?.Items[0]?.school_id;
+  const schoolDetails = await schoolRepository.getSchoolDetailsById2(request)
+  if (schoolDetails.Items[0].school_logo && schoolDetails.Items[0].school_logo !== "" && schoolDetails.Items[0].school_logo !== "N.A." && schoolDetails.Items[0].school_logo.includes("uploads/")) {
+    let Key = schoolDetails.Items[0].school_logo;
+    let s3Params = {
+      Bucket: process.env.BUCKET_NAME,
+      Key,
+    }
+    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise('getObject', s3Params)
+    schoolDetails.Items[0].school_logoURL = uploadURL;
+  }
   const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ "client_class_id": val.client_class_id }));
-
-  return await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: "OR" })
+  const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: "OR" })
+  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === 'Upschool' ? false : schoolDetails.Items[0]?.school_logoURL }
+  return teacherResponse2;
 };
 exports.getTeacherSectionsBasedonClass = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
@@ -318,7 +330,7 @@ exports.generateQuizForPreLearning = (request, callback) => {
                               // callback(add_express_quiz_basedon_varient_err, 200); 
                               if (add_express_quiz_basedon_varient_response === 200) {
 
-                                if (request.data.quizMode === "offline") {
+                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
 
                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
 
@@ -358,7 +370,7 @@ exports.generateQuizForPreLearning = (request, callback) => {
                             } else {
                               if (add_express_quiz_basedon_varient_response === 200) {
 
-                                if (request.data.quizMode === "offline") {
+                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
 
                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
 
@@ -983,8 +995,8 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
                         non_considered_topic_data = res_non_considered_topic_data;
                         questionTrackData.push(...res_concept);
 
-                        topicIndex++;
-                        topicLoop(topicIndex);
+                        conceptIndex++;
+                        conceptLoop(conceptIndex);
                       }
 
                     })
@@ -1193,7 +1205,7 @@ exports.generateQuizForPostLearning = (request, callback) => {
 
                       if (add_quiz_basedon_varient_response === 200) {
 
-                        if (request.data.quizMode === "offline") {
+                        if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
                           console.log("test 4");
 
                           exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
@@ -1261,7 +1273,7 @@ exports.generateQuizForPostLearning = (request, callback) => {
 
                                 if (add_quiz_basedon_varient_response === 200) {
 
-                                  if (request.data.quizMode === "offline") {
+                                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
 
                                     exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
                                       if (create_pdf_and_update_details_err) {
@@ -1329,7 +1341,7 @@ exports.generateQuizForPostLearning = (request, callback) => {
 
                               if (add_express_quiz_basedon_varient_response === 200) {
 
-                                if (request.data.quizMode === "offline") {
+                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
                                   console.log("test 6");
 
                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
@@ -1370,7 +1382,7 @@ exports.generateQuizForPostLearning = (request, callback) => {
 
                               if (add_express_quiz_basedon_varient_response === 200) {
 
-                                if (request.data.quizMode === "offline") {
+                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
                                   console.log("test 7");
 
                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
@@ -1836,9 +1848,9 @@ exports.activeAndArchiveDigicardsInTopic = async function (request) {
     }
 
     if (request.data.learningType === "Pre") {
-      digicardActivity[0].pre_learning = prePostActivity;
+      digicardActivity[0]["pre_learning"] = prePostActivity;
     } else {
-      digicardActivity[0].post_learning = prePostActivity;
+      digicardActivity[0]["post_learning"] = prePostActivity;
     }
 
     if (digicardActivity.length > 0) {

@@ -742,7 +742,7 @@ exports.viewClassReportQuestions = async (request) => {
     possiblemarks = possiblemarks + question.marks
     question.questionNo = (i + 1)
     question.set = questionSet.find((q) => q.question_id == question.question_id).sets
-    
+
     const allAnswers = quizResultMarksData.flat().filter(ans => ans.question_id === question.question_id)
     question.cognitive_skill = cognitiveSkillNames.Items.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;
     //% of most common answer for objective (descriptive we wont show anything)
@@ -1050,7 +1050,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
   console.log({ chapter_ids });
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter2(request, chapter_ids);
-  
+
   const quizids = quizDataRes.Items.map(q => q.quiz_id)
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     let overallMarks = 0;
@@ -1336,9 +1336,21 @@ exports.fetchIndividualQuizReport = async (request) => {
   });
 
   allStudentsData.Items.forEach((studentData) => {
-    const performance = quizResultsMap.get(studentData.student_id);
+    let performance = quizResultsMap.get(studentData.student_id);
     if (performance) {
       studentData.individual_group_performance = performance;
+    } else {
+      studentData.individual_group_performance = {
+        Basic: {
+          Ispassed: "N.A.",
+        },
+        Intermediate: {
+          Ispassed: "N.A.",
+        },
+        Advanced: {
+          Ispassed: "N.A.",
+        },
+      };
     }
   });
 
