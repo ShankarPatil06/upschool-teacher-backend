@@ -145,7 +145,7 @@ exports.getTargetedLearningExpectation = async (request) => {
 
   quizDataRes.Items.forEach((quiz) => {
     const passedStudentsOfParticularQuiz = quizResultDataRes.filter(
-      (val) => val.isPassed && quiz.quiz_id == val.quiz_id
+      (val) => val.isPassed && val.evaluated == "Yes" && quiz.quiz_id == val.quiz_id
     ).length;
 
     const classPercentage =
@@ -455,7 +455,7 @@ exports.preLearningSummaryDetails = async (request) => {
 
     if (val.quiz_id) {
       const quizResults = quizResultDataRes.filter(
-        (result) => result.quiz_id === val.quiz_id
+        (result) => result.quiz_id === val.quiz_id && result.evaluated === "Yes"
       );
 
       val.student_attendance = quizResults.length;
@@ -543,13 +543,17 @@ exports.postLearningSummaryDetails = async (request) => {
     if (Array.isArray(val.quiz_id)) {
       val.quiz_id.forEach((quiz) => {
         const quizResults = quizResultDataRes.filter(
-          (result) => result.quiz_id === quiz.id
+          (result) => result.quiz_id === quiz.id && result.evaluated === "Yes"
         );
         const totalMarks = quizResults.reduce(
           (sum, result) => sum + (result.marks_details[0]?.totalMark || 0),
           0
         );
         const totalAttendance = quizResults.length;
+        console.log("totalAttendance - ",totalAttendance);
+        quizResults.map(val =>
+          console.log("val - ",val.marks_details)
+          )
 
         quiz.student_attendance = totalAttendance;
         quiz.avgMarks = quizResults.length
@@ -559,6 +563,7 @@ exports.postLearningSummaryDetails = async (request) => {
             0
           ) / quizResults.length) / quizResults[0].marks_details[0]?.expectedMarks) * 100
           : 0;
+          console.log("quiz.avgMarks - ",quiz.avgMarks);
       });
     }
   });
@@ -1086,7 +1091,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
         possiblemarks = 0
         quizCount++;
         quizResultDataRes.map(result => {
-          if (quiz.quiz_id === result.quiz_id) {
+          if (quiz.quiz_id === result.quiz_id && result.evaluated === "Yes") {
             //marks in each chapter
             result.marks_details[0].qa_details.map(marks => {
               // console.log(marks.obtained_marks)
@@ -1379,9 +1384,11 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   const performance = {};
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
+   if( result.evaluated === "Yes"){
     if (!acc[result.student_id]) acc[result.student_id] = [];
     acc[result.student_id].push(result);
-    return acc;
+  }
+  return acc;
   }, {});
 
   const quizDataByQuizId = quizDataRes.Items.reduce((acc, quiz) => {
@@ -1477,11 +1484,12 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
 
   const performance = {};
 
-  console.log("+++++++++++++++", quizResultDataRes);
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes?.reduce((acc, result) => {
+    if( result.evaluated === "Yes"){
     if (!acc[result.student_id]) acc[result.student_id] = [];
     acc[result.student_id].push(result);
+    }
     return acc;
   }, {});
 
@@ -1594,8 +1602,10 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   const performance = {};
 
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
+    if( result.evaluated === "Yes"){
     if (!acc[result.student_id]) acc[result.student_id] = [];
     acc[result.student_id].push(result);
+    }
     return acc;
   }, {});
 
@@ -1745,7 +1755,9 @@ exports.getActionsAndRecommendations = async (request) => {
     }));
 
 
-  const quizResultMarksData = quizResultsRes.map((item) => {
+  const quizResultMarksData = quizResultsRes
+  .filter((item) => item.evaluated === "Yes") 
+  .map((item) => {
     return {
       marks: item.marks_details[0].qa_details,
       studentId: item.student_id,
