@@ -27,137 +27,146 @@ exports.fetchAllStudents = function (request, callback) {
 
 exports.topAndBottomPerformers = async function (request, callback) {
     try {
-        const allquizs = await quizRepository.getQuizBasedonStatus2(request);
+        const allquizs = await quizRepository.fetchAllQuizBasedOnSubject3(request);
         const studentMap = new Map();
         const studentData = await studentRepository.getStudentsData2(request);
+        const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
+        request["unit_Quiz_id"] = quiz_Ids;
+
+        let questionDetails = [];
+        let quiz_question_ids = [];
+        let test_question_ids = [];
+        let quiz_results = [];
+        let recentQuiz;
         if (allquizs?.length) {
-            // console.log('No quizzes found');
-            // return callback(0, []);
-            const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
-            request["unit_Quiz_id"] = quiz_Ids;
-    
-            let quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
-    
-            quiz_results = quiz_results.sort((a, b) => {
-                return new Date(b.created_ts) - new Date(a.created_ts);
+            quiz_results = await quizResultRepository.fetchBulkQuizResultsByID4(request);
+            if (request.data.isRecent) {
+                const { quiz, quizResults } = await getRecentQuizForMe(allquizs);
+                quiz_results = quizResults;
+                recentQuiz = quiz;
+            } else {
+                quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+            }
+            quiz_question_ids = await quiz_results.flatMap(quiz =>
+                quiz.marks_details.flatMap(mark =>
+                    mark.qa_details.map(qa => qa.question_id)
+                )
+            );
+        }
+
+        const allTestResponse = await classTestRepository.fetchAllTestBasedOnSubject(request);
+        const allTests = allTestResponse;
+        let testResults;
+        const test_Ids = allTests.map(test => test.class_test_id);
+        request["class_test_id"] = test_Ids;
+        let recentTest;
+        if (allTests?.length) {
+            if (request.data.isRecent) {
+                const { test, test_results } = await getRecentTestForMe(allTests);
+                testResults = test_results;
+                recentTest = test;
+            } else {
+                testResults = await fetchStudentresultMetadata3(request);
+            }
+            test_question_ids = await testResults.flatMap(test =>
+                test.marks_details.flatMap(mark =>
+                    mark.qa_details.map(qa => qa.question_id)
+                )
+            );
+        }
+        let allQuestionIds = [...quiz_question_ids, ...test_question_ids];
+        if (allQuestionIds.length > 0) {
+            questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+                question_id: [...new Set(allQuestionIds)],
             });
-    
-    
+        }
+        const quizDate = recentQuiz?.created_ts ? new Date(recentQuiz.created_ts) : new Date("1900-12-18T10:56:11.143Z");
+        const testDate = recentTest?.created_ts ? new Date(recentTest.created_ts) : new Date("1900-12-18T10:56:11.143Z");
+
+        const isQuizRecent = quizDate > testDate;
+
+        const processQuizResults = async () => {
             for (const qResult of quiz_results) {
-                const quizType = allquizs.find(quiz => quiz.quiz_id === qResult.quiz_id)?.learningType;
-    
-                const studentEntry = studentMap.get(qResult.student_id)?.studentEntry || {
-                    preLearning: null,
-                    postLearning: null,
-                };
-    
-                if (request.data.isRecent && (quizType === "preLearning" && studentEntry.preLearning) ||
-                    (quizType === "postLearning" && studentEntry.postLearning)) {
-                    continue;
-                }
-    
                 for (const mark_details of qResult.marks_details) {
                     const questionIds = mark_details.qa_details.map(q => q.question_id);
                     request["question_id"] = questionIds;
-    
+
+                    const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
+                    const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
+
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
-                    let totalMarks = 0;
-                    const fetch_bulk_questions_response = await new Promise((resolve, reject) => {
-                        questionRepository.fetchBulkQuestionsNameById(request, (err, response) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(response);
-                            }
-                        });
-                    });
-    
-                    if (fetch_bulk_questions_response.Items?.length) {
-                        totalMarks = fetch_bulk_questions_response.Items.reduce((sum, question) => sum + question.marks, 0);
-                    }
-    
+                    let totalMarks = filteredQuestions.reduce((sum, question) => sum + question.marks, 0);
+
                     let singleStudent = studentData.Items.find(student => student.student_id === qResult.student_id);
                     if (!singleStudent) continue;
-    
-                    if (quizType === "preLearning") {
-                        studentEntry.preLearning = true;
-                    } else if (quizType === "postLearning") {
-                        studentEntry.postLearning = true;
-                    }
-    
+
                     const student = {
                         student_id: singleStudent.student_id,
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                        studentEntry: studentEntry,
-                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2)
+                        percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2)
                     };
-    
+
                     if (!studentMap.has(student.student_id)) {
                         studentMap.set(student.student_id, student);
                     } else {
                         const existingStudent = studentMap.get(student.student_id);
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
-                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
-                        existingStudent.studentEntry = studentEntry;
+                        existingStudent.percentage = ((existingStudent.studentMark / (existingStudent.totalMarks || 1)) * 100).toFixed(2) || 0;
                         studentMap.set(student.student_id, existingStudent);
                     }
                 }
             }
         }
-        classTestRepository.getClassTestsBasedonStatus(request, async function (allTestErr, allTestResponse) {
-            if (allTestErr) {
-                console.log(allTestErr);
-                callback(allTestErr, allTestResponse);
-            } else {
-                console.log(allTestResponse);
-                const allTests = allTestResponse.Items;
-                if (allTests?.length) {
-                    console.log({ allTests });
-                    const test_Ids = allTests.map(test => test.class_test_id);
-                    request["class_test_id"] = test_Ids;
-                    const testResults = await fetchStudentresultMetadata3(request);
 
-                    testResults.forEach(testResult => {
-                        let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
-                        const testData = {
-                            student_id: testResult.student_id,
-                            student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
-                            studentMark: testResult?.marks_details[0]?.totalMark,
-                            totalMarks: testResult?.marks_details[0]?.expectedMarks,
-                            percentage: (((testResult?.marks_details[0]?.totalMark / testResult?.marks_details[0]?.expectedMarks) || 0) * 100).toFixed(2),
-                        };
-                        if (!studentMap.has(testResult.student_id)) {
-                            studentMap.set(testResult.student_id, testData);
-                        } else {
-                            const existingStudent = studentMap.get(testData.student_id);
-                            existingStudent.studentMark += testData.studentMark;
-                            existingStudent.totalMarks += testData.totalMarks;
-                            existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
-
-                            studentMap.set(testData.student_id, existingStudent);
-                        }
-                        if (request.data.isRecent) {
-                            return;
-                        }
-                    })
-                }
-                const studentsArray = Array.from(studentMap.values());
-                studentsArray.sort((a, b) => b.percentage - a.percentage);
-
-                const topStudents = studentsArray.slice(0, 5);
-                const bottomStudents = studentsArray.slice(-5);
-
-                const result = {
-                    topPerformers: topStudents,
-                    bottomPerformers: bottomStudents.reverse(),
+        const processTestResults = async () => {
+            testResults?.forEach(testResult => {
+                let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
+                const testData = {
+                    student_id: testResult.student_id,
+                    student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
+                    studentMark: testResult?.marks_details[0]?.totalMark,
+                    totalMarks: testResult?.marks_details[0]?.expectedMarks,
+                    percentage: (((testResult?.marks_details[0]?.totalMark / (testResult?.marks_details[0]?.expectedMarks || 1))) * 100).toFixed(2),
                 };
-                callback(0, result);
+                if (!studentMap.has(testResult.student_id)) {
+                    studentMap.set(testResult.student_id, testData);
+                } else {
+                    const existingStudent = studentMap.get(testData.student_id);
+                    existingStudent.studentMark += testData.studentMark;
+                    existingStudent.totalMarks += testData.totalMarks;
+                    existingStudent.percentage = (((existingStudent.studentMark / (existingStudent.totalMarks || 1))) * 100).toFixed(2);
+
+                    studentMap.set(testData.student_id, existingStudent);
+                }
+            })
+        }
+
+        if (request.data.isRecent) {
+            if (isQuizRecent) {
+                await processQuizResults();
+            } else {
+                await processTestResults();
             }
-        });
+        } else {
+            await processQuizResults();
+            await processTestResults();
+        }
+
+        const studentsArray = Array.from(studentMap.values());
+        studentsArray.sort((a, b) => b.percentage - a.percentage);
+
+        const topStudents = studentsArray.slice(0, 5);
+        const bottomStudents = studentsArray.slice(-5);
+
+        const result = {
+            topPerformers: topStudents,
+            bottomPerformers: bottomStudents.reverse(),
+        };
+        callback(0, result);
     } catch (error) {
         console.error('Error in topAndBottomPerformers:', error);
         callback(error, null);
@@ -231,7 +240,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0].concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -296,7 +305,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0]?.concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                                     console.log({ conceptDetails });
 
                                     if (existingConcept) {
@@ -358,10 +367,13 @@ exports.needAttention = async (request) => {
                     const chapter = await chapterRepository.fetchChapterByID2(request)
                     const chapterDetails = chapter.Items[0]
 
-                    const [pretopicDetails, posttopicDetails] = await Promise.all([
+                    let [pretopicDetails, posttopicDetails] = await Promise.all([
                         topicRepository.fetchPreTopicData2(chapterDetails),
                         topicRepository.fetchPostTopicData2(chapterDetails),
                     ]);
+                    
+                    pretopicDetails = pretopicDetails?.Items ? pretopicDetails.Items : pretopicDetails;
+                    posttopicDetails = posttopicDetails?.Items ? posttopicDetails.Items : posttopicDetails;
 
                     let preConceptDetails = [];
                     let postConceptDetails = [];
@@ -383,7 +395,7 @@ exports.needAttention = async (request) => {
                                 if (concept.concept_question_id.includes(mark.question_id)) {
                                     const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                                    const markValue = mark.modified_marks !== 'N.A.' ? mark.modified_marks : (mark.obtained_marks !== ' N.A.' ? mark.obtained_marks : 0);
+                                    const markValue = mark.modified_marks !== 'N.A.' ? parseInt(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseInt(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -447,7 +459,7 @@ const getRecentQuiz = async (quizDetails) => {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
         if (quizResults.length > 0) {
             recentQuiz = quiz;
-            break;
+            return recentQuiz;
         }
     }
     return recentQuiz;
@@ -459,9 +471,30 @@ const getRecentTest = async (testDetails) => {
         const testResults = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
         if (testResults.length > 0) {
             recentTest = test
+            return recentTest
         }
     }
     return recentTest;
+}
+
+const getRecentQuizForMe = async (quizDetails) => {
+    let recentQuiz;
+    for (const quiz of quizDetails) {
+        const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
+        if (quizResults.length > 0) {
+            return { quiz, quizResults };
+        }
+    }
+    return recentQuiz;
+}
+
+const getRecentTestForMe = async (testDetails) => {
+    for (const test of testDetails) {
+        const test_results = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
+        if (test_results.length > 0) {
+            return { test, test_results };
+        }
+    }
 }
 
 exports.studentChaptersPerformance = async (request) => {
@@ -492,10 +525,13 @@ exports.studentChaptersPerformance = async (request) => {
                 const chapterDetails = chapterItem.Items[0]
                 let allTopics = [];
 
-                const [pretopicDetails, posttopicDetails] = await Promise.all([
+                let [pretopicDetails, posttopicDetails] = await Promise.all([
                     topicRepository.fetchPreTopicData2(chapterDetails),
                     topicRepository.fetchPostTopicData2(chapterDetails),
                 ]);
+
+                pretopicDetails = pretopicDetails.Items ? pretopicDetails.Items : pretopicDetails;
+                posttopicDetails = posttopicDetails.Items ? posttopicDetails.Items : posttopicDetails;
 
                 allTopics = [...pretopicDetails, ...posttopicDetails]
 
@@ -516,7 +552,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (concept.concept_question_id.includes(mark.question_id)) {
                             const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
 
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
@@ -638,7 +674,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = preConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -720,7 +756,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = postConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? mark.modified_marks : (mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -868,7 +904,7 @@ exports.studentAvgVsClassAvg = async (request) => {
                 student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
             };
 
             quizEntry.students.push(student);
@@ -906,7 +942,7 @@ exports.studentAvgVsClassAvg = async (request) => {
                 student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks)) * 100).toFixed(2),
+                percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
             };
             quizEntry.students.push(student);
             quizEntry.total_marks += student.totalMarks;
@@ -926,7 +962,6 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const allquizs = await quizRepository.getQuizBasedonStatus2(request);
     if (!allquizs?.length) {
         console.log('No quizzes found');
-        return callback(0, []);
     }
 
     const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
@@ -945,11 +980,11 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         quiz_ids: [...quizIds]
     }));
 
-    const chapter_Ids = [...new Set(allquizs.map(quiz => quiz.chapter_id))];
-    request["unit_chapter_id"] = chapter_Ids;
-
     const studentData = await studentRepository.getStudentsData2(request);
-    const quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+    let quiz_results = [];
+    if (quiz_Ids.length > 0) {
+        quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
+    }
     const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
 
     const question_paper_ids = testDetails.map(test => test.question_paper_id);
@@ -958,23 +993,38 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     request['class_test_id'] = test_ids
     request['question_paper_ids'] = question_paper_ids;
 
-    const testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+    let testResult = [];
+    if (test_ids.length > 0) {
+        testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+    }
+
     const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
 
+    const quiz_chapter_ids = [...new Set(allquizs.map(quiz => quiz.chapter_id))];
+    const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
+
+    let chapter_Ids = [...new Set([...quiz_chapter_ids, ...test_chapter_ids])];
+
+    chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+
+    request["unit_chapter_id"] = chapter_Ids;
+
     const testChapterMap = {};
-    for (const paper of questionPaper.Items) {
-        if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
-            // Find all matching test_ids for the question_paper_id
-            const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
+    if (questionPaper?.data?.length > 0) {
+        for (const paper of questionPaper.data) {
+            if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
+                // Find all matching test_ids for the question_paper_id
+                const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
 
-            for (const chapter of paper.chapter_id) {
-                if (!testChapterMap[chapter]) {
-                    testChapterMap[chapter] = new Set();
-                }
+                for (const chapter of paper.chapter_id) {
+                    if (!testChapterMap[chapter]) {
+                        testChapterMap[chapter] = new Set();
+                    }
 
-                // Add all test_ids linked to the question_paper_id
-                for (const test of matchingTests) {
-                    testChapterMap[chapter].add(test.class_test_id);
+                    // Add all test_ids linked to the question_paper_id
+                    for (const test of matchingTests) {
+                        testChapterMap[chapter].add(test.class_test_id);
+                    }
                 }
             }
         }
@@ -998,7 +1048,10 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         });
     }
 
-    let chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+    let chapter_details = [];
+    if (chapter_Ids.length > 0) {
+        chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+    }
 
     const chapterResults = [];
     for (const uniqueChapter of uniqueChapters) {
@@ -1016,7 +1069,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
                     const studentMark = mark_details.totalMark;
                     const expectedMarks = mark_details.expectedMarks;
-                    let totalMarks = filteredQuestions[0]?.marks || 0;
+                    let totalMarks = filteredQuestions.reduce((sum, question) => sum + question.marks, 0);
                     total_marks += (typeof mark_details.expectedMarks === "string" ? filteredQuestions[0]?.marks : mark_details.expectedMarks || filteredQuestions[0]?.marks) || 0;
                     total_obtained_marks += studentMark;
 
@@ -1028,7 +1081,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                         student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
-                        percentage: (((studentMark / (expectedMarks || totalMarks)) || 0) * 100).toFixed(2),
+                        percentage: (((studentMark / (expectedMarks || 1))) * 100).toFixed(2),
                     };
 
                     if (!studentMap.has(student.student_id)) {
@@ -1037,7 +1090,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                         const existingStudent = studentMap.get(student.student_id);
                         existingStudent.studentMark += student.studentMark;
                         existingStudent.totalMarks += student.totalMarks;
-                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 0) * 100).toFixed(2);
+                        existingStudent.percentage = (((existingStudent.studentMark / existingStudent.totalMarks) || 1) * 100).toFixed(2);
                         studentMap.set(student.student_id, existingStudent);
                     }
                 }
@@ -1310,8 +1363,8 @@ exports.sendEmailToParent = async (request) => {
                 console.log({ parentDetails });
                 if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
                 let fileKey = worksheet.question_paper_template
-                const fileBuffer = await s3Services.getFileBufferFromS3(fileKey);
-                const pdfBase64 = fileBuffer.toString("base64");
+                const fileLink = await s3Services.getFileBufferFromS3(fileKey);
+                // const pdfBase64 = fileBuffer.toString("base64");
 
                 const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
                 const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
@@ -1320,10 +1373,10 @@ exports.sendEmailToParent = async (request) => {
                 const mailPayload = {
                     subject: subject,
                     toMail: toMail,
-                    attachment: {
-                        filename: `${worksheet?.question_paper_name}.pdf`,
-                        content: pdfBase64
-                    },
+                    // attachment: {
+                    //     filename: `${worksheet?.question_paper_name}.pdf`,
+                    // },
+                    link: fileLink,
                     schoolName: schoolName,
                     studentName: studentName,
                     chapterNames: chapterNames,

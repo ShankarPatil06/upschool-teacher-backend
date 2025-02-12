@@ -1,4 +1,4 @@
-const {blueprintRepository,testQuestionPaperRepository,commonRepository} = require("../repository")
+const { blueprintRepository, testQuestionPaperRepository, commonRepository } = require("../repository")
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 const { TABLE_NAMES } = require('../constants/tables');
@@ -40,29 +40,31 @@ exports.fetchTestQuestionPapersBasedonStatus = (request, callback) => {
 
 exports.fetchTestQuestionPapersBasedonStatus2 = async (request) => {
 
-    const testQuestionPaperRes = await testQuestionPaperRepository.getTestQuestionPapersBasedonStatus2(request);
+  const testQuestionPaperRes = await testQuestionPaperRepository.getTestQuestionPapersBasedonStatus2(request);
 
-    console.log("testQuestionPaperRes - ", testQuestionPaperRes);
-    if (!testQuestionPaperRes || testQuestionPaperRes.length === 0) {
-      return  [];
+  console.log("testQuestionPaperRes - ", testQuestionPaperRes);
+  if (!testQuestionPaperRes || testQuestionPaperRes.length === 0) {
+    return [];
+  }
+
+  let blueprintArray = [...new Set(testQuestionPaperRes.map((e) => e.blueprint_id))];
+
+  blueprintArray = blueprintArray.filter(blueprint => blueprint !== undefined);
+
+  const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData3({ blueprint_array: blueprintArray });
+
+  console.log("fetchBluePrintRes - ", fetchBluePrintRes);
+
+  testQuestionPaperRes.forEach((testPaper) => {
+    const bluePrint = fetchBluePrintRes.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
+    console.log("bluePrint - ", bluePrint);
+    if (bluePrint) {
+      testPaper.blueprint_name = bluePrint.blueprint_name;
+      delete testPaper.blueprint_id;
     }
+  });
 
-    const blueprintArray = [...new Set(testQuestionPaperRes.map((e) => e.blueprint_id))];
-
-    const fetchBluePrintRes = await blueprintRepository.fetchBluePrintData3({ blueprint_array: blueprintArray });
-
-    console.log("fetchBluePrintRes - ", fetchBluePrintRes);
-
-    testQuestionPaperRes.forEach((testPaper) => {
-      const bluePrint = fetchBluePrintRes.find((bp) => bp.blueprint_id === testPaper.blueprint_id);
-      console.log("bluePrint - ",bluePrint);
-      if (bluePrint) {
-        testPaper.blueprint_name = bluePrint.blueprint_name;
-        delete testPaper.blueprint_id;
-      }
-    });
-
-    return testQuestionPaperRes ;
+  return testQuestionPaperRes;
 };
 
 exports.addTestQuestionPaper = (request, callback) => {
@@ -91,23 +93,23 @@ exports.addTestQuestionPaper = (request, callback) => {
 
 exports.addTestQuestionPaper2 = async (request) => {
 
-  console.log("request - ",request);
+  console.log("request - ", request);
 
-    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
+  const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
 
-    console.log("fetchQuestionPaperRes - ",fetchQuestionPaperRes);
-    if (fetchQuestionPaperRes.Items.length > 0 && request.section_id == fetchQuestionPaperRes.Items[0].section_id) {
-      return {
-        statusCode: 400,
-        message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
-      };
-    }
-    const addQuestionPaperRes = await testQuestionPaperRepository.insertTestQuestionPaper2(request);
-
+  console.log("fetchQuestionPaperRes - ", fetchQuestionPaperRes);
+  if (fetchQuestionPaperRes.Items.length > 0 && request.section_id == fetchQuestionPaperRes.Items[0].section_id) {
     return {
-      statusCode: 200,
-      data: addQuestionPaperRes,
+      statusCode: 400,
+      message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
     };
+  }
+  const addQuestionPaperRes = await testQuestionPaperRepository.insertTestQuestionPaper2(request);
+
+  return {
+    statusCode: 200,
+    data: addQuestionPaperRes,
+  };
 
 };
 
@@ -129,16 +131,16 @@ exports.validateQuestionPaperName = (request, callback) => {
 
 exports.validateQuestionPaperName2 = async (request) => {
 
-    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
+  const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperbyName2(request);
 
-    if (fetchQuestionPaperRes.Items.length === 0) {
-      return { statusCode: 200 };
-    } else {
-      return {
-        statusCode: 400,
-        message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
-      };
-    }
+  if (fetchQuestionPaperRes.Items.length === 0) {
+    return { statusCode: 200 };
+  } else {
+    return {
+      statusCode: 400,
+      message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
+    };
+  }
 
 };
 
@@ -208,50 +210,50 @@ exports.validateQuestionPaperName2 = async (request) => {
 // }
 
 exports.viewTestQuestionPaper2 = async (request) => {
- 
-    const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
 
-    if (!fetchQuestionPaperRes.Items || fetchQuestionPaperRes.Items.length === 0) {
-      console.log(constant.messages.NO_DATA);
-      return { statusCode: 400, message: constant.messages.NO_DATA };
+  const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
+
+  if (!fetchQuestionPaperRes.Items || fetchQuestionPaperRes.Items.length === 0) {
+    console.log(constant.messages.NO_DATA);
+    return { statusCode: 400, message: constant.messages.NO_DATA };
+  }
+
+  const questionsData = fetchQuestionPaperRes.Items[0].questions;
+  let questionIDs = [];
+
+  questionsData.forEach(questionSet => {
+    if (Array.isArray(questionSet.question_id)) {
+      questionIDs = questionIDs.concat(questionSet.question_id);
     }
+  });
 
-    const questionsData = fetchQuestionPaperRes.Items[0].questions;
-    let questionIDs = [];
+  questionIDs = helper.removeDuplicates(questionIDs);
 
-    questionsData.forEach(questionSet => {
-      if (Array.isArray(questionSet.question_id)) {
-        questionIDs = questionIDs.concat(questionSet.question_id);
-      }
-    });
-
-    questionIDs = helper.removeDuplicates(questionIDs);
-
-    if (questionIDs.length === 0) {
-      console.log("No questions found in the question paper.");
-      return fetchQuestionPaperRes;
-    }
-
-    const fetchBulkCatReq = {
-      IdArray: questionIDs,
-      fetchIdName: "question_id",
-      TableName: TABLE_NAMES.upschool_question_table,
-      projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
-    };
-
-    const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
-
-
-    if (!fetchQuestionsRes || fetchQuestionsRes.length === 0) {
-      console.log("No questions found for the given IDs.");
-      return { statusCode: 400, message: "Questions not found." };
-    }
-
-    const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
-
-    fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
-
+  if (questionIDs.length === 0) {
+    console.log("No questions found in the question paper.");
     return fetchQuestionPaperRes;
+  }
+
+  const fetchBulkCatReq = {
+    IdArray: questionIDs,
+    fetchIdName: "question_id",
+    TableName: TABLE_NAMES.upschool_question_table,
+    projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+  };
+
+  const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
+
+
+  if (!fetchQuestionsRes || fetchQuestionsRes.length === 0) {
+    console.log("No questions found for the given IDs.");
+    return { statusCode: 400, message: "Questions not found." };
+  }
+
+  const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
+
+  fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
+
+  return fetchQuestionPaperRes;
 };
 
 
@@ -329,7 +331,7 @@ exports.setQuestionPaperView2 = async (questionsSectionData, questionData) => {
 
     // Await all promises to ensure questions are fully resolved before proceeding
     const resolvedQuestions = await Promise.all(questionsPromises);
-    
+
     // Assign the resolved questions back to the section
     questionsSectionData[i].questions = resolvedQuestions;
   }
@@ -361,14 +363,14 @@ exports.toggleQuestionPaperBasedOnId = function (request, callback) {
 
 exports.toggleQuestionPaperBasedOnId2 = async (request) => {
 
-    const fetchClassTestResponse = await testQuestionPaperRepository.getClassTestsBasedonIds2(request);
+  const fetchClassTestResponse = await testQuestionPaperRepository.getClassTestsBasedonIds2(request);
 
-    console.log("fetchClassTestResponse - ",fetchClassTestResponse);
-    if (fetchClassTestResponse.Items.length === 0) {
-      const updateQuestionResponse = await testQuestionPaperRepository.updateQuestionPaperStatus2(request);
-      console.log("update_question_response", updateQuestionResponse);
-      return { statusCode: 200, body: updateQuestionResponse };
-    } else {
-      return { statusCode: 400, body: fetchClassTestResponse };
-    }
+  console.log("fetchClassTestResponse - ", fetchClassTestResponse);
+  if (fetchClassTestResponse.Items.length === 0) {
+    const updateQuestionResponse = await testQuestionPaperRepository.updateQuestionPaperStatus2(request);
+    console.log("update_question_response", updateQuestionResponse);
+    return { statusCode: 200, body: updateQuestionResponse };
+  } else {
+    return { statusCode: 400, body: fetchClassTestResponse };
+  }
 };
