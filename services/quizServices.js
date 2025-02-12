@@ -855,6 +855,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 // console.log("type", questionAnswerPairs[index].question_type)
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
+                    console.log("Descriptive -  ",questionAnswerPairs[index].marks);
                     const range = 100 / Number(questionAnswerPairs[index].marks)
                     if (scores[index] === NaN || scores[index] < 10) mark.obtained_marks = 0;
                     else {
@@ -862,18 +863,22 @@ exports.startQuizEvaluationProcess = async (request) => {
                             if (scores[index] <= i * range) {
                                 // console.log("questiondesc - ",scores[index], i);
                                 mark.obtained_marks = i;
-                                // totalMarks += i;
-                                // totalMarks -= (i - 1);
+                                totalMarks += i;
+                                // totalMarks -= (i-1);
                                 break;
                             }
                         }
+                        console.log("mark for that question  -- - ",totalMarks);
                     }
                 }
                 else {
                     if (scores[index] > 80) {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
-                        // totalMarks += questionAnswerPairs[index].marks;
+                        totalMarks += questionAnswerPairs[index].marks;
+                        console.log("mark for that question  -- - ",totalMarks);
+                        console.log("non Descriptive ");
+                        
                     }
                     if (scores[index] === NaN) {
                         mark.obtained_marks = 0;
@@ -892,6 +897,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 });
             });
 
+            console.log("totalMark -- - ",totalMarks);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;

@@ -87,6 +87,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
 
         const processQuizResults = async () => {
             for (const qResult of quiz_results) {
+                if (qResult.evaluated !== "Yes") continue;
                 for (const mark_details of qResult.marks_details) {
                     const questionIds = mark_details.qa_details.map(q => q.question_id);
                     request["question_id"] = questionIds;
@@ -873,6 +874,7 @@ exports.studentAvgVsClassAvg = async (request) => {
     const quizDataMap = new Map();
 
     for (const qResult of quiz_results) {
+        if (qResult.evaluated !== "Yes") continue;
         let currentQuiz = allquizs.find(quiz => quiz.quiz_id === qResult.quiz_id);
         if (!currentQuiz) continue;
 
@@ -1062,6 +1064,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         const current_chapter = chapter_details.find(chapter => chapter.chapter_id === uniqueChapter.chapter_id);
 
         for (const qResult of quiz_results) {
+            if (qResult.evaluated !== "Yes") continue;
             if (uniqueChapter.quiz_ids.includes(qResult.quiz_id)) {
                 for (const mark_details of qResult.marks_details) {
                     const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));

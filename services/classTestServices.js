@@ -284,11 +284,13 @@ if (question) {
             });
 
             console.log("studentMarkDetail.marks_details - ",studentMarkDetail.marks_details);
+            console.log("studentMarkDetail - ",studentMarkDetail);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
             studentMarkDetail.marks_details[0].totalMark = totalMarks;
             studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classTest.classPassPercentage;
+            console.log("");
         }
 
         // Batch update with processed results
