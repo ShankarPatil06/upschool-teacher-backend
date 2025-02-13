@@ -533,7 +533,7 @@ exports.readStudentAnswerSheets = (request, callback) => {
 exports.fetchGetStudentData = async (request) => {
     const studentData = await classTestRepository.getStudentInfo(request);
     studentData?.Items?.sort((a, b) => a.roll_no.localeCompare(b.roll_no));
-    return studentData;
+    return {Items : studentData?.Items?.filter(student => student.user_status === "Active")};
   };
 
 
