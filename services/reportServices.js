@@ -1233,7 +1233,7 @@ exports.preLearningBlueprintDetails = async (request) => {
     };
   });
 
-  console.log(averages);
+  console.log("averages - ",averages);
 
   const conceptIds = [];
   const topicIds = [];
