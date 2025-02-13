@@ -380,50 +380,82 @@ const mergeStudentAnswers = (answerMetadata) => {
         };
     });
 };
+// basicQuestions -  2 4 0.6
+// intermediateQuestions -  2 8 0.3
+// advancedQuestions -  9 12 0.4
 
-function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage) {
-    // console.log("questionDataRes", questionDataRes);
+function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage,quizTestRes) {
+    console.log("questionDataRes", questionDataRes);
     const questionMarksMap = {};
 
     markAssignRes[0].answer_metadata = mergeStudentAnswers(markAssignRes[0].answer_metadata);
 
-    questionDataRes?.Items?.forEach(question => {
+    questionDataRes?.forEach(question => {
         if (question.question_id && typeof question.marks === 'number') {
             questionMarksMap[question.question_id] = question.marks;
         }
     });
 
+ console.log("questionMarksMap - ",questionMarksMap);
     const basicThreshold = group_pass_percentage.Basic / 100;
     const intermediateThreshold = group_pass_percentage.Intermediate / 100;
     const advancedThreshold = group_pass_percentage.Advanced / 100;
+
+   
 
     markAssignRes.forEach(res => {
         let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
         let intermediateQuestions = 0, intermediateMarks = 0, intermediateObtained = 0;
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
+        console.log(" res.marks_details - ", res.marks_details);
+
+        let questionSetData = [];
+        res.marks_details.forEach((req) => {
+            const { set_key } = req;
+            if (quizTestRes.Item.question_track_details[set_key]) {
+                questionSetData = quizTestRes.Item.question_track_details[set_key];
+                req.qa_details.forEach((question) => {
+                    const matchingQuestion = questionSetData.find(q => q.question_id === question.question_id);
+                    if (matchingQuestion) {
+                        question.type = matchingQuestion.type;
+                    }
+                });
+            } else {
+                console.log(`set_key: ${set_key} not found in quizTestRes`);
+            }
+        });
 
         res.marks_details.forEach(markDetail => {
             markDetail.qa_details.forEach((question) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
+    
+                console.log("question - ", question);
+                // console.log("marksPerQuestion - ", marksPerQuestion);
+                // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
                 switch (question.type) {
-                    case 'basic':
+                    case 'Basic':
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.obtained_marks;
+                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0  : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'intermediate':
+                    case 'Intermediate':
                         intermediateQuestions += 1;
                         intermediateMarks += marksPerQuestion;
-                        intermediateObtained += question.obtained_marks;
+                        intermediateObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'advanced':
+                    case 'Advanced':
                         advancedQuestions += 1;
                         advancedMarks += marksPerQuestion;
-                        advancedObtained += question.obtained_marks;
+                        advancedObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                 }
             });
         });
+
+        console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
+        console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
+        console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
+
 
         const individualGroupPerformance = {
             Basic: {
@@ -445,11 +477,66 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
                 total_obtained_mark: advancedObtained
             }
         };
+    
 
         // Add the individualGroupPerformance object to the res object
         res.individual_group_performance = individualGroupPerformance;
     });
 
+    // request.data.marks_details.forEach(markDetail => {
+    //     markDetail.qa_details.forEach((question) => {
+    //         const marksPerQuestion = questionMarksMap[question.question_id] || 0;
+
+    //         console.log("question - ", question);
+    //         // console.log("marksPerQuestion - ", marksPerQuestion);
+    //         // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
+    //         switch (question.type) {
+    //             case 'Basic':
+    //                 basicQuestions += 1;
+    //                 basicMarks += marksPerQuestion;
+    //                 basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+    //                 break;
+    //             case 'Intermediate':
+    //                 intermediateQuestions += 1;
+    //                 intermediateMarks += marksPerQuestion;
+    //                 intermediateObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+    //                 break;
+    //             case 'Advanced':
+    //                 advancedQuestions += 1;
+    //                 advancedMarks += marksPerQuestion;
+    //                 advancedObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+    //                 break;
+    //         }
+    //     });
+    // });
+    // console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
+    // console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
+    // console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
+
+    // const individualGroupPerformance = {
+    //     Basic: {
+    //         Ispassed: basicObtained >= basicMarks * basicThreshold,
+    //         no_of_questions: basicQuestions,
+    //         total_mark: basicMarks,
+    //         total_obtained_mark: basicObtained
+    //     },
+    //     Intermediate: {
+    //         Ispassed: intermediateObtained >= intermediateMarks * intermediateThreshold,
+    //         no_of_questions: intermediateQuestions,
+    //         total_mark: intermediateMarks,
+    //         total_obtained_mark: intermediateObtained
+    //     },
+    //     Advanced: {
+    //         Ispassed: advancedObtained >= advancedMarks * advancedThreshold,
+    //         no_of_questions: advancedQuestions,
+    //         total_mark: advancedMarks,
+    //         total_obtained_mark: advancedObtained
+    //     }
+    // };
+
+    // console.log("individualGroupPerformance - ", individualGroupPerformance);
+    // // Add the individualGroupPerformance object to the res object
+    // request.data.individual_group_performance = individualGroupPerformance;
     return markAssignRes;
 }
 
@@ -725,13 +812,26 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-        let classPassPercentage = quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal
-            ? Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach)
-            : Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
+        // let classPassPercentage = quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal
+        //     ? Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach)
+        //     : Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
 
-        let groupPassPercentage = quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal
-            ? Number(schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage)
-            : Number(schoolDataRes.Items[0].post_quiz_config.group_pass_percentage);
+        // let groupPassPercentage = quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal
+        //     ? Number(schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage)
+        //     : Number(schoolDataRes.Items[0].post_quiz_config.group_pass_percentage);
+
+            let classPassPercentage = 0;
+            let passPassPercentage = 0;
+            let groupPassPercentage = {};
+            if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
+                classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
+                passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
+                groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
+            } else {
+                classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
+                passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
+                groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.group_pass_percentage
+            }
 
         const studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
 
@@ -863,7 +963,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             if (scores[index] <= i * range) {
                                 // console.log("questiondesc - ",scores[index], i);
                                 mark.obtained_marks = i;
-                                totalMarks += i;
+                                // totalMarks += i;
                                 // totalMarks -= (i-1);
                                 break;
                             }
@@ -875,7 +975,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     if (scores[index] > 80) {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
-                        totalMarks += questionAnswerPairs[index].marks;
+                        // totalMarks += questionAnswerPairs[index].marks;
                         console.log("mark for that question  -- - ",totalMarks);
                         console.log("non Descriptive ");
                         
@@ -886,7 +986,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 }
 
                 totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
-
+                mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
                 // console.log("scores[index] - ", scores[index]);
 
                 answerCompareArray.push({
@@ -907,7 +1007,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
-        const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage);
+        const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage ,quizTestRes);
 
         // console.log("markAssignRes - ", markAssignRes);
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
