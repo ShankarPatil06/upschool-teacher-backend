@@ -887,12 +887,18 @@ exports.viewClassReportFocusArea = async (request) => {
     };
   });
 
+  // console.log("quizResultMarksData - ",quizResultMarksData);
+
   const totalStudents = quizResultMarksData.length;
   const questionSetA = [
     ...new Set(
       Object.values(quizData.Item.question_track_details.qp_set_a).flat()
     ),
-  ]; //only set a for focus area
+  ]; 
+
+  // console.log("questionSetA - ",questionSetA);
+  
+  //only set a for focus area
   const conceptAndQuestions = questionSetA.reduce((acc, item) => {
     const existingConcept = acc.find(
       (concept) => concept.concept === item.concept_id
@@ -907,6 +913,9 @@ exports.viewClassReportFocusArea = async (request) => {
     }
     return acc;
   }, []);
+
+  // console.log("conceptAndQuestions - ",conceptAndQuestions);
+
   const conceptIdsSetA = questionSetA.map((item) => item.concept_id); //concepts for set A
   const questionIdsSetA = questionSetA.map((item) => item.question_id); //concepts for set A
 
@@ -931,10 +940,9 @@ exports.viewClassReportFocusArea = async (request) => {
         if (question === marks.question_id) {
           let marksValue;
           if (marks.modified_marks === "N.A.") {
-            marksValue =
-              marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks;
+            marksValue = marks.obtained_marks === "N.A." ?  0 : Number(marks.obtained_marks);
           } else {
-            marksValue = marks.modified_marks;
+            marksValue = Number(marks.modified_marks);
           }
 
           marksOfEachStudent.push({
@@ -946,6 +954,9 @@ exports.viewClassReportFocusArea = async (request) => {
       });
     });
   });
+
+  // console.log("marksOfEachStudent - ", marksOfEachStudent);
+
   const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
     // Find the existing student entry
     const existingStudent = acc.find(
@@ -973,8 +984,10 @@ exports.viewClassReportFocusArea = async (request) => {
 
     return acc;
   }, []);
-  groupedMarks.forEach((student) => {
-  });
+
+  // console.log("groupedMarks - ",groupedMarks);
+  // groupedMarks.forEach((student) => {
+  // });
 
   const studentIds = groupedMarks.map((student) => student.studentid)
 
@@ -983,13 +996,21 @@ exports.viewClassReportFocusArea = async (request) => {
     acc[curr] = (acc[curr] || 0) + 1;
     return acc;
   }, []);
+
+  // console.log("noOfQuestionsperConcept - ",noOfQuestionsperConcept);
+
   const conceptNames =
     conceptIdsSetA.length &&
     (await conceptRepository.fetchBulkConceptsIDName2({
       unit_Concept_id: conceptIdsSetA,
     }));
+
   let conceptsToFocus = [];
   // let failedStudents = [];
+
+console.log("conceptAndQuestions - ",conceptAndQuestions);
+
+  let passPercentage = request.data.config === '"post_quiz_config"' ? schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach : schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
   conceptAndQuestions.map(async (item) => {
     item.numberOfQuestions = noOfQuestionsperConcept[item.concept] || 0;
     item.name = conceptNames.find(
@@ -997,17 +1018,20 @@ exports.viewClassReportFocusArea = async (request) => {
     ).display_name;
 
     //%cal for pass
-    let passPercentage = request.data.config === '"post_quiz_config"' ? schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach : schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
 
     let studentsData = []
     item.passPercentage = passPercentage
 
+    console.log("groupedMarks - ",groupedMarks);
+
     groupedMarks.map((student) => {
       let marks = 0;
       let totalconceptMarks = 0;
+      console.log("student.details =====  ",student.details);
       student.details.map((q) => {
-        questions.map((questionData) => {
-          if (q.questionId === questionData.question_id) {
+        questions.map((questionData,i) => {
+          if (q.questionId === questionData.question_id && item.questions.includes(q.questionId)) {
+            console.log(i);
             totalconceptMarks = totalconceptMarks + questionData.marks;
           }
         })
