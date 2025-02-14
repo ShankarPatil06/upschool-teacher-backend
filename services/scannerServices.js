@@ -541,6 +541,8 @@ exports.uploadAnswerSheets2 = async (request) => {
                 } else {
                     console.log("Existing Student Record - Updating metadata");
 
+                    testResultData.Items[0].answer_metadata.sort((a, b) => a.page_no - b.page_no);
+
                     let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
                     if (!pageExists) {
