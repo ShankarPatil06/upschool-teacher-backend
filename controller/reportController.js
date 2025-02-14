@@ -120,6 +120,16 @@ exports.comprehensivePerformanceChapterWise = async (req, res, next) => {
     }
 };
 
+exports.comprehensivePerformanceChapterWiseForTest = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await reportServices.comprehensivePerformanceChapterWiseForTest(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
+
 exports.comprehensivePerformanceTopicWise = async (req, res, next) => {
     try {
         const request = req.body;
@@ -130,10 +140,30 @@ exports.comprehensivePerformanceTopicWise = async (req, res, next) => {
     }
 };
 
+exports.comprehensivePerformanceTopicWiseForTest = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await reportServices.comprehensivePerformanceTopicWiseForTest(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
+
 exports.comprehensivePerformanceConceptWise = async (req, res, next) => {
     try {
         const request = req.body;
         const reportData = await reportServices.comprehensivePerformanceConceptWise(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
+
+exports.comprehensivePerformanceConceptWiseForTest = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await reportServices.comprehensivePerformanceConceptWiseForTest(request);
         return formatResponse(res, reportData);
     } catch (error) {
         next(error)

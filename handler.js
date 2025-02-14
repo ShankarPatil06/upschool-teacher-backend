@@ -138,8 +138,11 @@ app.post("/v1/postLearningSummaryDetails",reportController.postLearningSummaryDe
 app.post("/v1/preLearningBlueprintDetails",reportController.preLearningBlueprintDetails);
 app.post("/v1/viewAnalysisIndividualReport",reportController.viewAnalysisIndividualReport);
 app.post("/v1/comprehensivePerformanceChapterWise",reportController.comprehensivePerformanceChapterWise);
+app.post("/v1/comprehensivePerformanceChapterWiseForTest",reportController.comprehensivePerformanceChapterWiseForTest);
 app.post("/v1/comprehensivePerformanceTopicWise",reportController.comprehensivePerformanceTopicWise);
+app.post("/v1/comprehensivePerformanceTopicWiseForTest",reportController.comprehensivePerformanceTopicWiseForTest);
 app.post("/v1/comprehensivePerformanceConceptWise",reportController.comprehensivePerformanceConceptWise);
+app.post("/v1/comprehensivePerformanceConceptWiseForTest",reportController.comprehensivePerformanceConceptWiseForTest);
 app.post("/v1/viewClassReportQuestions",reportController.viewClassReportQuestions);
 app.post("/v1/viewClassReportFocusArea",reportController.viewClassReportFocusArea);
 app.post("/v1/viewChapterwisePerformanceTracking",reportController.viewChapterwisePerformanceTracking);
