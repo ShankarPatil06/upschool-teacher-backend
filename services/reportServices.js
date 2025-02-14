@@ -1,4 +1,4 @@
-const { schoolRepository, studentRepository, subjectRepository, unitRepository, quizRepository, settingsRepository, questionRepository, quizResultRepository, classTestRepository, chapterRepository, topicRepository, conceptRepository } = require("../repository");
+const { schoolRepository, studentRepository, subjectRepository, unitRepository, quizRepository, settingsRepository, questionRepository, quizResultRepository, classTestRepository, chapterRepository, topicRepository, conceptRepository, testResultRepository, testQuestionPaperRepository } = require("../repository");
 const { formatDate } = require("../helper/helper");
 const s3Services = require("./s3Service");
 
@@ -129,14 +129,14 @@ exports.getTargetedLearningExpectation = async (request) => {
 
   if (!classPercentagePre || !classPercentagePost) return;
   const studentDataRes = await studentRepository.getStudentsData2(request);
-  console.log("studentDataRes - ",studentDataRes);
+  console.log("studentDataRes - ", studentDataRes);
   let classStrength = studentDataRes?.Items?.length;
-  console.log("request - ",request);
+  console.log("request - ", request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-  console.log("quizDataRes - ",quizDataRes);
+  console.log("quizDataRes - ", quizDataRes);
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
 
-  console.log("quizIds - ",quizIds);
+  console.log("quizIds - ", quizIds);
 
 
   const quizResultDataRes =
@@ -145,7 +145,7 @@ exports.getTargetedLearningExpectation = async (request) => {
       unit_Quiz_id: quizIds,
     }));
 
-    console.log("quizResultDataRes123 - ",quizResultDataRes);
+  console.log("quizResultDataRes123 - ", quizResultDataRes);
 
   totalTopics =
     quizDataRes &&
@@ -164,7 +164,7 @@ exports.getTargetedLearningExpectation = async (request) => {
       ? classStrength * classPercentage * 0.01
       : 0;
 
-      console.log("passedStudentsOfParticularQuiz - ",passedStudentsOfParticularQuiz);
+    console.log("passedStudentsOfParticularQuiz - ", passedStudentsOfParticularQuiz);
 
     if (passedStudentsOfParticularQuiz >= passedThreshold) {
       reachedTopics += quiz.selectedTopics.length;
@@ -560,10 +560,10 @@ exports.postLearningSummaryDetails = async (request) => {
           0
         );
         const totalAttendance = quizResults.length;
-        console.log("totalAttendance - ",totalAttendance);
+        console.log("totalAttendance - ", totalAttendance);
         quizResults.map(val =>
-          console.log("val - ",val.marks_details)
-          )
+          console.log("val - ", val.marks_details)
+        )
 
         quiz.student_attendance = totalAttendance;
         quiz.avgMarks = quizResults.length
@@ -573,7 +573,7 @@ exports.postLearningSummaryDetails = async (request) => {
             0
           ) / quizResults.length) / quizResults[0].marks_details[0]?.expectedMarks) * 100
           : 0;
-          console.log("quiz.avgMarks - ",quiz.avgMarks);
+        console.log("quiz.avgMarks - ", quiz.avgMarks);
       });
     }
   });
@@ -894,10 +894,10 @@ exports.viewClassReportFocusArea = async (request) => {
     ...new Set(
       Object.values(quizData.Item.question_track_details.qp_set_a).flat()
     ),
-  ]; 
+  ];
 
   // console.log("questionSetA - ",questionSetA);
-  
+
   //only set a for focus area
   const conceptAndQuestions = questionSetA.reduce((acc, item) => {
     const existingConcept = acc.find(
@@ -940,7 +940,7 @@ exports.viewClassReportFocusArea = async (request) => {
         if (question === marks.question_id) {
           let marksValue;
           if (marks.modified_marks === "N.A.") {
-            marksValue = marks.obtained_marks === "N.A." ?  0 : Number(marks.obtained_marks);
+            marksValue = marks.obtained_marks === "N.A." ? 0 : Number(marks.obtained_marks);
           } else {
             marksValue = Number(marks.modified_marks);
           }
@@ -1008,7 +1008,7 @@ exports.viewClassReportFocusArea = async (request) => {
   let conceptsToFocus = [];
   // let failedStudents = [];
 
-console.log("conceptAndQuestions - ",conceptAndQuestions);
+  console.log("conceptAndQuestions - ", conceptAndQuestions);
 
   let passPercentage = request.data.config === '"post_quiz_config"' ? schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach : schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
   conceptAndQuestions.map(async (item) => {
@@ -1022,14 +1022,14 @@ console.log("conceptAndQuestions - ",conceptAndQuestions);
     let studentsData = []
     item.passPercentage = passPercentage
 
-    console.log("groupedMarks - ",groupedMarks);
+    console.log("groupedMarks - ", groupedMarks);
 
     groupedMarks.map((student) => {
       let marks = 0;
       let totalconceptMarks = 0;
-      console.log("student.details =====  ",student.details);
+      console.log("student.details =====  ", student.details);
       student.details.map((q) => {
-        questions.map((questionData,i) => {
+        questions.map((questionData, i) => {
           if (q.questionId === questionData.question_id && item.questions.includes(q.questionId)) {
             console.log(i);
             totalconceptMarks = totalconceptMarks + questionData.marks;
@@ -1257,7 +1257,7 @@ exports.preLearningBlueprintDetails = async (request) => {
     };
   });
 
-  console.log("averages - ",averages);
+  console.log("averages - ", averages);
 
   const conceptIds = [];
   const topicIds = [];
@@ -1418,11 +1418,11 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   const performance = {};
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
-   if( result.evaluated === "Yes"){
-    if (!acc[result.student_id]) acc[result.student_id] = [];
-    acc[result.student_id].push(result);
-  }
-  return acc;
+    if (result.evaluated === "Yes") {
+      if (!acc[result.student_id]) acc[result.student_id] = [];
+      acc[result.student_id].push(result);
+    }
+    return acc;
   }, {});
 
   const quizDataByQuizId = quizDataRes.Items.reduce((acc, quiz) => {
@@ -1494,6 +1494,171 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   return performance;
 };
 
+exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
+  const studentData = await studentRepository.getStudentsData2(request);
+  const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  const question_paper_ids = testDetails.map(test => test.question_paper_id);
+  const test_ids = testDetails.map(test => test.class_test_id);
+  request['class_test_id'] = test_ids
+  request['question_paper_ids'] = question_paper_ids;
+  let testResult = [];
+  if (test_ids.length > 0) {
+    testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+  }
+
+  const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
+  const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
+  let chapter_Ids = [...new Set([...test_chapter_ids])];
+  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+  request["unit_chapter_id"] = chapter_Ids;
+  const testChapterMap = {};
+  if (questionPaper?.data?.length > 0) {
+    for (const paper of questionPaper.data) {
+      if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
+        const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
+        for (const chapter of paper.chapter_id) {
+          if (!testChapterMap[chapter]) {
+            testChapterMap[chapter] = new Set();
+          }
+          for (const test of matchingTests) {
+            testChapterMap[chapter].add(test.class_test_id);
+          }
+        }
+      }
+    }
+  }
+  const uniqueTestChapters = Object.entries(testChapterMap).map(([chapter_id, testIds]) => ({
+    chapter_id: chapter_id,
+    test_ids: [...testIds]
+  }));
+
+  const questionIds1 = testResult.flatMap(test =>
+    test.marks_details.flatMap(mark =>
+      mark.qa_details.map(qa => qa.question_id)
+    )
+  );
+  const allQuestionIds = [...new Set([...questionIds1])];
+  let questionDetails = [];
+  if (allQuestionIds.length > 0) {
+    questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+      question_id: allQuestionIds,
+    });
+  }
+
+  let chapter_details = [];
+  if (chapter_Ids.length > 0) {
+    chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+    if (chapter_response.Items.length > 0) {
+      for (const chapter of chapter_response.Items) {
+        testChapterMap[chapter.chapter_id] = [
+          ...(chapter.prelearning_topic_id || []),
+          ...(chapter.postlearning_topic_id || [])
+        ];
+      }
+    }
+
+    const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
+    let topicMap = { ...testChapterMap };
+    if (topic_array.length > 0) {
+      const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+      if (topic_response?.Items?.length > 0) {
+        const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+
+        Object.keys(testChapterMap).forEach(chapter => {
+          testChapterMap[chapter] = [];
+        });
+
+        for (const concept of concept_response) {
+          for (const topic of topic_response.Items) {
+            if (topic?.topic_concept_id?.includes(concept.concept_id)) {
+              for (const chapter in topicMap) {
+                if (topicMap[chapter].includes(topic.topic_id)) {
+                  if (!testChapterMap[chapter]) {
+                    testChapterMap[chapter] = [];
+                  }
+                  testChapterMap[chapter].push(concept.concept_id);
+                }
+              }
+            }
+          }
+        }
+
+        Object.keys(testChapterMap).forEach(chapter => {
+          let updatedConceptQuestions = [];
+          testChapterMap[chapter].forEach(concept_id => {
+            const concept = concept_response.find(c => c.concept_id === concept_id);
+            if (concept && Array.isArray(concept.concept_question_id)) {
+              updatedConceptQuestions = [...updatedConceptQuestions, ...concept.concept_question_id];
+            }
+          });
+          testChapterMap[chapter] = updatedConceptQuestions;
+        });
+      }
+    }
+  }
+
+  const chapterTestResults = [];
+  for (const chapter of uniqueTestChapters) {
+    let total_marks = 0;
+    let total_obtained_marks = 0;
+    const studentMap = new Map();
+    const current_chapter = chapter_details.find(ch => ch.chapter_id === chapter.chapter_id);
+
+    for (const test of testResult) {
+      if (chapter.test_ids.includes(test.class_test_id)) {
+        for (const marks of test.marks_details) {
+          for (const question of marks.qa_details) {
+            const questionId = question.question_id;
+            if (testChapterMap[chapter.chapter_id]?.includes(questionId)) {
+              const quest = questionDetails.find(q => q.question_id === questionId);
+              if (quest) {
+                let total_student_marks = quest?.marks || 0;
+                let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+
+                total_marks += parseInt(total_student_marks);
+                total_obtained_marks += parseInt(total_student_obtained_marks);
+                let student = studentData.Items.find(s => s.student_id === test.student_id);
+                if (!student) continue;
+
+                const studentEntry = {
+                  student_id: student.student_id,
+                  student_name: `${student.user_firstname} ${student.user_lastname}`,
+                  studentMark: parseInt(total_student_obtained_marks),
+                  totalMarks: parseInt(total_student_marks) || 0,
+                  percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                };
+
+                if (!studentMap.has(student.student_id)) {
+                  studentMap.set(student.student_id, studentEntry);
+                } else {
+                  let existing = studentMap.get(student.student_id);
+                  existing.studentMark += parseInt(studentEntry.studentMark);
+                  existing.totalMarks += parseInt(studentEntry.totalMarks);
+                  existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
+                  studentMap.set(student.student_id, existing);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    chapterTestResults.push({
+      chapter_id: chapter.chapter_id,
+      chapter_name: current_chapter?.display_name || '',
+      total_marks,
+      total_obtained_marks,
+      class_average: ((total_obtained_marks / total_marks) * 100).toFixed(2),
+      students: Array.from(studentMap.values())
+    });
+  }
+  return chapterTestResults;
+}
+
 exports.comprehensivePerformanceTopicWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter(request);
@@ -1520,9 +1685,9 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
 
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes?.reduce((acc, result) => {
-    if( result.evaluated === "Yes"){
-    if (!acc[result.student_id]) acc[result.student_id] = [];
-    acc[result.student_id].push(result);
+    if (result.evaluated === "Yes") {
+      if (!acc[result.student_id]) acc[result.student_id] = [];
+      acc[result.student_id].push(result);
     }
     return acc;
   }, {});
@@ -1611,6 +1776,195 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
   return performance;
 };
 
+exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
+  const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  const studentData = await studentRepository.getStudentsData2(request);
+  const question_paper_ids = testDetails.map(test => test.question_paper_id);
+  const test_ids = testDetails.map(test => test.class_test_id);
+
+  request['class_test_id'] = test_ids
+  request['question_paper_ids'] = question_paper_ids;
+
+  let testResult = [];
+  if (test_ids.length > 0) {
+    testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+  }
+
+  const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
+  const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
+  let chapter_Ids = [...new Set([...test_chapter_ids])];
+
+  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+  request["unit_chapter_id"] = chapter_Ids;
+
+  const testChapterMap = {};
+  if (questionPaper?.data?.length > 0) {
+    for (const paper of questionPaper.data) {
+      if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
+        const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
+
+        for (const chapter of paper.chapter_id) {
+          if (!testChapterMap[chapter]) {
+            testChapterMap[chapter] = new Set();
+          }
+
+          for (const test of matchingTests) {
+            testChapterMap[chapter].add(test.class_test_id);
+          }
+        }
+      }
+    }
+  }
+
+  const uniqueTestChapters = Object.entries(testChapterMap).map(([chapter_id, testIds]) => ({
+    chapter_id: chapter_id,
+    test_ids: [...testIds]
+  }));
+
+  const questionIds1 = testResult.flatMap(test =>
+    test.marks_details.flatMap(mark =>
+      mark.qa_details.map(qa => qa.question_id)
+    )
+  );
+
+  const allQuestionIds = [...new Set([...questionIds1])];
+  let questionDetails = [];
+  if (allQuestionIds.length > 0) {
+    questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+      question_id: allQuestionIds,
+    });
+  }
+
+  let chapter_details = [];
+  if (chapter_Ids.length > 0) {
+    chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+    if (chapter_response.Items.length > 0) {
+      for (const chapter of chapter_response.Items) {
+        testChapterMap[chapter.chapter_id] = [
+          ...(chapter.prelearning_topic_id || []),
+          ...(chapter.postlearning_topic_id || [])
+        ];
+      }
+    }
+  }
+  const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
+  const chapterTestResults = [];
+  if (topic_array.length > 0) {
+    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+    if (topic_response?.Items?.length > 0) {
+      const topicToConceptMap = {};
+      topic_response.Items.forEach(topic => {
+        if (topic.topic_concept_id && Array.isArray(topic.topic_concept_id)) {
+          topicToConceptMap[topic.topic_id] = topic.topic_concept_id;
+        }
+      });
+
+      concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+
+      if (concept_response?.length > 0) {
+        const conceptToQuestionMap = {};
+        concept_response.forEach(concept => {
+          if (concept.concept_question_id && Array.isArray(concept.concept_question_id)) {
+            conceptToQuestionMap[concept.concept_id] = concept.concept_question_id;
+          }
+        });
+
+        Object.keys(testChapterMap).forEach(chapter => {
+          let topicMappings = [];
+
+          testChapterMap[chapter].forEach(topic_id => {
+            let topicQuestions = new Set();
+            const relatedConcepts = topicToConceptMap[topic_id] || [];
+            relatedConcepts.forEach(concept_id => {
+              if (conceptToQuestionMap[concept_id]) {
+                conceptToQuestionMap[concept_id].forEach(question_id => topicQuestions.add(question_id));
+              }
+            });
+            topicMappings.push({ [topic_id]: [...topicQuestions] });
+          });
+          testChapterMap[chapter] = topicMappings;
+        });
+      }
+    }
+
+    for (const chapter of uniqueTestChapters) {
+      const current_chapter = chapter_details.find(ch => ch.chapter_id === chapter.chapter_id);
+      let chapterObject = {
+        chapter_id: chapter.chapter_id,
+        chapter_name: current_chapter?.display_name || '',
+        topics: []
+      };
+
+      if (!testChapterMap[chapter.chapter_id]) continue;
+
+      for (const topicObj of testChapterMap[chapter.chapter_id]) {
+        const topic_id = Object.keys(topicObj)[0];
+        const topic_details = topic_response?.Items?.find(topic => topic.topic_id === topic_id);
+        const topicQuestions = topicObj[topic_id];
+        let total_marks = 0;
+        let total_obtained_marks = 0;
+        const studentMap = new Map();
+
+        for (const test of testResult) {
+          if (chapter.test_ids.includes(test.class_test_id)) {
+            for (const marks of test.marks_details) {
+              for (const question of marks.qa_details) {
+                const questionId = question.question_id;
+                if (topicQuestions.includes(questionId)) {
+                  const quest = questionDetails.find(q => q.question_id === questionId);
+                  if (quest) {
+                    let total_student_marks = quest?.marks || 0;
+                    let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+
+                    total_marks += parseInt(total_student_marks);
+                    total_obtained_marks += parseInt(total_student_obtained_marks);
+                    let student = studentData.Items.find(s => s.student_id === test.student_id);
+                    if (!student) continue;
+
+                    const studentEntry = {
+                      student_id: student.student_id,
+                      student_name: `${student.user_firstname} ${student.user_lastname}`,
+                      studentMark: parseInt(total_student_obtained_marks),
+                      totalMarks: parseInt(total_student_marks) || 0,
+                      percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                    };
+
+                    if (!studentMap.has(student.student_id)) {
+                      studentMap.set(student.student_id, studentEntry);
+                    } else {
+                      let existing = studentMap.get(student.student_id);
+                      existing.studentMark += parseInt(studentEntry.studentMark);
+                      existing.totalMarks += parseInt(studentEntry.totalMarks);
+                      existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
+                      studentMap.set(student.student_id, existing);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        chapterObject.topics.push({
+          topic_id: topic_id,
+          topic_name: topic_details?.display_name || "",
+          total_marks,
+          total_obtained_marks,
+          class_average: total_marks ? ((total_obtained_marks / total_marks) * 100).toFixed(2) : "0.00",
+          students: Array.from(studentMap.values())
+        });
+      }
+
+      chapterTestResults.push(chapterObject);
+    }
+  }
+  return chapterTestResults;
+}
+
 exports.comprehensivePerformanceConceptWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter(request);
@@ -1636,9 +1990,9 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   const performance = {};
 
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
-    if( result.evaluated === "Yes"){
-    if (!acc[result.student_id]) acc[result.student_id] = [];
-    acc[result.student_id].push(result);
+    if (result.evaluated === "Yes") {
+      if (!acc[result.student_id]) acc[result.student_id] = [];
+      acc[result.student_id].push(result);
     }
     return acc;
   }, {});
@@ -1728,6 +2082,200 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   return performance;
 };
 
+exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
+  const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  const studentData = await studentRepository.getStudentsData2(request);
+  const question_paper_ids = testDetails.map(test => test.question_paper_id);
+  const test_ids = testDetails.map(test => test.class_test_id);
+
+  request['class_test_id'] = test_ids
+  request['question_paper_ids'] = question_paper_ids;
+
+  let testResult = [];
+  if (test_ids.length > 0) {
+    testResult = await testResultRepository.fetchStudentresultMetadata3(request);
+  }
+
+  const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
+  const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
+  let chapter_Ids = [...new Set([...test_chapter_ids])];
+
+  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+  request["unit_chapter_id"] = chapter_Ids;
+
+  const testChapterMap = {};
+  if (questionPaper?.data?.length > 0) {
+    for (const paper of questionPaper.data) {
+      if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
+        const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
+
+        for (const chapter of paper.chapter_id) {
+          if (!testChapterMap[chapter]) {
+            testChapterMap[chapter] = new Set();
+          }
+
+          for (const test of matchingTests) {
+            testChapterMap[chapter].add(test.class_test_id);
+          }
+        }
+      }
+    }
+  }
+
+  const uniqueTestChapters = Object.entries(testChapterMap).map(([chapter_id, testIds]) => ({
+    chapter_id: chapter_id,
+    test_ids: [...testIds]
+  }));
+
+  const questionIds1 = testResult.flatMap(test =>
+    test.marks_details.flatMap(mark =>
+      mark.qa_details.map(qa => qa.question_id)
+    )
+  );
+
+  const allQuestionIds = [...new Set([...questionIds1])];
+  let questionDetails = [];
+  if (allQuestionIds.length > 0) {
+    questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
+      question_id: allQuestionIds,
+    });
+  }
+
+  let chapter_details = [];
+  if (chapter_Ids.length > 0) {
+    chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+    if (chapter_response.Items.length > 0) {
+      for (const chapter of chapter_response.Items) {
+        testChapterMap[chapter.chapter_id] = [
+          ...(chapter.prelearning_topic_id || []),
+          ...(chapter.postlearning_topic_id || [])
+        ];
+      }
+    }
+  }
+  const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
+  const chapterTestResults = [];
+  if (topic_array.length > 0) {
+    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+    if (topic_response?.Items?.length > 0) {
+      const topicToConceptMap = {};
+
+      topic_response.Items.forEach(topic => {
+        if (topic.topic_concept_id && Array.isArray(topic.topic_concept_id)) {
+          topicToConceptMap[topic.topic_id] = topic.topic_concept_id;
+        }
+      });
+
+      const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+
+      if (concept_response?.length > 0) {
+        const conceptToQuestionMap = {};
+
+        concept_response.forEach(concept => {
+          if (concept.concept_question_id && Array.isArray(concept.concept_question_id)) {
+            conceptToQuestionMap[concept.concept_id] = concept.concept_question_id;
+          }
+        });
+
+        Object.keys(testChapterMap).forEach(chapter => {
+          let conceptMappings = [];
+
+          testChapterMap[chapter].forEach(topic_id => {
+            const relatedConcepts = topicToConceptMap[topic_id] || [];
+
+            relatedConcepts.forEach(concept_id => {
+              let conceptQuestions = new Set();
+
+              if (conceptToQuestionMap[concept_id]) {
+                conceptToQuestionMap[concept_id].forEach(question_id => conceptQuestions.add(question_id));
+              }
+
+              conceptMappings.push({ [concept_id]: [...conceptQuestions] });
+            });
+          });
+
+          testChapterMap[chapter] = conceptMappings;
+        });
+        for (const chapter of uniqueTestChapters) {
+          const current_chapter = chapter_details.find(ch => ch.chapter_id === chapter.chapter_id);
+          let chapterObject = {
+            chapter_id: chapter.chapter_id,
+            chapter_name: current_chapter?.display_name || '',
+            concepts: []
+          };
+
+          if (!testChapterMap[chapter.chapter_id]) continue;
+
+          for (const conceptObj of testChapterMap[chapter.chapter_id]) {
+            const concept_id = Object.keys(conceptObj)[0];
+            const concept_details = concept_response?.find(concept => concept.concept_id === concept_id);
+            const conceptQuestions = conceptObj[concept_id];
+            let total_marks = 0;
+            let total_obtained_marks = 0;
+            const studentMap = new Map();
+
+            for (const test of testResult) {
+              if (chapter.test_ids.includes(test.class_test_id)) {
+                for (const marks of test.marks_details) {
+                  for (const question of marks.qa_details) {
+                    const questionId = question.question_id;
+                    if (conceptQuestions.includes(questionId)) {
+                      const quest = questionDetails.find(q => q.question_id === questionId);
+                      if (quest) {
+                        let total_student_marks = quest?.marks || 0;
+                        let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+
+                        total_marks += parseInt(total_student_marks);
+                        total_obtained_marks += parseInt(total_student_obtained_marks);
+                        let student = studentData.Items.find(s => s.student_id === test.student_id);
+                        if (!student) continue;
+
+                        const studentEntry = {
+                          student_id: student.student_id,
+                          student_name: `${student.user_firstname} ${student.user_lastname}`,
+                          studentMark: parseInt(total_student_obtained_marks),
+                          totalMarks: parseInt(total_student_marks) || 0,
+                          percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                        };
+
+                        if (!studentMap.has(student.student_id)) {
+                          studentMap.set(student.student_id, studentEntry);
+                        } else {
+                          let existing = studentMap.get(student.student_id);
+                          existing.studentMark += parseInt(studentEntry.studentMark);
+                          existing.totalMarks += parseInt(studentEntry.totalMarks);
+                          existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
+                          studentMap.set(student.student_id, existing);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            chapterObject.concepts.push({
+              concept_id: concept_id,
+              concept_name: concept_details?.display_name || "",
+              total_marks,
+              total_obtained_marks,
+              class_average: total_marks ? ((total_obtained_marks / total_marks) * 100).toFixed(2) : "0.00",
+              students: Array.from(studentMap.values())
+            });
+          }
+          chapterTestResults.push(chapterObject);
+        }
+      }
+    }
+
+  }
+  return chapterTestResults;
+}
+
 exports.getActionsAndRecommendations = async (request) => {
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
@@ -1775,7 +2323,7 @@ exports.getActionsAndRecommendations = async (request) => {
     unit_chapter_id: chapterIds,
   });
 
-  console.log("chapterData - ",chapterData);
+  console.log("chapterData - ", chapterData);
 
   const topicIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({
@@ -1791,13 +2339,13 @@ exports.getActionsAndRecommendations = async (request) => {
 
 
   const quizResultMarksData = quizResultsRes
-  .filter((item) => item.evaluated === "Yes") 
-  .map((item) => {
-    return {
-      marks: item.marks_details[0].qa_details,
-      studentId: item.student_id,
-    };
-  });
+    .filter((item) => item.evaluated === "Yes")
+    .map((item) => {
+      return {
+        marks: item.marks_details[0].qa_details,
+        studentId: item.student_id,
+      };
+    });
 
   const marksOfEachStudent = [];
   quizResultMarksData.map((qdata) => {
@@ -1820,7 +2368,7 @@ exports.getActionsAndRecommendations = async (request) => {
       });
     });
   });
-  console.log("marksOfEachStudent - ",marksOfEachStudent);
+  console.log("marksOfEachStudent - ", marksOfEachStudent);
 
   const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
     const existingStudent = acc.find((student) => student.studentid === item.studentid);
@@ -1855,15 +2403,15 @@ exports.getActionsAndRecommendations = async (request) => {
     item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
 
     const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
-    console.log("relatedTopic - " ,relatedTopic);
-   
+    console.log("relatedTopic - ", relatedTopic);
+
     // const relatedChapter = chapterData.find((chapter) => chapter.chapter_id === quizDataRes.Items.find((quiz) => quiz.chapter_id)?.chapter_id);
     const relatedChapter = chapterData.find(
       (chapter) =>
         chapter.prelearning_topic_id.includes(item.topic_id) ||
         chapter.postlearning_topic_id.includes(item.topic_id)
     );
-    console.log("relatedChapter - " ,relatedChapter);
+    console.log("relatedChapter - ", relatedChapter);
 
     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
     item.chapter_name = relatedChapter?.chapter_title || "Unknown Chapter";

@@ -444,3 +444,15 @@ functions:
           path: /v1/studentAvgVsClassAvgChapterWise
           method: POST
           cors: true    
+      - http:
+          path: /v1/comprehensivePerformanceChapterWiseForTest
+          method: POST
+          cors: true    
+      - http:
+          path: /v1/comprehensivePerformanceTopicWiseForTest
+          method: POST
+          cors: true    
+      - http:
+          path: /v1/comprehensivePerformanceConceptWiseForTest
+          method: POST
+          cors: true    
