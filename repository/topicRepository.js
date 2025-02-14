@@ -270,7 +270,7 @@ exports.fetchTopicIDDisplayTitleData2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: fromatedRequest.FilterExpression,
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-        ProjectionExpression: "topic_id, topic_title, display_name"
+        ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
