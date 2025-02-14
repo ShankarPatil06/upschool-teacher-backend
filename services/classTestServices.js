@@ -284,11 +284,13 @@ if (question) {
             });
 
             console.log("studentMarkDetail.marks_details - ",studentMarkDetail.marks_details);
+            console.log("studentMarkDetail - ",studentMarkDetail);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
             studentMarkDetail.marks_details[0].totalMark = totalMarks;
             studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classTest.classPassPercentage;
+            console.log("");
         }
 
         // Batch update with processed results
@@ -531,7 +533,7 @@ exports.readStudentAnswerSheets = (request, callback) => {
 exports.fetchGetStudentData = async (request) => {
     const studentData = await classTestRepository.getStudentInfo(request);
     studentData?.Items?.sort((a, b) => a.roll_no.localeCompare(b.roll_no));
-    return studentData;
+    return {Items : studentData?.Items?.filter(student => student.user_status === "Active")};
   };
 
 
