@@ -371,7 +371,7 @@ exports.needAttention = async (request) => {
                         topicRepository.fetchPreTopicData2(chapterDetails),
                         topicRepository.fetchPostTopicData2(chapterDetails),
                     ]);
-                    
+
                     pretopicDetails = pretopicDetails?.Items ? pretopicDetails.Items : pretopicDetails;
                     posttopicDetails = posttopicDetails?.Items ? posttopicDetails.Items : posttopicDetails;
 
@@ -1035,22 +1035,80 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         test_ids: [...testIds]
     }));
 
-    const questionIds = quiz_results.flatMap(quiz =>
+    const questionIds1 = testResult.flatMap(test =>
+        test.marks_details.flatMap(mark =>
+            mark.qa_details.map(qa => qa.question_id)
+        )
+    );
+
+    const questionIds2 = quiz_results.flatMap(quiz =>
         quiz.marks_details.flatMap(mark =>
             mark.qa_details.map(qa => qa.question_id)
         )
     );
 
+    const allQuestionIds = [...new Set([...questionIds1, ...questionIds2])];
     let questionDetails = [];
-    if (questionIds.length > 0) {
+    if (allQuestionIds.length > 0) {
         questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
-            question_id: [...new Set(questionIds)],
+            question_id: allQuestionIds,
         });
     }
 
     let chapter_details = [];
     if (chapter_Ids.length > 0) {
         chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+        const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
+        const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+        if (chapter_response.Items.length > 0) {
+            for (const chapter of chapter_response.Items) {
+                testChapterMap[chapter.chapter_id] = [
+                    ...(chapter.prelearning_topic_id || []),
+                    ...(chapter.postlearning_topic_id || [])
+                ];
+            }
+        }
+
+        const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
+        let topicMap = { ...testChapterMap };
+        if (topic_array.length > 0) {
+            const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+            if (topic_response?.Items?.length > 0) {
+                const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+
+                Object.keys(testChapterMap).forEach(chapter => {
+                    testChapterMap[chapter] = [];
+                });
+
+                for (const concept of concept_response) {
+                    for (const topic of topic_response.Items) {
+                        if (topic?.topic_concept_id?.includes(concept.concept_id)) {
+                            for (const chapter in topicMap) {
+                                if (topicMap[chapter].includes(topic.topic_id)) {
+                                    if (!testChapterMap[chapter]) {
+                                        testChapterMap[chapter] = [];
+                                    }
+                                    testChapterMap[chapter].push(concept.concept_id);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Object.keys(testChapterMap).forEach(chapter => {
+                    let updatedConceptQuestions = [];
+                    testChapterMap[chapter].forEach(concept_id => {
+                        const concept = concept_response.find(c => c.concept_id === concept_id);
+                        if (concept && Array.isArray(concept.concept_question_id)) {
+                            updatedConceptQuestions = [...updatedConceptQuestions, ...concept.concept_question_id];
+                        }
+                    });
+                    testChapterMap[chapter] = updatedConceptQuestions;
+                });
+            }
+        }
     }
 
     const chapterResults = [];
@@ -1111,39 +1169,47 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         let total_marks = 0;
         let total_obtained_marks = 0;
         const studentMap = new Map();
-
         const current_chapter = chapter_details.find(ch => ch.chapter_id === chapter.chapter_id);
 
         for (const test of testResult) {
             if (chapter.test_ids.includes(test.class_test_id)) {
                 for (const marks of test.marks_details) {
-                    total_marks += marks.expectedMarks || 0;
-                    total_obtained_marks += marks.totalMark || 0;
+                    for (const question of marks.qa_details) {
+                        const questionId = question.question_id;
+                        if (testChapterMap[chapter.chapter_id]?.includes(questionId)) {
+                            const quest = questionDetails.find(q => q.question_id === questionId);
+                            if (quest) {
+                                let total_student_marks = quest?.marks || 0;
+                                let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                    let student = studentData.Items.find(s => s.student_id === test.student_id);
-                    if (!student) continue;
+                                total_marks += parseInt(total_student_marks);
+                                total_obtained_marks += parseInt(total_student_obtained_marks);
+                                let student = studentData.Items.find(s => s.student_id === test.student_id);
+                                if (!student) continue;
 
-                    const studentEntry = {
-                        student_id: student.student_id,
-                        student_name: `${student.user_firstname} ${student.user_lastname}`,
-                        studentMark: marks.totalMark,
-                        totalMarks: marks.expectedMarks || 0,
-                        percentage: (((marks.totalMark / (marks.expectedMarks || 1)) * 100).toFixed(2))
-                    };
+                                const studentEntry = {
+                                    student_id: student.student_id,
+                                    student_name: `${student.user_firstname} ${student.user_lastname}`,
+                                    studentMark: parseInt(total_student_obtained_marks),
+                                    totalMarks: parseInt(total_student_marks) || 0,
+                                    percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                                };
 
-                    if (!studentMap.has(student.student_id)) {
-                        studentMap.set(student.student_id, studentEntry);
-                    } else {
-                        let existing = studentMap.get(student.student_id);
-                        existing.studentMark += studentEntry.studentMark;
-                        existing.totalMarks += studentEntry.totalMarks;
-                        existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
-                        studentMap.set(student.student_id, existing);
+                                if (!studentMap.has(student.student_id)) {
+                                    studentMap.set(student.student_id, studentEntry);
+                                } else {
+                                    let existing = studentMap.get(student.student_id);
+                                    existing.studentMark += parseInt(studentEntry.studentMark);
+                                    existing.totalMarks += parseInt(studentEntry.totalMarks);
+                                    existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
+                                    studentMap.set(student.student_id, existing);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-
         chapterTestResults.push({
             chapter_id: chapter.chapter_id,
             chapter_name: current_chapter?.display_name || '',
@@ -1181,7 +1247,6 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         }
     }
 
-    // Convert object back to array
     const finalResults = Object.values(mergedResults);
     return finalResults;
 }
