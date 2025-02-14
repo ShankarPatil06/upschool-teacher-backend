@@ -873,11 +873,16 @@ exports.viewClassReportQuestions = async (request) => {
 }
 
 exports.viewClassReportFocusArea = async (request) => {
-  const [quizData, quizResult, schoolDataRes] = await Promise.all([
+  const [quizData, quizResult, schoolDataRes, allStudentsData] = await Promise.all([
     quizRepository.fetchQuizDataById2(request),
     quizResultRepository.fetchQuizResultByQuizId(request),
     schoolRepository.getSchoolDetailsById2(request),
+    studentRepository.getStudentsData2(request)
   ]);
+
+  await studentRepository.getStudentsData2(request);
+  const allStudentsCount = allStudentsData.Items.length;
+  console.log("allStudentsCount - ",allStudentsCount);
   //numb of students who attendedgroupedMarks
   const quizResultMarksData = quizResult.Items.map((item) => {
 
@@ -1011,6 +1016,7 @@ exports.viewClassReportFocusArea = async (request) => {
 console.log("conceptAndQuestions - ",conceptAndQuestions);
 
   let passPercentage = request.data.config === '"post_quiz_config"' ? schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach : schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
+  let classPercentage = request.data.config === '"post_quiz_config"' ? schoolDataRes.Items[0].post_quiz_config.class_percentage : schoolDataRes.Items[0].pre_quiz_config.class_percentage;
   conceptAndQuestions.map(async (item) => {
     item.numberOfQuestions = noOfQuestionsperConcept[item.concept] || 0;
     item.name = conceptNames.find(
@@ -1020,7 +1026,9 @@ console.log("conceptAndQuestions - ",conceptAndQuestions);
     //%cal for pass
 
     let studentsData = []
-    item.passPercentage = passPercentage
+    item.passPercentage = passPercentage;
+    item.classPercentage = classPercentage;
+    item.allStudentsCount = allStudentsCount;
 
     console.log("groupedMarks - ",groupedMarks);
 
@@ -1053,7 +1061,8 @@ console.log("conceptAndQuestions - ",conceptAndQuestions);
     item.passed = (countPassed / totalStudents) * 100 //[%] value
     item.count = countPassed //pass % numerator
     item.totalStudents = totalStudents //pass % denominator
-    if (item.passed >= passPercentage) {
+    let classPercentAchieved = (totalStudents/allStudentsCount) * 100;
+    if (item.passed >= passPercentage && classPercentAchieved >= classPercentage) {
       item.successMatrix = "yes";
     } else {
       item.successMatrix = "no";
