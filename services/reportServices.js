@@ -880,6 +880,8 @@ exports.viewClassReportFocusArea = async (request) => {
     studentRepository.getStudentsData2(request)
   ]);
 
+  console.log("quizData - ", quizData);
+
   await studentRepository.getStudentsData2(request);
   const allStudentsCount = allStudentsData.Items.length;
   console.log("allStudentsCount - ",allStudentsCount);
@@ -1737,17 +1739,223 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   return performance;
 };
 
-exports.getActionsAndRecommendations = async (request) => {
+// exports.getActionsAndRecommendations = async (request) => {
 
+//   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
+//   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+
+//   const studentDataRes = await studentRepository.getStudentsData2(request);
+//   const totalStudents = studentDataRes.Items.length;
+
+//   const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
+//     Object.values(quiz.question_track_details.qp_set_a).flat()
+//   );
+
+//   const conceptAndQuestions = allQuizQuestionSetA.reduce((acc, item) => {
+//     const existingConcept = acc.find((concept) => concept.concept === item.concept_id);
+//     if (existingConcept) {
+//       existingConcept.questions.push(item.question_id);
+//     } else {
+//       acc.push({
+//         concept: item.concept_id,
+//         topic_id: item.topic_id,
+//         questions: [item.question_id],
+//       });
+//     }
+//     return acc;
+//   }, []);
+
+//   const conceptIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.concept_id))];
+//   const questionIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.question_id))];
+
+//   const questions = await new Promise((resolve, reject) => {
+//     questionIdsSetA.length > 0 && questionRepository.fetchBulkQuestionsNameById(
+//       { question_id: questionIdsSetA },
+//       (err, res) => {
+//         if (err) {
+//           console.log(err);
+//           return reject(err);
+//         }
+//         resolve(res);
+//       }
+//     );
+//   });
+
+//   const chapterIds = [...new Set(quizDataRes.Items.map((quiz) => quiz.chapter_id))];
+//   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({
+//     unit_chapter_id: chapterIds,
+//   });
+
+//   console.log("chapterData - ",chapterData);
+
+//   const topicIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.topic_id))];
+//   const topicData = await topicRepository.fetchBulkTopicsIDName2({
+//     unit_Topic_id: topicIdsSetA,
+//   });
+
+//   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
+//   const quizResultsRes =
+//     quizIds.length &&
+//     (await quizResultRepository.fetchBulkQuizResultsByID2({
+//       unit_Quiz_id: quizIds,
+//     }));
+
+
+//   const quizResultMarksData = quizResultsRes
+//   .filter((item) => item.evaluated === "Yes") 
+//   .map((item) => {
+//     return {
+//       marks: item.marks_details[0].qa_details,
+//       studentId: item.student_id,
+//     };
+//   });
+
+//   const marksOfEachStudent = [];
+//   quizResultMarksData.map((qdata) => {
+//     qdata.marks.map((marks) => {
+//       questionIdsSetA.map((question) => {
+//         if (question === marks.question_id) {
+//           let marksValue;
+//           if (marks.modified_marks === "N.A.") {
+//             marksValue = marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks;
+//           } else {
+//             marksValue = marks.modified_marks;
+//           }
+
+//           marksOfEachStudent.push({
+//             studentid: qdata.studentId,
+//             marks: marksValue,
+//             questionId: question,
+//           });
+//         }
+//       });
+//     });
+//   });
+//   console.log("marksOfEachStudent - ",marksOfEachStudent);
+
+//   const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
+//     const existingStudent = acc.find((student) => student.studentid === item.studentid);
+
+//     if (existingStudent) {
+//       existingStudent.details.push({
+//         marks: item.marks,
+//         questionId: item.questionId,
+//       });
+//     } else {
+//       acc.push({
+//         studentid: item.studentid,
+//         details: [
+//           {
+//             marks: item.marks,
+//             questionId: item.questionId,
+//           },
+//         ],
+//       });
+//     }
+
+//     return acc;
+//   }, []);
+
+//   const conceptNames = await conceptRepository.fetchBulkConceptsIDName2({
+//     unit_Concept_id: conceptIdsSetA,
+//   });
+
+//   let conceptsToFocus = [];
+//   conceptAndQuestions.map((item) => {
+//     let studentsData = [];
+//     item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
+
+//     const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
+//     console.log("relatedTopic - " ,relatedTopic);
+   
+//     // const relatedChapter = chapterData.find((chapter) => chapter.chapter_id === quizDataRes.Items.find((quiz) => quiz.chapter_id)?.chapter_id);
+//     const relatedChapter = chapterData.find(
+//       (chapter) =>
+//         chapter.prelearning_topic_id.includes(item.topic_id) ||
+//         chapter.postlearning_topic_id.includes(item.topic_id)
+//     );
+//     console.log("relatedChapter - " ,relatedChapter);
+
+//     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
+//     item.chapter_name = relatedChapter?.chapter_title || "Unknown Chapter";
+
+//     const relatedQuiz = quizDataRes.Items.find((quiz) =>
+//       Object.values(quiz.question_track_details.qp_set_a).flat().some((q) => q.concept_id === item.concept)
+//     );
+//     item.learningType = relatedQuiz?.learningType || "Unknown Learning Type";
+//     const quizId = relatedQuiz?.quiz_id;
+
+//     const passPercentage = item.learningType === "preLearning"
+//       ? schoolDataRes.Items[0].pre_quiz_config.class_percentage
+//       : schoolDataRes.Items[0].post_quiz_config.class_percentage;
+
+//     const studentPassPercentage = item.learningType === "preLearning"
+//       ? schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach
+//       : schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
+
+//     const totalMarksForThisQuiz = relatedQuiz.question_track_details.qp_set_a.reduce(
+//       (total, question) => {
+//         const questionDetail = questions.find(q => q.question_id === question.question_id);
+//         return questionDetail ? total + questionDetail.marks : total;
+//       }, 0
+//     );
+
+//     groupedMarks.map((student) => {
+//       let marks = 0;
+//       student.details.map((q) => {
+//         item.questions.map((question) => {
+//           if (q.questionId === question) {
+//             marks += Number(q.marks);
+//           }
+//         });
+//       });
+//       let finalMarks = (marks / totalMarksForThisQuiz) * 100;
+//       let passed = finalMarks >= studentPassPercentage ? true : false;
+//       studentsData.push({ student: student.studentid, passed: passed });
+//     });
+
+//     const countPassed = studentsData.filter((student) => student.passed).length;
+//     const passedPercentage = (countPassed / totalStudents) * 100;
+
+//     if (passedPercentage < passPercentage) {
+//       conceptsToFocus.push({
+//         concept: item.name,
+//         topic: item.topic_name,
+//         chapter: item.chapter_name,
+//         learningType: item.learningType,
+//         passedPercentage: passedPercentage.toFixed(2),
+//         quizDate: relatedQuiz?.created_ts,
+//         quizId: quizId,
+//       });
+//     }
+//   });
+
+//   return {
+//     conceptsToFocus,
+//   };
+// };
+
+
+exports.getActionsAndRecommendations = async (request) => {
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
-
   const studentDataRes = await studentRepository.getStudentsData2(request);
   const totalStudents = studentDataRes.Items.length;
+ 
+  // const quizDataRes ={Items :  quizDataRes2.Items.filter((val)=> val.quiz_id == "34cec9c3-bcae-4f81-bf60-3cb6016815eb")};
 
-  const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
-    Object.values(quiz.question_track_details.qp_set_a).flat()
-  );
+ console.log("quizDataRes.Items.length - " ,quizDataRes.Items.length); 
+ console.log("quizDataRes.Items - " ,quizDataRes.Items); 
+
+ const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
+ [...Object.values(quiz.question_track_details.qp_set_a || {}),
+  ...Object.values(quiz.question_track_details.qp_set_b || {}),
+  ...Object.values(quiz.question_track_details.qp_set_c || {})].flat()
+);
+
+  // const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
+  //   Object.values(quiz.question_track_details.qp_set_a || {}).flat()
+  // );
 
   const conceptAndQuestions = allQuizQuestionSetA.reduce((acc, item) => {
     const existingConcept = acc.find((concept) => concept.concept === item.concept_id);
@@ -1767,16 +1975,14 @@ exports.getActionsAndRecommendations = async (request) => {
   const questionIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.question_id))];
 
   const questions = await new Promise((resolve, reject) => {
-    questionIdsSetA.length > 0 && questionRepository.fetchBulkQuestionsNameById(
-      { question_id: questionIdsSetA },
-      (err, res) => {
-        if (err) {
-          console.log(err);
-          return reject(err);
-        }
-        resolve(res);
-      }
-    );
+    if (questionIdsSetA.length > 0) {
+      questionRepository.fetchBulkQuestionsNameById(
+        { question_id: questionIdsSetA },
+        (err, res) => (err ? reject(err) : resolve(res))
+      );
+    } else {
+      resolve([]);
+    }
   });
 
   const chapterIds = [...new Set(quizDataRes.Items.map((quiz) => quiz.chapter_id))];
@@ -1784,133 +1990,127 @@ exports.getActionsAndRecommendations = async (request) => {
     unit_chapter_id: chapterIds,
   });
 
-  console.log("chapterData - ",chapterData);
-
   const topicIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({
     unit_Topic_id: topicIdsSetA,
   });
 
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
-  const quizResultsRes =
-    quizIds.length &&
-    (await quizResultRepository.fetchBulkQuizResultsByID2({
-      unit_Quiz_id: quizIds,
-    }));
-
+  const quizResultsRes = quizIds.length
+    ? await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizIds })
+    : [];
 
   const quizResultMarksData = quizResultsRes
-  .filter((item) => item.evaluated === "Yes") 
-  .map((item) => {
-    return {
+    .filter((item) => item.evaluated === "Yes")
+    .map((item) => ({
       marks: item.marks_details[0].qa_details,
       studentId: item.student_id,
-    };
-  });
+    }));
+
+    console.log("quizResultMarksData - ",quizResultMarksData[0].marks);
+    console.log("quizResultMarksData - ",quizResultMarksData[1].marks);
 
   const marksOfEachStudent = [];
-  quizResultMarksData.map((qdata) => {
-    qdata.marks.map((marks) => {
-      questionIdsSetA.map((question) => {
-        if (question === marks.question_id) {
-          let marksValue;
-          if (marks.modified_marks === "N.A.") {
-            marksValue = marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks;
-          } else {
-            marksValue = marks.modified_marks;
-          }
+  quizResultMarksData.forEach((qdata) => {
+    qdata.marks.forEach((marks) => {
+      // if (questionIdsSetA.includes(marks.question_id)) {
+        let marksValue = marks.modified_marks !== "N.A." ? marks.modified_marks : marks.obtained_marks;
+        if (marksValue === "N.A.") marksValue = "0";
 
-          marksOfEachStudent.push({
-            studentid: qdata.studentId,
-            marks: marksValue,
-            questionId: question,
-          });
-        }
-      });
+        marksOfEachStudent.push({
+          studentid: qdata.studentId,
+          marks: marksValue,
+          questionId: marks.question_id,
+        });
+      // }
     });
   });
+
   console.log("marksOfEachStudent - ",marksOfEachStudent);
 
   const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
     const existingStudent = acc.find((student) => student.studentid === item.studentid);
-
     if (existingStudent) {
-      existingStudent.details.push({
-        marks: item.marks,
-        questionId: item.questionId,
-      });
+      existingStudent.details.push({ marks: item.marks, questionId: item.questionId });
     } else {
-      acc.push({
-        studentid: item.studentid,
-        details: [
-          {
-            marks: item.marks,
-            questionId: item.questionId,
-          },
-        ],
-      });
+      acc.push({ studentid: item.studentid, details: [{ marks: item.marks, questionId: item.questionId }] });
     }
-
     return acc;
   }, []);
+
+
+  // console.log("groupedMarks - ", groupedMarks);
 
   const conceptNames = await conceptRepository.fetchBulkConceptsIDName2({
     unit_Concept_id: conceptIdsSetA,
   });
 
   let conceptsToFocus = [];
-  conceptAndQuestions.map((item) => {
-    let studentsData = [];
-    item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
 
-    const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
-    console.log("relatedTopic - " ,relatedTopic);
-   
-    // const relatedChapter = chapterData.find((chapter) => chapter.chapter_id === quizDataRes.Items.find((quiz) => quiz.chapter_id)?.chapter_id);
+  console.log("conceptAndQuestions - ", conceptAndQuestions);
+
+  conceptAndQuestions.forEach((item) => {
+    // console.log("item  1 - ", item);
+    let studentsData = [];
+    item.name = conceptNames.find((c) => c.concept_id === item.concept)?.display_name || "Unknown Concept";
+    const relatedTopic = topicData.find((topic) => topic.topic_id === item.topic_id);
     const relatedChapter = chapterData.find(
       (chapter) =>
-        chapter.prelearning_topic_id.includes(item.topic_id) ||
-        chapter.postlearning_topic_id.includes(item.topic_id)
+        chapter.prelearning_topic_id.includes(item.topic_id) || chapter.postlearning_topic_id.includes(item.topic_id)
     );
-    console.log("relatedChapter - " ,relatedChapter);
 
     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
     item.chapter_name = relatedChapter?.chapter_title || "Unknown Chapter";
 
     const relatedQuiz = quizDataRes.Items.find((quiz) =>
-      Object.values(quiz.question_track_details.qp_set_a).flat().some((q) => q.concept_id === item.concept)
+      Object.values(quiz.question_track_details.qp_set_a || {}).flat().some((q) => q.concept_id === item.concept)
     );
+
+    // console.log("relatedQuiz - ", relatedQuiz);
+
     item.learningType = relatedQuiz?.learningType || "Unknown Learning Type";
     const quizId = relatedQuiz?.quiz_id;
 
-    const passPercentage = item.learningType === "preLearning"
-      ? schoolDataRes.Items[0].pre_quiz_config.class_percentage
-      : schoolDataRes.Items[0].post_quiz_config.class_percentage;
+    const passPercentage =
+      item.learningType === "preLearning"
+        ? schoolDataRes.Items[0].pre_quiz_config.class_percentage
+        : schoolDataRes.Items[0].post_quiz_config.class_percentage;
 
-    const studentPassPercentage = item.learningType === "preLearning"
-      ? schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach
-      : schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
+        // console.log("passPercentage - ", passPercentage);
+        
+        const studentPassPercentage =
+        item.learningType === "preLearning"
+        ? schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach
+        : schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
 
-    const totalMarksForThisQuiz = relatedQuiz.question_track_details.qp_set_a.reduce(
-      (total, question) => {
-        const questionDetail = questions.find(q => q.question_id === question.question_id);
-        return questionDetail ? total + questionDetail.marks : total;
-      }, 0
-    );
+        // console.log("studentPassPercentage - ", studentPassPercentage);
 
-    groupedMarks.map((student) => {
-      let marks = 0;
-      student.details.map((q) => {
-        item.questions.map((question) => {
-          if (q.questionId === question) {
-            marks += Number(q.marks);
-          }
-        });
-      });
-      let finalMarks = (marks / totalMarksForThisQuiz) * 100;
-      let passed = finalMarks >= studentPassPercentage ? true : false;
-      studentsData.push({ student: student.studentid, passed: passed });
+    const totalMarksForThisQuiz = relatedQuiz
+      ? relatedQuiz.question_track_details.qp_set_a.reduce((total, question) => {
+          const questionDetail = questions.find((q) => q.question_id === question.question_id && item.questions.includes(q.question_id));
+          return questionDetail ? total + questionDetail.marks : total;
+        }, 0)
+      : 0;
+
+      // console.log("totalMarksForThisQuiz - ", totalMarksForThisQuiz);
+      // console.log("item - ", item);
+      // console.log("item.questions",  item.questions);
+      console.log("groupedMarks - ",groupedMarks[0].details);
+
+    groupedMarks.forEach((student , i) => {
+      let marks = student.details
+        .filter((q) => item.questions.includes(q.questionId))
+        .reduce((sum, q) => sum + Number(q.marks), 0);
+
+        console.log(i , " - marks - ", marks);
+
+      let finalMarks = totalMarksForThisQuiz > 0 ? (marks / totalMarksForThisQuiz) * 100 : 0;
+      let passed = finalMarks >= studentPassPercentage;
+      studentsData.push({ student: student.studentid, passed: passed ,finalMarks :marks  });
     });
+
+    // console.log("groupedMarks - ", groupedMarks);
+    console.log("studentsData - ", studentsData);
 
     const countPassed = studentsData.filter((student) => student.passed).length;
     const passedPercentage = (countPassed / totalStudents) * 100;
@@ -1928,10 +2128,9 @@ exports.getActionsAndRecommendations = async (request) => {
     }
   });
 
-  return {
-    conceptsToFocus,
-  };
+  return { conceptsToFocus };
 };
+
 
 
 exports.getActionsAndRecommendationDetail = async (request) => {
@@ -1959,7 +2158,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   ];
 
   const conceptAndQuestions = questionSetA.reduce((acc, item) => {
-    const existingConcept = acc.find((concept) => concept.concept === item.concept_id);
+    const existingConcept = acc?.find((concept) => concept.concept === item.concept_id);
     if (existingConcept) {
       existingConcept.questions.push(item.question_id);
     } else {
@@ -1987,6 +2186,8 @@ exports.getActionsAndRecommendationDetail = async (request) => {
       }
     );
   });
+
+  console.log("questions - ",questions);
 
   const topicIdsSetA = [...new Set(questionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIdsSetA });
@@ -2050,7 +2251,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
     const totalMarksForThisQuiz = quizData.Item.question_track_details.qp_set_a.reduce(
       (total, question) => {
-        const questionDetail = questions.Items.find(q => q.question_id === question.question_id);
+        const questionDetail = questions.find(q => q.question_id === question.question_id);
         return questionDetail ? total + questionDetail.marks : total;
       }, 0
     );
