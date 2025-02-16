@@ -1794,7 +1794,7 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
   const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
   let chapter_Ids = [...new Set([...test_chapter_ids])];
 
-  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined && chapter_Id === request.data.chapter_id);
   request["unit_chapter_id"] = chapter_Ids;
 
   const testChapterMap = {};
@@ -2100,7 +2100,7 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
   const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
   let chapter_Ids = [...new Set([...test_chapter_ids])];
 
-  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
+  chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined && chapter_Id === request.data.chapter_id);
   request["unit_chapter_id"] = chapter_Ids;
 
   const testChapterMap = {};
