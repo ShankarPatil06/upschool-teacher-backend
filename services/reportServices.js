@@ -813,7 +813,7 @@ exports.viewClassReportQuestions = async (request) => {
         }
       }, 0);
 
-      const correctPercentage = (correct / allAnswers.length) * 100;
+      const correctPercentage = ((correct / allAnswers.length) * 100).toFixed(2);
 
 
       question.correctAnswerPercentage = correctPercentage

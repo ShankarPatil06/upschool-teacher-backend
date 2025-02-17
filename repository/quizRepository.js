@@ -679,33 +679,33 @@ exports.getAllQuizData = function (request, callback) {
     });
 }
 
-exports.fetchAllQuizBasedonChapter = async (request) => {
-    let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
-    let expressionAttributeValues = {
-        ":common_id": constant.constValues.common_id,
-        ":client_class_id": request.data.client_class_id,
-        ":subject_id": request.data.subject_id,
-        ":section_id": request.data.section_id,
-        ":chapter_id": request.data.chapter_id,
-        ":learningType": request.data.learningType,
-        ":quiz_status": "Active",
-    };
+// exports.fetchAllQuizBasedonChapter = async (request) => {
+//     let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
+//     let expressionAttributeValues = {
+//         ":common_id": constant.constValues.common_id,
+//         ":client_class_id": request.data.client_class_id,
+//         ":subject_id": request.data.subject_id,
+//         ":section_id": request.data.section_id,
+//         ":chapter_id": request.data.chapter_id,
+//         ":learningType": request.data.learningType,
+//         ":quiz_status": "Active",
+//     };
 
-    if (request.data.quiz_id !== undefined && request.data.quiz_id !== "") {
-        filterExpression += " AND quiz_id = :quiz_id";
-        expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
-    }
+//     if (request.data.quiz_id !== undefined && request.data.quiz_id !== "") {
+//         filterExpression += " AND quiz_id = :quiz_id";
+//         expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
+//     }
 
-    let params = {
-        TableName: TABLE_NAMES.upschool_quiz_table,
-        IndexName: Indexes.common_id_index,
-        KeyConditionExpression: "common_id = :common_id",
-        FilterExpression: filterExpression,
-        ExpressionAttributeValues: expressionAttributeValues
-    };
+//     let params = {
+//         TableName: TABLE_NAMES.upschool_quiz_table,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: filterExpression,
+//         ExpressionAttributeValues: expressionAttributeValues
+//     };
 
-    return await DATABASE_TABLE2.query(params);
-};
+//     return await DATABASE_TABLE2.query(params);
+// };
 
 // exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 //     // Create placeholders for the chapter IDs
@@ -772,6 +772,62 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
 
 //     return await DATABASE_TABLE2.query(params);
 // };
+
+exports.fetchAllQuizBasedonChapter = async (request) => {
+    try {
+        const dynamoDBCall = await new Promise((resolve, reject) => {
+            dynamoDbCon.getDB((DBErr, db) => {
+                if (DBErr) {
+                    console.error("Fetch Quiz Data Database Error:", DBErr);
+                    return reject(new Error(constant.messages.DATABASE_ERROR));
+                }
+                console.log("DynamoDB Connection Established ✅");
+                resolve(db);
+            });
+        });
+
+        const docClient = dynamoDBCall;
+        let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
+        let expressionAttributeValues = {
+            ":common_id": constant.constValues.common_id,
+            ":client_class_id": request.data.client_class_id,
+            ":subject_id": request.data.subject_id,
+            ":section_id": request.data.section_id,
+            ":chapter_id": request.data.chapter_id,
+            ":learningType": request.data.learningType,
+            ":quiz_status": "Active",
+        };
+
+        if (request.data.quiz_id !== undefined && request.data.quiz_id !== "") {
+            filterExpression += " AND quiz_id = :quiz_id";
+            expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
+        }
+
+        let params = {
+            TableName: TABLE_NAMES.upschool_quiz_table,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: filterExpression,
+            ExpressionAttributeValues: expressionAttributeValues,
+        };
+
+        const result = await new Promise((resolve, reject) => {
+            DATABASE_TABLE.queryRecord(docClient, params, (err, data) => {
+                if (err) {
+                    console.error("Error querying database:", err);
+                    return reject(err);
+                }
+                console.log("Query Successful ✅ Data Received:", JSON.stringify(data, null, 2));
+                resolve(data);
+            });
+        });
+
+        return result;
+    } catch (error) {
+        console.error("Error fetching quiz data:", error);
+        throw new Error(error.message || constant.messages.DATABASE_ERROR);
+    }
+};
 
 exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
     try {
