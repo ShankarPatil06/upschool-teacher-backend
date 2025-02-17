@@ -929,17 +929,26 @@ exports.startQuizEvaluationProcess = async (request) => {
             //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
             const normalizeAnswer = (answer) => {
-                return answer.trim().toLowerCase().replace(/[.,;!?]/g, "");
+                if (!answer) return "";
+                let normalized = answer.trim().toLowerCase();
+                if (!isNaN(normalized)) {
+                    return parseFloat(normalized).toString();
+                }
+                normalized = normalized.replace(/[,;!?]/g, "");
+                return normalized;
             };
-
+            
             const extractValidAnswers = (correctAnswer) => {
-                return correctAnswer.split(/\s*or\s*/i).map(normalizeAnswer);
+                return correctAnswer
+                    ?.split(/\s*or\s*/i)
+                    ?.map(normalizeAnswer)
+                    .filter(Boolean);
             };
 
             const userPrompt = `Please compare the following answers for similarity. 
-            Ignore numbering, placeholders, or minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
-            Ensure different words or concepts are not mistakenly considered similar. 
-            If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
+            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
+            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
+            
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
                     const correctAnswers = extractValidAnswers(pair.correctAnswer);
@@ -948,7 +957,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
                 }).join("\n") + `.
             In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
-
+            
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
                 messages: [
