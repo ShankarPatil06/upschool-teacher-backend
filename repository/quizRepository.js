@@ -843,6 +843,7 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 
 
 
+
 // exports.fetchAllQuizBasedOnSubject3 = async (request) => {
 //     let filterExpression = "quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";
 //     let expressionAttributeValues = {
