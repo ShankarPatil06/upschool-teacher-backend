@@ -384,7 +384,7 @@ const mergeStudentAnswers = (answerMetadata) => {
 // intermediateQuestions -  2 8 0.3
 // advancedQuestions -  9 12 0.4
 
-function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage,quizTestRes) {
+function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage, quizTestRes) {
     console.log("questionDataRes", questionDataRes);
     const questionMarksMap = {};
 
@@ -396,12 +396,12 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         }
     });
 
- console.log("questionMarksMap - ",questionMarksMap);
+    console.log("questionMarksMap - ", questionMarksMap);
     const basicThreshold = group_pass_percentage.Basic / 100;
     const intermediateThreshold = group_pass_percentage.Intermediate / 100;
     const advancedThreshold = group_pass_percentage.Advanced / 100;
 
-   
+
 
     markAssignRes.forEach(res => {
         let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
@@ -428,7 +428,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         res.marks_details.forEach(markDetail => {
             markDetail.qa_details.forEach((question) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
-    
+
                 console.log("question - ", question);
                 // console.log("marksPerQuestion - ", marksPerQuestion);
                 // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
@@ -436,7 +436,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
                     case 'Basic':
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0  : parseFloat(question.obtained_marks) || 0;
+                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                     case 'Intermediate':
                         intermediateQuestions += 1;
@@ -477,7 +477,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
                 total_obtained_mark: advancedObtained
             }
         };
-    
+
 
         // Add the individualGroupPerformance object to the res object
         res.individual_group_performance = individualGroupPerformance;
@@ -820,18 +820,18 @@ exports.startQuizEvaluationProcess = async (request) => {
         //     ? Number(schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage)
         //     : Number(schoolDataRes.Items[0].post_quiz_config.group_pass_percentage);
 
-            let classPassPercentage = 0;
-            let passPassPercentage = 0;
-            let groupPassPercentage = {};
-            if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
-                classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
-                passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
-                groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
-            } else {
-                classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
-                passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
-                groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.group_pass_percentage
-            }
+        let classPassPercentage = 0;
+        let passPassPercentage = 0;
+        let groupPassPercentage = {};
+        if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
+            classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
+            passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
+            groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
+        } else {
+            classPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.class_percentage);
+            passPassPercentage = Number(schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach);
+            groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.group_pass_percentage
+        }
 
         const studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
 
@@ -898,7 +898,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
                         console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
@@ -928,10 +928,10 @@ exports.startQuizEvaluationProcess = async (request) => {
             //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
             //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
-            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
+            const userPrompt = `Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer, full stops, or other punctuation marks that do not affect the meaning. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each comparison. \n\n` +
                 questionAnswerPairs.map(
-                    (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels,keys or question number.Just Similarity Scores in specified format.`;
+                    (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer.trim().replace(/[.,;!?]/g, "")}\nAnswer 2 (Correct): ${pair.correctAnswer.trim().replace(/[.,;!?]/g, "")}\n`
+                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
 
 
             const response = await openai.chat.completions.create({
@@ -955,7 +955,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 // console.log("type", questionAnswerPairs[index].question_type)
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
-                    console.log("Descriptive -  ",questionAnswerPairs[index].marks);
+                    console.log("Descriptive -  ", questionAnswerPairs[index].marks);
                     const range = 100 / Number(questionAnswerPairs[index].marks)
                     if (scores[index] === NaN || scores[index] < 10) mark.obtained_marks = 0;
                     else {
@@ -968,7 +968,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                                 break;
                             }
                         }
-                        console.log("mark for that question  -- - ",totalMarks);
+                        console.log("mark for that question  -- - ", totalMarks);
                     }
                 }
                 else {
@@ -976,9 +976,9 @@ exports.startQuizEvaluationProcess = async (request) => {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         // totalMarks += questionAnswerPairs[index].marks;
-                        console.log("mark for that question  -- - ",totalMarks);
+                        console.log("mark for that question  -- - ", totalMarks);
                         console.log("non Descriptive ");
-                        
+
                     }
                     if (scores[index] === NaN) {
                         mark.obtained_marks = 0;
@@ -997,7 +997,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 });
             });
 
-            console.log("totalMark -- - ",totalMarks);
+            console.log("totalMark -- - ", totalMarks);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
@@ -1007,7 +1007,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
-        const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage ,quizTestRes);
+        const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
 
         // console.log("markAssignRes - ", markAssignRes);
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
