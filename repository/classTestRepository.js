@@ -325,17 +325,18 @@ exports.updateClassTestStatus2 = async (request) => {
 }
 
 exports.fetchAllTestBasedOnSubject = async (request) => {
-    let filterConditions = ["subject_id = :subject_id", "section_id = :section_id", "class_test_status = :class_test_status"];
+    let filterConditions = ["client_class_id = :client_class_id", "subject_id = :subject_id", "section_id = :section_id", "class_test_status = :class_test_status"];
     let expressionAttributeValues = {
         ":common_id": constant.constValues.common_id,
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
+        ":client_class_id": request.data.client_class_id,
         ":class_test_status": "Active",
     };
 
-    if (request.data.client_class_id) {
-        filterConditions.push("client_class_id = :client_class_id");
-        expressionAttributeValues[":client_class_id"] = request.data.client_class_id;
+    if (request.data?.class_test_id) {
+        filterConditions.push("class_test_id = :class_test_id");
+        expressionAttributeValues[":class_test_id"] = request.data.class_test_id;
     }
 
     const params = {
