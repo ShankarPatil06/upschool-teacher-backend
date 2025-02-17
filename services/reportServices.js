@@ -1085,6 +1085,7 @@ exports.viewClassReportFocusArea = async (request) => {
 }
 
 exports.viewChapterwisePerformanceTracking = async (request) => {
+  console.log("_---------------------------------------------");
 
   const subject_res = await subjectRepository.getSubjetById2(request);
   let subject_unit_id = subject_res.Items[0].subject_unit_id;
@@ -1096,6 +1097,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter2(request, chapter_ids);
 
+  console.log("quizDataRes - ", quizDataRes);
   const quizids = quizDataRes.Items.map(q => q.quiz_id)
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     let overallMarks = 0;
