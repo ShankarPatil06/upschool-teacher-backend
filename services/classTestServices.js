@@ -44,6 +44,7 @@ exports.addClassTest = async (request) => {
 
 exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: "AND" });
 
+exports.fetchClassTestsBasedonStatus2 = async (request) => await classTestRepository.fetchAllTestBasedOnSubject(request);
 
 exports.getClassTestbyId = async (request) => {
     request.data.class_test_status = "Active";
@@ -206,7 +207,7 @@ if (question) {
             (ans) => ans.answer_display === "Yes" || !ans.answer_display
         );
         const indexLetter = String.fromCharCode(97 + index);
-         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
+         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}. or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
     console.log("objective",question.answers_of_question,correctAnswer)
     } else  if (question.question_type === "Subjective"){
         correctAnswer = question.answers_of_question
@@ -236,10 +237,10 @@ if (question) {
             //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
             //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
-            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
+            const userPrompt = `Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer, full stops, or other punctuation marks that do not affect the meaning. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each comparison. \n\n` +
                 questionAnswerPairs.map(
-                    (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels,keys or question number.Just Similarity Scores in specified format.`;
+                    (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer.trim().replace(/[.,;!?]/g, "")}\nAnswer 2 (Correct): ${pair.correctAnswer.trim().replace(/[.,;!?]/g, "")}\n`
+                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
