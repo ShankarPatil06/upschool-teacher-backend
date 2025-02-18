@@ -787,13 +787,14 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
         });
 
         const docClient = dynamoDBCall;
-        let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
+        let filterExpression = "quiz_id = :quiz_id AND chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
         let expressionAttributeValues = {
             ":common_id": constant.constValues.common_id,
             ":client_class_id": request.data.client_class_id,
             ":subject_id": request.data.subject_id,
             ":section_id": request.data.section_id,
             ":chapter_id": request.data.chapter_id,
+            ":quiz_id": request.data.quiz_id,
             ":learningType": request.data.learningType,
             ":quiz_status": "Active",
         };
