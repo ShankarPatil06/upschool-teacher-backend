@@ -68,15 +68,15 @@ const checkDuplicateTopics = async (resTopics, checkTopics) => {
 
 exports.fetchQuizBasedonStatus = async (request) => {
     try {
-        return await new Promise((resolve) => {
-            quizRepository.getQuizBasedonStatus(request, (status, response) => {
-                if (response?.Items?.length > 0) {
-                    resolve(response?.Items);
-                } else {
-                    resolve(response?.Items);
-                }
-            });
-        });
+        // return await new Promise((resolve) => {
+           return quizRepository.getQuizBasedonStatus2(request)
+        //         if (response?.Items?.length > 0) {
+        //             resolve(response?.Items);
+        //         } else {
+        //             resolve(response?.Items);
+        //         }
+        //     });
+        // });
     } catch (error) {
         console.error("Error in fetchQuizBasedonStatus:", error);
         throw error;
