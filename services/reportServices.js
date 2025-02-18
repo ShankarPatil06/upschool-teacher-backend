@@ -1064,7 +1064,7 @@ exports.viewClassReportFocusArea = async (request) => {
     item.count = countPassed //pass % numerator
     item.totalStudents = totalStudents //pass % denominator
     let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
-    if (item.passed >= passPercentage && classPercentAchieved >= classPercentage) {
+      if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
       item.successMatrix = "yes";
     } else {
       item.successMatrix = "no";
