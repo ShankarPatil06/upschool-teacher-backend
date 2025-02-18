@@ -1,5 +1,5 @@
 const dynamoDbCon = require('../awsConfig');
-const { classTestRepository,testQuestionPaperRepository,commonRepository,classRepository,testResultRepository,} = require("../repository")
+const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository, testResultRepository, } = require("../repository")
 const commonServices = require("../services/commonServices");
 const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
@@ -18,11 +18,11 @@ const openai = new OpenAI({
 
 exports.addClassTest = async (request) => {
     const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    console.log("fetch_class_test_res - ",fetch_class_test_res);
+    console.log("fetch_class_test_res - ", fetch_class_test_res);
     if (fetch_class_test_res.Items.length === 0) {
         request.data.class_test_id = helper.getRandomString();
-        console.log("request.data.class_test_id - ",request.data.class_test_id);
-        console.log("qs.stringify(request) - ",qs.stringify(request));
+        console.log("request.data.class_test_id - ", request.data.class_test_id);
+        console.log("qs.stringify(request) - ", qs.stringify(request));
         const options = {
             method: 'POST',
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -31,12 +31,12 @@ exports.addClassTest = async (request) => {
             // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
         };
         // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-        console.log("qs.stringify(request) - ",qs.stringify(request));
+        console.log("qs.stringify(request) - ", qs.stringify(request));
         const pdfData = await axios(options);
         // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
-        request.data.question_paper_template = pdfData.data.question_paper_template;  
+        request.data.question_paper_template = pdfData.data.question_paper_template;
 
         return await classTestRepository.insertClassTest2(request);
     }
@@ -44,6 +44,7 @@ exports.addClassTest = async (request) => {
 
 exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: "AND" });
 
+exports.fetchClassTestsBasedonStatus2 = async (request) => await classTestRepository.fetchAllTestBasedOnSubject(request);
 
 exports.getClassTestbyId = async (request) => {
     request.data.class_test_status = "Active";
@@ -66,7 +67,7 @@ exports.getClassTestbyId = async (request) => {
 //     try{
 //     request.data.class_test_status = "Active";
 //     const classTestRes = await classTestRepository.getClassTestIdAndName2(request)
-   
+
 //         let classTest = classTestRes.Items[0];
 //         const studentMetaRes = await testResultRepository.fetchStudentresultMetadata2(request)
 //         console.log("STUDENT METADATA : ", studentMetaRes);
@@ -90,7 +91,7 @@ exports.getClassTestbyId = async (request) => {
 //             console.log("QUESTION DATA : ", questionDataRes.Items);
 
 //            const markAssignRes  = await exports.assigningMarks(studentMetaRes.Items, questionPaperRes.Items[0], questionDataRes.Items)
-               
+
 //                     console.log(markAssignRes);
 
 //                     /** BATCH UPDATE **/
@@ -151,21 +152,21 @@ exports.startEvaluationProcess = async (request) => {
         }
 
         // Prepare marks details
-        const marksFormat = await  exports.assigningMarks(studentMetaRes.Items, questionPaperRes.Items[0], questionDataRes)
+        const marksFormat = await exports.assigningMarks(studentMetaRes.Items, questionPaperRes.Items[0], questionDataRes)
 
         // Process each student metadata
         // console.log("----------------",marksFormat);
 
         // console.log("-----==================== ",studentMetaRes.Items.length); 
-        let i=0;
+        let i = 0;
         for (let studentMarkDetail of studentMetaRes.Items) {
             // console.log("studentMarkDetail - ",studentMarkDetail.marks_details);
-            if(!studentMarkDetail.marks_details)
-            studentMarkDetail.marks_details = [];
+            if (!studentMarkDetail.marks_details)
+                studentMarkDetail.marks_details = [];
             studentMarkDetail.marks_details = [marksFormat];
             const marksToUpdate = marksFormat.qa_details;
             // const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
-            const getAnswerByQuestionNumber = ( questionNumber) => {
+            const getAnswerByQuestionNumber = (questionNumber) => {
                 for (const metadata of studentMarkDetail.answer_metadata) {
                     for (const answerObj of metadata.studentAnswer) {
                         const normalizedDatasetQuestion = Number(answerObj.question.replace(/\./g, ""));
@@ -181,42 +182,42 @@ exports.startEvaluationProcess = async (request) => {
                         }
                     }
                 }
-                return null; 
+                return null;
             };
 
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
-                const studentAnswer = getAnswerByQuestionNumber(i+1);
+                const studentAnswer = getAnswerByQuestionNumber(i + 1);
                 // const correctAnswer = questionDataRes.find((q) => q.question_id === mark.question_id)
                 //     ?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
                 let correctAnswer = "";
 
-const question = questionDataRes.find(
-    (q) => q.question_id === mark.question_id
-);
+                const question = questionDataRes.find(
+                    (q) => q.question_id === mark.question_id
+                );
 
-if (question) {
-    if (question.question_type === "Descriptive") {
-        correctAnswer = question.answers_of_question
-            .filter((ans) => ans.answer_weightage > 0)
-            .map((ans) => ans.answer_content) // Extract all answer_content
-            .join(" ");
-            console.log("DESCRIPTIKJKJN",correctAnswer)
-    } else if (question.question_type === "Objective") {
-        const index = question.answers_of_question.findIndex(
-            (ans) => ans.answer_display === "Yes" || !ans.answer_display
-        );
-        const indexLetter = String.fromCharCode(97 + index);
-         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}.${question.answers_of_question[index].answer_content}`: "";
-    console.log("objective",question.answers_of_question,correctAnswer)
-    } else  if (question.question_type === "Subjective"){
-        correctAnswer = question.answers_of_question
-        .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-        .map((ans) => ans.answer_content)               // Extract the answer_content
-        .join(" ");                                     // Join the answer contents into a single string
-    
-    console.log(correctAnswer);
-    } 
-}
+                if (question) {
+                    if (question.question_type === "Descriptive") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_weightage > 0)
+                            .map((ans) => ans.answer_content) // Extract all answer_content
+                            .join(" ");
+                        console.log("DESCRIPTIKJKJN", correctAnswer)
+                    } else if (question.question_type === "Objective") {
+                        const index = question.answers_of_question.findIndex(
+                            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+                        );
+                        const indexLetter = String.fromCharCode(97 + index);
+                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        console.log("objective", question.answers_of_question, correctAnswer)
+                    } else if (question.question_type === "Subjective") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+                            .map((ans) => ans.answer_content)               // Extract the answer_content
+                            .join(" ");                                     // Join the answer contents into a single string
+
+                        console.log(correctAnswer);
+                    }
+                }
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 // console.log("correct answers:::",correctAnswer)
@@ -229,18 +230,43 @@ if (question) {
                 };
             });
 
-            console.log("+++++++++++++++",questionAnswerPairs);
+            console.log("+++++++++++++++", questionAnswerPairs);
 
             // const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
             //     questionAnswerPairs.map(
             //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
             //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
-            const userPrompt = ` Please compare the following answers for similarity. Ignore any numbering, placeholders, or formatting differences such as "1." before the answer. Focus solely on the semantic meaning and factual correctness of the answers. Provide a similarity score between 0 and 100 for each. \n\n` +
-                questionAnswerPairs.map(
-                    (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-                ).join("\n") + `. In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels,keys or question number.Just Similarity Scores in specified format.`;
+            const normalizeAnswer = (answer) => {
+                if (!answer) return "";
+                let normalized = answer.trim().toLowerCase();
+                if (!isNaN(normalized)) {
+                    return parseFloat(normalized).toString();
+                }
+                normalized = normalized.replace(/[,;!?]/g, "");
+                return normalized;
+            };
+            
+            const extractValidAnswers = (correctAnswer) => {
+                return correctAnswer
+                    ?.split(/\s*or\s*/i)
+                    ?.map(normalizeAnswer)
+                    .filter(Boolean);
+            };
 
+            const userPrompt = `Please compare the following answers for similarity. 
+            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
+            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
+            
+            Provide a similarity score between 0 and 100 for each comparison.\n\n` +
+                questionAnswerPairs.map((pair, index) => {
+                    const correctAnswers = extractValidAnswers(pair.correctAnswer);
+                    return `Question ${index + 1}:
+            Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
+            Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
+                }).join("\n") + `.
+            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
+            
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
                 messages: [
@@ -249,7 +275,7 @@ if (question) {
                 ],
             });
 
-            console.log("response - ",userPrompt, response.choices[0].message);
+            console.log("response - ", userPrompt, response.choices[0].message);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
 
@@ -258,7 +284,7 @@ if (question) {
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
 
-                console.log("questionAnswerPairs[index].question_type - ",questionAnswerPairs[index].question_type);
+                console.log("questionAnswerPairs[index].question_type - ", questionAnswerPairs[index].question_type);
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
@@ -283,12 +309,14 @@ if (question) {
                 }
             });
 
-            console.log("studentMarkDetail.marks_details - ",studentMarkDetail.marks_details);
+            console.log("studentMarkDetail.marks_details - ", studentMarkDetail.marks_details);
+            console.log("studentMarkDetail - ", studentMarkDetail);
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
             studentMarkDetail.evaluated = "Yes";
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
             studentMarkDetail.marks_details[0].totalMark = totalMarks;
             studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classTest.classPassPercentage;
+            console.log("");
         }
 
         // Batch update with processed results
@@ -330,12 +358,12 @@ exports.assigningMarks = async (studResultData, questionPaper, quesAns) => {
 
         //     // Set evaluated status and timestamp for each student
         // }
-            // studResultData[0].evaluated = "Yes";
-            // studResultData[0].updated_ts = helper.getCurrentTimestamp();
+        // studResultData[0].evaluated = "Yes";
+        // studResultData[0].updated_ts = helper.getCurrentTimestamp();
 
         console.log("DONE!");
         console.log(studResultData);
-        
+
         // Return the modified student result data
         return markDetails;
 
@@ -531,16 +559,16 @@ exports.readStudentAnswerSheets = (request, callback) => {
 exports.fetchGetStudentData = async (request) => {
     const studentData = await classTestRepository.getStudentInfo(request);
     studentData?.Items?.sort((a, b) => a.roll_no.localeCompare(b.roll_no));
-    return studentData;
-  };
+    return { Items: studentData?.Items?.filter(student => student.user_status === "Active") };
+};
 
 
 exports.getResult = async (request) => {
     console.log("request - ", request);
     const result_response = await classRepository.getResult2(request)
-    console.log("result_response - ",result_response);
-    if(result_response.Items.length == 0)
-    return result_response;
+    console.log("result_response - ", result_response);
+    if (result_response.Items.length == 0)
+        return result_response;
     await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
         result.content_url = await s3Services.getS3SignedUrl(result.url);
     }));
