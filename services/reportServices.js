@@ -1473,13 +1473,12 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
                 (question) => question.question_id == qa.question_id
               );
               const obtainedMarks = parseFloat(qa.obtained_marks) || 0;
-              const modifiedMarks = parseFloat(qa.modified_marks) || 0;
+              // const modifiedMarks = parseFloat(qa.modified_marks) || 0;
 
               studentPerformance[chapterId].totalQuestions += 1;
               studentPerformance[chapterId].totalMarks += marksData?.marks;
-              studentPerformance[chapterId].obtainedMarks += modifiedMarks
-                ? modifiedMarks
-                : obtainedMarks;
+              studentPerformance[chapterId].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
+              // studentPerformance[chapterId].obtainedMarks += modifiedMarks? modifiedMarks : obtainedMarks;
             });
           });
       });
@@ -1676,6 +1675,8 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter(request);
 
+  console.log("quizDataRes - ",quizDataRes);
+
   const allQuestionIds = quizDataRes.Items.flatMap((quiz) => [
     ...quiz.question_track_details.qp_set_a.map((q) => q.question_id),
     ...quiz.question_track_details.qp_set_b.map((q) => q.question_id),
@@ -1695,6 +1696,8 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
     }));
 
   const performance = {};
+quizResultDataRes.map(val => console.log(val.marks_details[0].qa_details))
+  console.log("quizResultDataRes - ", quizResultDataRes);
 
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes?.reduce((acc, result) => {
@@ -1752,13 +1755,11 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
                 (question) => question.question_id == qa.question_id
               );
               const obtainedMarks = parseFloat(qa.obtained_marks) || 0;
-              const modifiedMarks = parseFloat(qa.modified_marks) || 0;
+              // const modifiedMarks = parseFloat(qa.modified_marks) || 0;
 
               studentPerformance[topic_id].totalQuestions += 1;
               studentPerformance[topic_id].totalMarks += marksData?.marks;
-              studentPerformance[topic_id].obtainedMarks += modifiedMarks
-                ? modifiedMarks
-                : obtainedMarks;
+              studentPerformance[topic_id].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
             }
           });
         });
@@ -2060,13 +2061,12 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
               );
 
               const obtainedMarks = parseFloat(qa.obtained_marks) || 0;
-              const modifiedMarks = parseFloat(qa.modified_marks) || 0;
+              // const modifiedMarks = parseFloat(qa.modified_marks) || 0;
 
               studentPerformance[concept_id].totalQuestions += 1;
               studentPerformance[concept_id].totalMarks += marksData?.marks;
-              studentPerformance[concept_id].obtainedMarks += modifiedMarks
-                ? modifiedMarks
-                : obtainedMarks;
+              // studentPerformance[concept_id].obtainedMarks += modifiedMarks? modifiedMarks: obtainedMarks;
+              studentPerformance[concept_id].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
             }
           });
         });
