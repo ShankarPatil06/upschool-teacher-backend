@@ -897,6 +897,7 @@ exports.viewClassReportFocusArea = async (request) => {
     studentId: item.student_id
   }));
 
+  
   // console.log("quizResultMarksData - ",quizResultMarksData);
 
   const totalStudents = quizResultMarksData.length;
