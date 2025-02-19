@@ -854,7 +854,7 @@ exports.viewClassReportQuestions = async (request) => {
 
   const cognitiveResult = Object.keys(skillTotals).map((skill) => ({
     skill,
-    averagePercentage: skillTotals[skill].total / skillTotals[skill].count,
+    averagePercentage: parseFloat((parseFloat(skillTotals[skill].total) / parseFloat(skillTotals[skill].count)).toFixed(2)),
     noOfQuestions: skillTotals[skill].count,
   }));
 
@@ -1059,18 +1059,20 @@ exports.viewClassReportFocusArea = async (request) => {
       studentsData.push({ student: student.studentid, passed: passed });
     });
 
-    const countPassed = studentsData.filter(student => student.passed).length;
-    item.passed = (countPassed / totalStudents) * 100 //[%] value
-    item.count = countPassed //pass % numerator
+    // const countPassed = studentsData.filter(student => student.passed).length;
+    // item.passed = (countPassed / totalStudents) * 100 //[%] value
+    // item.count = countPassed //pass % numerator
     item.totalStudents = totalStudents //pass % denominator
     let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
-      if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
+    if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
       item.successMatrix = "yes";
     } else {
       item.successMatrix = "no";
       conceptsToFocus.push(item.name);
     }
     const studentFailed = studentsData.filter((student) => student.passed == false)
+    item.count = totalStudents - studentFailed.length;
+    item.passed = (item.count / totalStudents) * 100;
     studentFailed.map((failedStudent) => {
       students.map((student) => {
         if (failedStudent.student === student.student_id) {
