@@ -601,7 +601,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
   const studentsDataRes =
     await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-  if (quizData.Item && studentsDataRes.Items[0]) {
+  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === "Yes" ) {
     const setKey = studentsDataRes.Items[0].marks_details[0].set_key;
 
     const questionTrackDetails = quizData.Item.question_track_details[setKey];
@@ -670,15 +670,18 @@ exports.viewClassReportQuestions = async (request) => {
   // console.log("QUIZRESULT", quizResult.Items[1].marks_details[0]);
   // console.log("quizData", quizData);
 
-  const quizResultMarksData = quizResult.Items.map(
-    (item) => item.marks_details[0].qa_details
-  );
+  const quizResultMarksData = quizResult.Items
+    .filter((item) => item.evaluated === "Yes") 
+    .map((item) => item.marks_details?.[0]?.qa_details);
   // console.log("quizResultMarksData", quizResultMarksData);  
 
   const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = quizResult.Items.reduce(
     (acc, item) => {
-      acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
-      acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      if(item.evaluated === "Yes")
+      {
+        acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
+        acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      }
       return acc;
     },
     { totalMarkObtainedByStudents: 0, totalMarkExpectedFromStudents: 0 }
@@ -886,14 +889,15 @@ exports.viewClassReportFocusArea = async (request) => {
   const allStudentsCount = allStudentsData.Items.length;
   console.log("allStudentsCount - ", allStudentsCount);
   //numb of students who attendedgroupedMarks
-  const quizResultMarksData = quizResult.Items.map((item) => {
 
-    return {
-      marks: item.marks_details[0].qa_details, // Accessing qa_details
-      studentId: item.student_id, // Accessing student_id
-    };
-  });
+  const quizResultMarksData = quizResult.Items
+  .filter(item => item.evaluated === "Yes")
+  .map(item => ({
+    marks: item.marks_details?.[0]?.qa_details || [], // Prevent errors if marks_details is missing
+    studentId: item.student_id
+  }));
 
+  
   // console.log("quizResultMarksData - ",quizResultMarksData);
 
   const totalStudents = quizResultMarksData.length;
@@ -1223,7 +1227,7 @@ exports.preLearningBlueprintDetails = async (request) => {
 
   quizResultData.Items.length > 0 &&
     quizResultData.Items.forEach((result, i) => {
-      if (result.marks_details) {
+      if (result.marks_details && result.evaluated == "Yes") {
         const marksDetails = result.marks_details;
         marksDetails[0].qa_details.forEach((question) => {
           const questionId = question.question_id;
@@ -1372,16 +1376,18 @@ exports.fetchIndividualQuizReport = async (request) => {
   const quizResults = await quizResultRepository.fetchQuizResultByQuizId(
     request
   );
-  console.log("quizResults123", quizResults.Items[0].individual_group_performance);
+  // console.log("quizResults123", quizResults.Items[0].individual_group_performance);
 
   const allStudentsData = await classTestRepository.getStudentInfo(request);
 
   const quizResultsMap = new Map();
   quizResults.Items.forEach((quizResult) => {
+    if(quizResult.evaluated == "Yes"){
     quizResultsMap.set(
       quizResult.student_id,
       quizResult.individual_group_performance
     );
+    }
   });
 
   allStudentsData.Items.forEach((studentData) => {
