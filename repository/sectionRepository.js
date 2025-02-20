@@ -2,6 +2,7 @@ const dynamoDbCon = require('../awsConfig');
 const { DATABASE_TABLE } = require('./baseRepository');
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
+const { helper } = require('../helper');
 
 exports.getSectionIdAndName = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -49,4 +50,22 @@ exports.getSectionDetailsById = function (request, callback) {
 
         }
     });
+}
+
+exports.updateActionAndRecommendations= async (request) => {
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+            "section_id": request.data.section_id
+        },
+        UpdateExpression: "set action_recommendations = :action_recommendations, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":action_recommendations": request.data.action_recommendations,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+
+    }
+    const data = await DATABASE_TABLE2.updateService(params);
+    return data;
 }
