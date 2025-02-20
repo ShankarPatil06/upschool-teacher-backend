@@ -13,6 +13,7 @@ const reportController = require('./reportController')
 const scannerController = require('./scannerController')
 const schoolAdminController = require('./schoolAdminController')
 const schoolController = require('./schoolController')
+const sectionController = require('./sectionController')
 const studentController = require('./studentController')
 const subjectController = require('./subjectController')
 const teacherController = require('./teacherController')
@@ -37,6 +38,7 @@ module.exports = {
     scannerController,
     schoolAdminController,
     schoolController,
+    sectionController,
     studentController,
     subjectController,
     teacherController,
