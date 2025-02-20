@@ -2606,6 +2606,7 @@ exports.getActionsAndRecommendations = async (request) => {
   });
 
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
+  console.log("quizIds ---------- ",quizIds);
   const quizResultsRes = quizIds.length
     ? await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizIds })
     : [];
@@ -2617,8 +2618,8 @@ exports.getActionsAndRecommendations = async (request) => {
       studentId: item.student_id,
     }));
 
-  console.log("quizResultMarksData - ", quizResultMarksData[0].marks);
-  console.log("quizResultMarksData - ", quizResultMarksData[1].marks);
+  // console.log("quizResultMarksData - ", quizResultMarksData[0].marks);
+  console.log("quizResultMarksData ---------------- ", quizResultMarksData);
 
   const marksOfEachStudent = [];
   quizResultMarksData.forEach((qdata) => {
@@ -2636,7 +2637,7 @@ exports.getActionsAndRecommendations = async (request) => {
     });
   });
 
-  console.log("marksOfEachStudent - ", marksOfEachStudent);
+  // console.log("marksOfEachStudent - ", marksOfEachStudent);
 
   const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
     const existingStudent = acc.find((student) => student.studentid === item.studentid);
@@ -2649,7 +2650,8 @@ exports.getActionsAndRecommendations = async (request) => {
   }, []);
 
 
-  // console.log("groupedMarks - ", groupedMarks);
+  console.log("groupedMarks - ", groupedMarks);
+  // console.log("groupedMarks - ", groupedMarks[0].details);
 
   const conceptNames = await conceptRepository.fetchBulkConceptsIDName2({
     unit_Concept_id: conceptIdsSetA,
@@ -2657,7 +2659,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
   let conceptsToFocus = [];
 
-  console.log("conceptAndQuestions - ", conceptAndQuestions);
+  // console.log("conceptAndQuestions - ", conceptAndQuestions);
 
   conceptAndQuestions.forEach((item) => {
     // console.log("item  1 - ", item);
@@ -2676,7 +2678,7 @@ exports.getActionsAndRecommendations = async (request) => {
       Object.values(quiz.question_track_details.qp_set_a || {}).flat().some((q) => q.concept_id === item.concept)
     );
 
-    // console.log("relatedQuiz - ", relatedQuiz);
+    console.log("relatedQuiz - ", relatedQuiz);
 
     item.learningType = relatedQuiz?.learningType || "Unknown Learning Type";
     const quizId = relatedQuiz?.quiz_id;
@@ -2705,12 +2707,13 @@ exports.getActionsAndRecommendations = async (request) => {
     // console.log("totalMarksForThisQuiz - ", totalMarksForThisQuiz);
     // console.log("item - ", item);
     // console.log("item.questions",  item.questions);
-    console.log("groupedMarks - ", groupedMarks[0].details);
+    // console.log("groupedMarks - ", groupedMarks[0].details);
 
     groupedMarks.forEach((student, i) => {
-      let marks = student.details
-        .filter((q) => item.questions.includes(q.questionId))
-        .reduce((sum, q) => sum + Number(q.marks), 0);
+      let filteredQuestions = student.details.filter((q) => item.questions.includes(q.questionId))
+      if(!filteredQuestions.length) 
+      return;
+      let marks = filteredQuestions.reduce((sum, q) => sum + Number(q.marks), 0);
 
       console.log(i, " - marks - ", marks);
 
@@ -2719,9 +2722,10 @@ exports.getActionsAndRecommendations = async (request) => {
       studentsData.push({ student: student.studentid, passed: passed, finalMarks: marks });
     });
 
-    // console.log("groupedMarks - ", groupedMarks);
-    console.log("studentsData - ", studentsData);
+    console.log("groupedMarks - ", groupedMarks);
+    // console.log("studentsData - ", studentsData);
 
+    if(!studentsData.length)return;
     const countPassed = studentsData.filter((student) => student.passed).length;
     const passedPercentage = (countPassed / totalStudents) * 100;
 
@@ -2803,7 +2807,9 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   const topicData = await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIdsSetA });
   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({ unit_chapter_id: [quizData.Item.chapter_id] });
 
-  const quizResultMarksData = quizResult.Items.map((item) => {
+  const quizResultMarksData = quizResult.Items
+  .filter(item => item.evaluated === "Yes")
+  .map((item) => {
     return {
       marks: item.marks_details[0].qa_details,
       studentId: item.student_id,
