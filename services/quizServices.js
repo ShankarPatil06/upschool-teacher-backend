@@ -929,7 +929,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
             const normalizeAnswer = (answer) => {
-                if (!answer) return "";
+                if (!answer) return " ";
                 let normalized = answer.trim().toLowerCase();
                 if (!isNaN(normalized)) {
                     return parseFloat(normalized).toString();

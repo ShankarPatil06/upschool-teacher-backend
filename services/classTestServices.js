@@ -238,7 +238,7 @@ exports.startEvaluationProcess = async (request) => {
             //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
             const normalizeAnswer = (answer) => {
-                if (!answer) return "";
+                if (!answer) return " ";
                 let normalized = answer.trim().toLowerCase();
                 if (!isNaN(normalized)) {
                     return parseFloat(normalized).toString();
