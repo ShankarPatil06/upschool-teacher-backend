@@ -601,7 +601,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
   const studentsDataRes =
     await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-  if (quizData.Item && studentsDataRes.Items[0]) {
+  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === "Yes" ) {
     const setKey = studentsDataRes.Items[0].marks_details[0].set_key;
 
     const questionTrackDetails = quizData.Item.question_track_details[setKey];
@@ -670,15 +670,18 @@ exports.viewClassReportQuestions = async (request) => {
   // console.log("QUIZRESULT", quizResult.Items[1].marks_details[0]);
   // console.log("quizData", quizData);
 
-  const quizResultMarksData = quizResult.Items.map(
-    (item) => item.marks_details[0].qa_details
-  );
+  const quizResultMarksData = quizResult.Items
+    .filter((item) => item.evaluated === "Yes") 
+    .map((item) => item.marks_details?.[0]?.qa_details);
   // console.log("quizResultMarksData", quizResultMarksData);  
 
   const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = quizResult.Items.reduce(
     (acc, item) => {
-      acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
-      acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      if(item.evaluated === "Yes")
+      {
+        acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
+        acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      }
       return acc;
     },
     { totalMarkObtainedByStudents: 0, totalMarkExpectedFromStudents: 0 }
@@ -779,42 +782,30 @@ exports.viewClassReportQuestions = async (request) => {
     if (allAnswers.length === 0) {
       question.correctAnswerPercentage = 0;
     } else {
-      const correct = allAnswers.reduce((count, answer) => {
-        if (
-          (String(answer.modified_marks) === "N.A." &&
-            Number(answer.obtained_marks) === Number(question.marks)) ||
-          (String(answer.modified_marks) !== "N.A." &&
-            Number(answer.modified_marks) === Number(question.marks))
-        ) {
-
-          marksInTotal +=
-            String(answer.obtained_marks) !== "N.A."
+      const correct = allAnswers.reduce((total, answer) => {
+        if (String(answer.modified_marks) === "N.A.") {
+          let marks = String(answer.obtained_marks) !== "N.A."
+            ? Number(answer.obtained_marks)
+            : 0;
+          marksInTotal += marks;
+          return total + marks;
+        } else {
+          let marks = String(answer.modified_marks) !== "N.A."
+            ? Number(answer.modified_marks)
+            : String(answer.obtained_marks) !== "N.A."
               ? Number(answer.obtained_marks)
               : 0;
-
-          console.log("mark_cal", marksInTotal);
-          return count + 1;
-        } else {
-          console.log(
-            "missing mark",
-            Number(answer.modified_marks),
-            Number(answer.obtained_marks)
-          );
-
-          marksInTotal +=
-            String(answer.modified_marks) !== "N.A."
-              ? Number(answer.modified_marks)
-              : String(answer.obtained_marks) !== "N.A."
-                ? Number(answer.obtained_marks)
-                : 0;
-
-          // console.log("mark cal", marksInTotal);
-          return count;
+          marksInTotal += marks;
+          return total + marks;
         }
       }, 0);
 
-      const correctPercentage = ((correct / allAnswers.length) * 100).toFixed(2);
+      const totalMarks = allAnswers.reduce((total, answer) => {
+        let questionObj = questions.find(qtn => qtn.question_id === answer.question_id);
+        return questionObj ? total + questionObj?.marks : total;
+      }, 0);
 
+      const correctPercentage = ((correct / totalMarks) * 100).toFixed(2);
 
       question.correctAnswerPercentage = correctPercentage
       // totalStudents > 0 ? (correct / totalStudents) * 100 : 0;
@@ -827,21 +818,59 @@ exports.viewClassReportQuestions = async (request) => {
     // });
   });
   //cognitive table and difficulty table data
-  const averageData = questions.map((question) => ({
-    skill: question.cognitive_skill,
-    percentage: question.correctAnswerPercentage,
-    level: question.difficulty_level,
+  const averageData = questions.map((question) => {
+    return {
+      skill: question.cognitive_skill,
+      percentage: question.correctAnswerPercentage,
+      level: question.difficulty_level,
+    }
+  });
+
+  const mergedData = averageData.reduce((acc, item) => {
+    const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
+    if (existingSkill) {
+      existingSkill.totalPercentage += parseFloat(item.percentage);
+      existingSkill.count += 1;
+    } else {
+      acc.push({
+        skill: item.skill,
+        totalPercentage: parseFloat(item.percentage),
+        count: 1,
+        level: item.level
+      });
+    }
+    return acc;
+  }, []).map(skillItem => ({
+    skill: skillItem.skill,
+    percentage: (skillItem.totalPercentage / skillItem.count).toFixed(2),
+    level: skillItem.level
   }));
+
+  const skillCounts = averageData.reduce((acc, item) => {
+    const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
+    if (existingSkill) {
+      existingSkill.count += 1;
+    } else {
+      acc.push({
+        skill: item.skill,
+        count: 1
+      });
+    }
+    return acc;
+  }, []);
+
+  const skillCountsArray = Object.values(skillCounts);
+
   const skillTotals = {};
   const levelTotals = {};
 
-  averageData.forEach(({ skill, percentage, level }) => {
+  mergedData?.forEach(({ skill, percentage, level }) => {
     if (!skillTotals[skill]) {
       skillTotals[skill] = { total: 0, count: 0 };
     }
-
-    skillTotals[skill].total += percentage;
-    skillTotals[skill].count += 1;
+    const intelligenceCount = skillCountsArray.find(skills => skills.skill === skill);
+    skillTotals[skill].total = percentage;
+    skillTotals[skill].count += intelligenceCount?.count;
 
     if (level !== "N.A") {
       if (!levelTotals[level]) {
@@ -854,7 +883,7 @@ exports.viewClassReportQuestions = async (request) => {
 
   const cognitiveResult = Object.keys(skillTotals).map((skill) => ({
     skill,
-    averagePercentage: parseFloat((parseFloat(skillTotals[skill].total) / parseFloat(skillTotals[skill].count)).toFixed(2)),
+    averagePercentage: parseFloat(skillTotals[skill].total),
     noOfQuestions: skillTotals[skill].count,
   }));
 
@@ -886,14 +915,15 @@ exports.viewClassReportFocusArea = async (request) => {
   const allStudentsCount = allStudentsData.Items.length;
   console.log("allStudentsCount - ", allStudentsCount);
   //numb of students who attendedgroupedMarks
-  const quizResultMarksData = quizResult.Items.map((item) => {
 
-    return {
-      marks: item.marks_details[0].qa_details, // Accessing qa_details
-      studentId: item.student_id, // Accessing student_id
-    };
-  });
+  const quizResultMarksData = quizResult.Items
+  .filter(item => item.evaluated === "Yes")
+  .map(item => ({
+    marks: item.marks_details?.[0]?.qa_details || [], // Prevent errors if marks_details is missing
+    studentId: item.student_id
+  }));
 
+  
   // console.log("quizResultMarksData - ",quizResultMarksData);
 
   const totalStudents = quizResultMarksData.length;
@@ -902,22 +932,35 @@ exports.viewClassReportFocusArea = async (request) => {
       Object.values(quizData.Item.question_track_details.qp_set_a).flat()
     ),
   ];
+  const questionSetB = [
+    ...new Set(
+      Object.values(quizData.Item.question_track_details.qp_set_b).flat()
+    ),
+  ];
+  const questionSetC = [
+    ...new Set(
+      Object.values(quizData.Item.question_track_details.qp_set_c).flat()
+    ),
+  ];
 
+  const allQuestions = [...new Set([...questionSetC, ...questionSetB, ...questionSetA])];
   // console.log("questionSetA - ",questionSetA);
 
   //only set a for focus area
-  const conceptAndQuestions = questionSetA.reduce((acc, item) => {
+  const conceptAndQuestions = allQuestions.reduce((acc, item) => {
     const existingConcept = acc.find(
       (concept) => concept.concept === item.concept_id
     );
+
     if (existingConcept) {
-      existingConcept.questions.push(item.question_id);
+      existingConcept.questions = [...new Set([...existingConcept.questions, item.question_id])];
     } else {
       acc.push({
         concept: item.concept_id,
         questions: [item.question_id],
       });
     }
+
     return acc;
   }, []);
 
@@ -925,10 +968,17 @@ exports.viewClassReportFocusArea = async (request) => {
 
   const conceptIdsSetA = questionSetA.map((item) => item.concept_id); //concepts for set A
   const questionIdsSetA = questionSetA.map((item) => item.question_id); //concepts for set A
+  const conceptIdsSetB = questionSetB.map((item) => item.concept_id); //concepts for set B
+  const questionIdsSetB = questionSetB.map((item) => item.question_id); //concepts for set B
+  const conceptIdsSetC = questionSetC.map((item) => item.concept_id); //concepts for set C
+  const questionIdsSetC = questionSetC.map((item) => item.question_id); //concepts for set C
+
+  const allQuestionIds = new Set([...questionIdsSetC, ...questionIdsSetB, ...questionIdsSetA]);
+  const allConceptIds = new Set([...conceptIdsSetC, ...conceptIdsSetB, ...conceptIdsSetA]);
 
   const questions = await new Promise((resolve, reject) => {
     questionRepository.fetchBulkQuestionsNameById(
-      { question_id: questionIdsSetA },
+      { question_id: allQuestionIds },
       (err, res) => {
         if (err) {
           console.log(err);
@@ -943,7 +993,7 @@ exports.viewClassReportFocusArea = async (request) => {
   //get student marks based on question
   quizResultMarksData.map((qdata) => {
     qdata.marks.map((marks) => {
-      questionIdsSetA.map((question) => {
+      Array.from(allQuestionIds).map((question) => {
         if (question === marks.question_id) {
           let marksValue;
           if (marks.modified_marks === "N.A.") {
@@ -1007,9 +1057,9 @@ exports.viewClassReportFocusArea = async (request) => {
   // console.log("noOfQuestionsperConcept - ",noOfQuestionsperConcept);
 
   const conceptNames =
-    conceptIdsSetA.length &&
+    Array.from(allConceptIds).length &&
     (await conceptRepository.fetchBulkConceptsIDName2({
-      unit_Concept_id: conceptIdsSetA,
+      unit_Concept_id: Array.from(allConceptIds),
     }));
 
   let conceptsToFocus = [];
@@ -1047,6 +1097,7 @@ exports.viewClassReportFocusArea = async (request) => {
         })
         item.questions.map((question) => {
           if (q.questionId === question) {
+            console.log({ seconddddd: q });
             marks = marks + Number(q.marks)
           }
         })
@@ -1059,9 +1110,9 @@ exports.viewClassReportFocusArea = async (request) => {
       studentsData.push({ student: student.studentid, passed: passed });
     });
 
-    // const countPassed = studentsData.filter(student => student.passed).length;
-    // item.passed = (countPassed / totalStudents) * 100 //[%] value
-    // item.count = countPassed //pass % numerator
+    const countPassed = studentsData.filter(student => student.passed).length;
+    item.passed = (countPassed / totalStudents) * 100 //[%] value
+    item.count = countPassed //pass % numerator
     item.totalStudents = totalStudents //pass % denominator
     let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
     if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
@@ -1071,8 +1122,8 @@ exports.viewClassReportFocusArea = async (request) => {
       conceptsToFocus.push(item.name);
     }
     const studentFailed = studentsData.filter((student) => student.passed == false)
-    item.count = totalStudents - studentFailed.length;
-    item.passed = (item.count / totalStudents) * 100;
+    // item.count = totalStudents - studentFailed.length;
+    // item.passed = (item.count / totalStudents) * 100;
     studentFailed.map((failedStudent) => {
       students.map((student) => {
         if (failedStudent.student === student.student_id) {
@@ -1081,6 +1132,7 @@ exports.viewClassReportFocusArea = async (request) => {
       })
     })
     item.failedStudent = studentFailed
+    // }
   });
   return { conceptAndQuestions: conceptAndQuestions, conceptsToFocus: conceptsToFocus, quizData: quizData }
   // return groupedMarks
@@ -1223,7 +1275,7 @@ exports.preLearningBlueprintDetails = async (request) => {
 
   quizResultData.Items.length > 0 &&
     quizResultData.Items.forEach((result, i) => {
-      if (result.marks_details) {
+      if (result.marks_details && result.evaluated == "Yes") {
         const marksDetails = result.marks_details;
         marksDetails[0].qa_details.forEach((question) => {
           const questionId = question.question_id;
@@ -1372,16 +1424,18 @@ exports.fetchIndividualQuizReport = async (request) => {
   const quizResults = await quizResultRepository.fetchQuizResultByQuizId(
     request
   );
-  console.log("quizResults123", quizResults.Items[0].individual_group_performance);
+  // console.log("quizResults123", quizResults.Items[0].individual_group_performance);
 
   const allStudentsData = await classTestRepository.getStudentInfo(request);
 
   const quizResultsMap = new Map();
   quizResults.Items.forEach((quizResult) => {
+    if(quizResult.evaluated == "Yes"){
     quizResultsMap.set(
       quizResult.student_id,
       quizResult.individual_group_performance
     );
+    }
   });
 
   allStudentsData.Items.forEach((studentData) => {
@@ -1677,7 +1731,7 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter(request);
 
-  console.log("quizDataRes - ",quizDataRes);
+  console.log("quizDataRes - ", quizDataRes);
 
   const allQuestionIds = quizDataRes.Items.flatMap((quiz) => [
     ...quiz.question_track_details.qp_set_a.map((q) => q.question_id),
@@ -1698,7 +1752,7 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
     }));
 
   const performance = {};
-quizResultDataRes.map(val => console.log(val.marks_details[0].qa_details))
+  quizResultDataRes.map(val => console.log(val.marks_details[0].qa_details))
   console.log("quizResultDataRes - ", quizResultDataRes);
 
   if (!quizResultDataRes) return {};
