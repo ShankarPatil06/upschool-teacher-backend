@@ -338,6 +338,11 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         filterConditions.push("class_test_id = :class_test_id");
         expressionAttributeValues[":class_test_id"] = request.data.class_test_id;
     }
+    if (request.data?.start_date && request.data?.end_date) {
+        filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
+        expressionAttributeValues[":start_date"] = request.data.start_date;
+        expressionAttributeValues[":end_date"] = request.data.end_date;
+    }    
 
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
