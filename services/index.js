@@ -15,6 +15,7 @@ const s3Services = require('./s3Service')
 const scannerServices = require('./scannerServices')
 const schoolAdminServices = require('./schoolAdminServices')
 const schoolServices = require('./schoolServices')
+const sectionServices = require('./sectionServices')
 const studentServices = require('./studentServices')
 const subjectServices = require('./subjectServices')
 const teacherServices = require('./teacherServices')
@@ -39,6 +40,7 @@ module.exports = {
     scannerServices,
     schoolAdminServices,
     schoolServices,
+    sectionServices,
     studentServices,
     subjectServices,
     teacherServices,
