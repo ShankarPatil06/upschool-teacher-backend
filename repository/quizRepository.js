@@ -625,6 +625,12 @@ exports.fetchAllQuizBasedonSubject2 = async (request) => {
             expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
         }
 
+        if (request.data?.start_date && request.data?.end_date) {
+            filterExpression += " AND created_ts >= :start_date AND created_ts <= :end_date";
+            expressionAttributeValues[":start_date"] = request.data.start_date;
+            expressionAttributeValues[":end_date"] = request.data.end_date;
+        }    
+
         let params = {
             TableName: TABLE_NAMES.upschool_quiz_table,
             IndexName: Indexes.common_id_index,
@@ -632,7 +638,6 @@ exports.fetchAllQuizBasedonSubject2 = async (request) => {
             FilterExpression: filterExpression,
             ExpressionAttributeValues: expressionAttributeValues,
         };
-
         const result = await new Promise((resolve, reject) => {
             DATABASE_TABLE.queryRecord(docClient, params, (err, data) => {
                 if (err) {
@@ -787,14 +792,14 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
         });
 
         const docClient = dynamoDBCall;
-        let filterExpression = "quiz_id = :quiz_id AND chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
+        let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
         let expressionAttributeValues = {
             ":common_id": constant.constValues.common_id,
             ":client_class_id": request.data.client_class_id,
             ":subject_id": request.data.subject_id,
             ":section_id": request.data.section_id,
             ":chapter_id": request.data.chapter_id,
-            ":quiz_id": request.data.quiz_id,
+            // ":quiz_id": request.data.quiz_id, quiz_id = :quiz_id AND
             ":learningType": request.data.learningType,
             ":quiz_status": "Active",
         };
@@ -803,6 +808,12 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
             filterExpression += " AND quiz_id = :quiz_id";
             expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
         }
+        
+        if (request.data?.start_date && request.data?.end_date) {
+            filterExpression += " AND created_ts >= :start_date AND created_ts <= :end_date";
+            expressionAttributeValues[":start_date"] = request.data.start_date;
+            expressionAttributeValues[":end_date"] = request.data.end_date;
+        } 
 
         let params = {
             TableName: TABLE_NAMES.upschool_quiz_table,
