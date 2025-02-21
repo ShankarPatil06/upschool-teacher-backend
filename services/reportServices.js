@@ -1416,7 +1416,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-
+  if(quizDataRes?.length === 0) return {};
   const allQuestionIds = quizDataRes.Items.flatMap((quiz) => [
     ...quiz.question_track_details.qp_set_a.map((q) => q.question_id),
     ...quiz.question_track_details.qp_set_b.map((q) => q.question_id),
@@ -1517,6 +1517,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
 exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
   const studentData = await studentRepository.getStudentsData2(request);
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  if(testDetails?.length == 0)  return [];
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
   request['class_test_id'] = test_ids
@@ -1528,7 +1529,8 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
 
   const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
   const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
-  let chapter_Ids = [...new Set([...test_chapter_ids])];
+  let chapter_Ids;
+  chapter_Ids = [...new Set([...test_chapter_ids])];
   chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
   request["unit_chapter_id"] = chapter_Ids;
   const testChapterMap = {};
@@ -1800,10 +1802,10 @@ quizResultDataRes.map(val => console.log(val.marks_details[0].qa_details))
 
 exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  if(testDetails?.length == 0)  return [];
   const studentData = await studentRepository.getStudentsData2(request);
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
-
   request['class_test_id'] = test_ids
   request['question_paper_ids'] = question_paper_ids;
 
@@ -2107,6 +2109,7 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
 
 exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
+  if(testDetails?.length == 0)  return []; 
   const studentData = await studentRepository.getStudentsData2(request);
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
