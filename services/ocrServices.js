@@ -120,11 +120,15 @@ async function convertImageToBase64(imageUrl) {
   //   }
   // }
 
-  const extractTextAndEquations = async (imageUrl ,predictiveText ) => {
+  const extractTextAndEquations = async (imageUrls ,predictiveText ) => {
     try {
-      const base64Image = await convertImageToBase64(imageUrl);
-      if (base64Image) {
-        let response ;
+      const extractedTexts = [];
+  
+      for (const imageUrl of imageUrls) {
+        const base64Image = await convertImageToBase64(imageUrl);
+        if (base64Image) {
+          let response;
+  
         if( predictiveText && predictiveText === 'Yes')
         {
           response = await openai.chat.completions.create({
@@ -165,18 +169,19 @@ async function convertImageToBase64(imageUrl) {
           });
         }
   
-        let extractedText = response?.choices[0].message;
-  
-          return extractedText;
+        const extractedText = response?.choices[0].message;
+        if (extractedText) extractedTexts.push(extractedText);
       } else {
-        console.error('Failed to convert image to base64');
-        return null;
+        console.error('Failed to convert image to base64 for URL:', imageUrl);
       }
-    } catch (error) {
-      console.error('Error processing image:', error);
-      return null;
     }
+
+    return extractedTexts;
+  } catch (error) {
+    console.error('Error processing images:', error);
+    return null;
   }
+};
 
   // async function extractTextAndEquations(imageUrl ,predictiveText ) {
   //   try {
@@ -274,13 +279,18 @@ async function convertImageToBase64(imageUrl) {
 //   }
   exports.readOpenAiPage = async (request) => {
     try {
-      const { Key } = request.data;
-      const imageUrl = await s3Services.getS3SignedUrl(Key);
+      const { Keys } = request.data;
+      const imageUrls = await Promise.all(
+        Keys.map(async (Key) => {
+            return await s3Services.getS3SignedUrl(Key);
+        })
+    );
+    
+    console.log("Signed URLs:", imageUrls);
+    
       // const imageUrl = await s3Services.getS3SignedUrl("quiz_uploads/c2ddd828-ab47-5a7a-9128-9243f107f187/student_answered_sheets/5e7af638-6523-5cf6-844b-f68b03b1041b.png");
       // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/144568c4-5cb6-5852-96a9-df46756f233f/student_answered_sheets/e9e38967-6113-4ebd-9f39-ec22010c9e50.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241213%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241213T042820Z&X-Amz-Expires=600&X-Amz-Signature=8040c9f039e230c5324ef262bac0c0ab0a75d920777201fcd29c0d8b3b12126f&X-Amz-SignedHeaders=host";
       
-        console.log("IMAGE URL",imageUrl)
-  
       // For testing, you can pass a hardcoded URL to extract text and equations
     //   const imageUrl = request.data.url; // Replace with your image URL
   
@@ -289,7 +299,7 @@ async function convertImageToBase64(imageUrl) {
     //   const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
     const schoolInfoPromise = schoolRepository.getSchoolDetailsById2(request);
 const responsePromise = schoolInfoPromise.then(schoolInfo => 
-  extractTextAndEquations(imageUrl, schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation ? schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation : 'NO' )
+  extractTextAndEquations(imageUrls, schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation ? schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation : 'NO' )
 );
 
 // Wait for both promises to resolve
