@@ -333,6 +333,12 @@ exports.fetchQuizTemplates = async (request) => {
                 quizTemplate.answer_sheet_url = answerTemp.includes(answerUrlCheck)
                     ? await s3Services.getS3SignedUrl(answerTemp)
                     : "N.A.";
+
+                    const keyanswerTemp = quizTemplate.key_answer || "N.A.";
+                    const keyanswerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                    quizTemplate.key_answer_url = answerTemp.includes(keyanswerUrlCheck)
+                        ? await s3Services.getS3SignedUrl(keyanswerTemp)
+                        : "N.A.";
             }
         } else {
             quizRes.Items[0].quiz_template_details = {};
