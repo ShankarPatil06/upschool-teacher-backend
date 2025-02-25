@@ -42,6 +42,7 @@ exports.addClassTest = async (request) => {
     }
 };
 
+
 exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: "AND" });
 
 exports.fetchClassTestsBasedonStatus2 = async (request) => await classTestRepository.fetchAllTestBasedOnSubject(request);
