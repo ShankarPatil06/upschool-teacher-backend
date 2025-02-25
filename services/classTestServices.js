@@ -42,6 +42,7 @@ exports.addClassTest = async (request) => {
     }
 };
 
+
 exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: "AND" });
 
 exports.fetchClassTestsBasedonStatus2 = async (request) => await classTestRepository.fetchAllTestBasedOnSubject(request);
@@ -52,12 +53,15 @@ exports.getClassTestbyId = async (request) => {
 
     let questionPaperTEmp = classTestRes.Items[0].question_paper_template ? classTestRes.Items[0].question_paper_template : "N.A.";
     let answerSheetTemp = classTestRes.Items[0].answer_sheet_template ? classTestRes.Items[0].answer_sheet_template : "N.A.";
+    let keyAnswerTemp = classTestRes.Items[0].key_answer_template ? classTestRes.Items[0].key_answer_template : "N.A.";
 
     let questionUrlCheck = constant.testFolder.questionPapers.split("/")[0];
     let answerUrlCheck = constant.testFolder.answerSheets.split("/")[0];
+    let keyanswerUrlCheck = constant.testFolder.questionPapers.split("/")[0];
 
     classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await s3Services.getS3SignedUrl(questionPaperTEmp) : "N.A.";
     classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await s3Services.getS3SignedUrl(answerSheetTemp) : "N.A.";
+    classTestRes.Items[0].key_answer_template_url = keyAnswerTemp.includes(keyanswerUrlCheck) ? await s3Services.getS3SignedUrl(keyAnswerTemp) : "N.A.";
 
     return classTestRes
 
