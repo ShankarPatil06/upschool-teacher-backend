@@ -491,9 +491,10 @@ exports.updateTemplateDetails = async (request) => {
         Key: {
             "question_paper_id": request.data.question_paper_id,
         },
-        UpdateExpression: "SET question_paper_template = :question_paper_template , updated_ts = :updated_ts",
+        UpdateExpression: "SET question_paper_template = :question_paper_template , updated_ts = :updated_ts , key_answer_template = :key_answer_template",
         ExpressionAttributeValues: {
             ":question_paper_template": request.data.question_paper_template,
+            ":key_answer_template": request.data.key_answer_template,
             ":updated_ts": helper.getCurrentTimestamp(),
         }
     };
