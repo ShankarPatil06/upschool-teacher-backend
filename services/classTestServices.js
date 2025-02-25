@@ -37,6 +37,7 @@ exports.addClassTest = async (request) => {
         // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
         request.data.question_paper_template = pdfData.data.question_paper_template;
+        request.data.key_answer_template = pdfData.data.key_answer_template;
 
         return await classTestRepository.insertClassTest2(request);
     }
