@@ -193,21 +193,21 @@ exports.getClassTestIdAndName = function (request, callback) {
         }
     });
 }
-exports.getClassTestIdAndName2 = async (request) => {
-    let params = {
-        TableName: TABLE_NAMES.upschool_class_test_table,
+// exports.getClassTestIdAndName2 = async (request) => {
+//     let params = {
+//         TableName: TABLE_NAMES.upschool_class_test_table,
 
-                KeyConditionExpression: "class_test_id = :class_test_id",
-                FilterExpression: "class_test_status = :class_test_status",
-                ExpressionAttributeValues: {
-                    ":class_test_id": request.data.class_test_id,
-                    ":class_test_status": request.data.class_test_status,
-                },
-                ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template"
+//                 KeyConditionExpression: "class_test_id = :class_test_id",
+//                 FilterExpression: "class_test_status = :class_test_status",
+//                 ExpressionAttributeValues: {
+//                     ":class_test_id": request.data.class_test_id,
+//                     ":class_test_status": request.data.class_test_status,
+//                 },
+//                 ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template, key_answer_template"
 
-    };
-    return await DATABASE_TABLE2.query(params);    
-}
+//     };
+//     return await DATABASE_TABLE2.query(params);    
+// }
 exports.getClassTestIdAndName2 = async (request) => {
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
@@ -218,7 +218,7 @@ exports.getClassTestIdAndName2 = async (request) => {
             ":class_test_id": request.data.class_test_id,
             ":class_test_status": request.data.class_test_status,
         },
-        ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template"
+        ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template, key_answer_template"
     };
 
     const data = await DATABASE_TABLE2.query(params);

@@ -1368,7 +1368,8 @@ exports.customWorksheetGenerated = async (request) => {
             let resultPdf = await createPDFandUpdateTemplateDetails(request);
             console.log(resultPdf.data);
 
-            request.data["question_paper_template"] = resultPdf.data
+            request.data["question_paper_template"] = resultPdf.data.pdf_response
+            request.data["key_answer_template"] = resultPdf.data.answer_pdf_response
 
             await testQuestionPaperRepository.updateTemplateDetails(request)
             return 200
