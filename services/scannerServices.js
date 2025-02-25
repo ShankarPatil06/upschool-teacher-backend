@@ -571,8 +571,10 @@ exports.uploadAnswerSheets2 = async (request) => {
                     
                     if(updateResponse){
                         console.log("Image Successfully updated");
+                        return("Image Successfully updated")
                     }else{
                         console.log("Image Update Issue");
+                        return("Image Update Issue")
                     }
                 }
             } else {
