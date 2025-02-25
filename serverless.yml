@@ -456,3 +456,7 @@ functions:
           path: /v1/comprehensivePerformanceConceptWiseForTest
           method: POST
           cors: true    
+      - http:
+          path: /v1/updateActionAndRecommendations
+          method: POST
+          cors: true    
