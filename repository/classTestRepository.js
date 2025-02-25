@@ -106,6 +106,7 @@ exports.insertClassTest2 = async (request) => {
             "test_end_time": request.data.test_end_time,
             "answer_sheet_template": request.data.answer_sheet_template,
             "question_paper_template": request.data.question_paper_template,
+            "key_answer_template": request.data.key_answer_template,
             "class_test_status": "Active",
             "common_id": constant.constValues.common_id,
             "created_ts": helper.getCurrentTimestamp(),
