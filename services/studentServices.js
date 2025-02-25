@@ -1403,11 +1403,15 @@ exports.fetchCustomWorksheet = async (request) => {
         const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheetBasedOnTestId(request)
         if (studentWorksheet?.Items?.[0]) {
             let questionPaperTEmp = studentWorksheet.Items[0]?.question_paper_template || 'N.A.';
+            let answerPaperTEmp = studentWorksheet.Items[0]?.key_answer_template || 'N.A.';
             let questionUrlCheck = constant.testFolder.customQuestionPapers.split("/")[0];
             console.log({ questionPaperTEmp }, studentWorksheet.Items[0], questionUrlCheck);
 
             studentWorksheet.Items[0].worksheet_template_url = questionPaperTEmp.includes(questionUrlCheck)
                 ? await s3Services.getS3SignedUrl(questionPaperTEmp)
+                : "N.A.";
+            studentWorksheet.Items[0].key_answer_template_url = answerPaperTEmp.includes(questionUrlCheck)
+                ? await s3Services.getS3SignedUrl(answerPaperTEmp)
                 : "N.A.";
             return studentWorksheet.Items[0];
         }
