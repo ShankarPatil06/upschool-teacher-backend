@@ -126,6 +126,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
         const processTestResults = async () => {
             testResults?.forEach(testResult => {
                 let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
+                if(singleStudent.length ===0) return;
                 const testData = {
                     student_id: testResult.student_id,
                     student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
