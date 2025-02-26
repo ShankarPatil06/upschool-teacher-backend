@@ -333,6 +333,12 @@ exports.fetchQuizTemplates = async (request) => {
                 quizTemplate.answer_sheet_url = answerTemp.includes(answerUrlCheck)
                     ? await s3Services.getS3SignedUrl(answerTemp)
                     : "N.A.";
+
+                    const keyanswerTemp = quizTemplate.key_answer || "N.A.";
+                    const keyanswerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                    quizTemplate.key_answer_url = answerTemp.includes(keyanswerUrlCheck)
+                        ? await s3Services.getS3SignedUrl(keyanswerTemp)
+                        : "N.A.";
             }
         } else {
             quizRes.Items[0].quiz_template_details = {};
@@ -929,7 +935,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
             const normalizeAnswer = (answer) => {
-                if (!answer) return "";
+                if (!answer) return " ";
                 let normalized = answer.trim().toLowerCase();
                 if (!isNaN(normalized)) {
                     return parseFloat(normalized).toString();

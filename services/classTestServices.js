@@ -37,10 +37,12 @@ exports.addClassTest = async (request) => {
         // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
         request.data.question_paper_template = pdfData.data.question_paper_template;
+        request.data.key_answer_template = pdfData.data.key_answer_template;
 
         return await classTestRepository.insertClassTest2(request);
     }
 };
+
 
 exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: "AND" });
 
@@ -52,12 +54,15 @@ exports.getClassTestbyId = async (request) => {
 
     let questionPaperTEmp = classTestRes.Items[0].question_paper_template ? classTestRes.Items[0].question_paper_template : "N.A.";
     let answerSheetTemp = classTestRes.Items[0].answer_sheet_template ? classTestRes.Items[0].answer_sheet_template : "N.A.";
+    let keyAnswerTemp = classTestRes.Items[0].key_answer_template ? classTestRes.Items[0].key_answer_template : "N.A.";
 
     let questionUrlCheck = constant.testFolder.questionPapers.split("/")[0];
     let answerUrlCheck = constant.testFolder.answerSheets.split("/")[0];
+    let keyanswerUrlCheck = constant.testFolder.questionPapers.split("/")[0];
 
     classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await s3Services.getS3SignedUrl(questionPaperTEmp) : "N.A.";
     classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await s3Services.getS3SignedUrl(answerSheetTemp) : "N.A.";
+    classTestRes.Items[0].key_answer_template_url = keyAnswerTemp.includes(keyanswerUrlCheck) ? await s3Services.getS3SignedUrl(keyAnswerTemp) : "N.A.";
 
     return classTestRes
 
@@ -238,7 +243,7 @@ exports.startEvaluationProcess = async (request) => {
             //     ).join("\n") + `. In the response content just return similarity scores as numbers like \n100\n100\n70 ,donot add any additional keys or Question Number ( like 'Question 1: 0\n')'.`;
 
             const normalizeAnswer = (answer) => {
-                if (!answer) return "";
+                if (!answer) return " ";
                 let normalized = answer.trim().toLowerCase();
                 if (!isNaN(normalized)) {
                     return parseFloat(normalized).toString();

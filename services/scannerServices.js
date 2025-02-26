@@ -541,8 +541,6 @@ exports.uploadAnswerSheets2 = async (request) => {
                 } else {
                     console.log("Existing Student Record - Updating metadata");
 
-                    testResultData.Items[0].answer_metadata.sort((a, b) => a.page_no - b.page_no);
-
                     let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
                     if (!pageExists) {
@@ -556,6 +554,8 @@ exports.uploadAnswerSheets2 = async (request) => {
                                 : meta
                         ));
                     }
+
+                    testResultData.Items[0].answer_metadata.sort((a, b) => a.page_no - b.page_no);
 
                     const updateRequest = {
                         data: {
@@ -571,8 +571,10 @@ exports.uploadAnswerSheets2 = async (request) => {
                     
                     if(updateResponse){
                         console.log("Image Successfully updated");
+                        return("Image Successfully updated")
                     }else{
                         console.log("Image Update Issue");
+                        return("Image Update Issue")
                     }
                 }
             } else {
