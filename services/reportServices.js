@@ -250,7 +250,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   groupedData.forEach((chapter) => {
     chapter.data.forEach((quiz) => {
       const results = quizResultDataRes.filter(
-        (result) => result.quiz_id === quiz.quiz_id
+        (result) => result.quiz_id === quiz.quiz_id && result.evaluated == "Yes"
       );
       const failedStudents = [];
       let passedStudentsOfParticularQuiz = 0;
