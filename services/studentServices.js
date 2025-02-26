@@ -1437,19 +1437,19 @@ exports.sendEmailToParent = async (request) => {
                 if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
                 let fileKey = worksheet.question_paper_template
                 const fileLink = await s3Services.getFileBufferFromS3(fileKey);
+                let answerFileKey = worksheet.key_answer_template
+                const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
                 // const pdfBase64 = fileBuffer.toString("base64");
-
+                
                 const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
                 const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
                 const chapterNames = request?.data.chapter_name?.join(',')
-                const toMail = parentDetails?.user_email
+                const toMail = parentDetails?.user_email 
                 const mailPayload = {
                     subject: subject,
                     toMail: toMail,
-                    // attachment: {
-                    //     filename: `${worksheet?.question_paper_name}.pdf`,
-                    // },
-                    link: fileLink,
+                    questionPaperLink: fileLink,
+                    answerKeyLink: answerKeyLink,
                     schoolName: schoolName,
                     studentName: studentName,
                     chapterNames: chapterNames,
