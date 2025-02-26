@@ -1426,7 +1426,8 @@ exports.fetchIndividualQuizReport = async (request) => {
   );
   // console.log("quizResults123", quizResults.Items[0].individual_group_performance);
 
-  const allStudentsData = await classTestRepository.getStudentInfo(request);
+  // const allStudentsData = await classTestRepository.getStudentInfo(request);
+  const allStudentsData = await  studentRepository.getStudentsData2(request);
 
   const quizResultsMap = new Map();
   quizResults.Items.forEach((quizResult) => {
@@ -1457,7 +1458,7 @@ exports.fetchIndividualQuizReport = async (request) => {
     }
   });
 
-  return allStudentsData;
+  return {Items : allStudentsData.Items.sort((a, b) => a.user_firstname.localeCompare(b.user_firstname))};
 };
 
 exports.comprehensivePerformanceChapterWise = async (request) => {
