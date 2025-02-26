@@ -1444,7 +1444,7 @@ exports.sendEmailToParent = async (request) => {
                 const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
                 const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
                 const chapterNames = request?.data.chapter_name?.join(',')
-                const toMail = "shankaragouda.patil@rhibhus.com"//parentDetails?.user_email 
+                const toMail = parentDetails?.user_email 
                 const mailPayload = {
                     subject: subject,
                     toMail: toMail,
