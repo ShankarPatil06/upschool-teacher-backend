@@ -103,8 +103,8 @@ exports.topAndBottomPerformers = async function (request, callback) {
                     if (!singleStudent) continue;
 
                     const student = {
-                        student_id: singleStudent.student_id,
-                        student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                        student_id: singleStudent?.student_id,
+                        student_name: `${singleStudent?.user_firstname} ${singleStudent?.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                         percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2)
@@ -128,7 +128,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
                 let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
                 const testData = {
                     student_id: testResult.student_id,
-                    student_name: `${singleStudent[0].user_firstname} ${singleStudent[0].user_lastname}`,
+                    student_name: `${singleStudent[0]?.user_firstname} ${singleStudent[0]?.user_lastname}`,
                     studentMark: testResult?.marks_details[0]?.totalMark,
                     totalMarks: testResult?.marks_details[0]?.expectedMarks,
                     percentage: (((testResult?.marks_details[0]?.totalMark / (testResult?.marks_details[0]?.expectedMarks || 1))) * 100).toFixed(2),
@@ -275,7 +275,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         needAttention.push({
                                             student_id: singleStudentDetails[0].student_id,
-                                            student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                            student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.chapter_title],
@@ -342,7 +342,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         needAttention.push({
                                             student_id: singleStudentDetails[0].student_id,
-                                            student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                            student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.chapter_title],
@@ -431,7 +431,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         needAttention.push({
                                             student_id: singleStudentDetails[0].student_id,
-                                            student_name: `${singleStudentDetails[0].user_firstname} ${singleStudentDetails[0].user_lastname}`,
+                                            student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             class_test_id: testResult.class_test_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.chapter_title],
@@ -903,7 +903,7 @@ exports.studentAvgVsClassAvg = async (request) => {
 
             const student = {
                 student_id: singleStudent.student_id,
-                student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                student_name: `${singleStudent?.user_firstname} ${singleStudent?.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                 percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
@@ -941,7 +941,7 @@ exports.studentAvgVsClassAvg = async (request) => {
             if (!singleStudent) continue;
             const student = {
                 student_id: tResult.student_id,
-                student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                student_name: `${singleStudent?.user_firstname} ${singleStudent?.user_lastname}`,
                 studentMark: studentMark,
                 totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                 percentage: ((studentMark / (typeof expectedMarks === "string" ? totalMarks : expectedMarks || 1)) * 100).toFixed(2),
@@ -1139,7 +1139,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
                     const student = {
                         student_id: singleStudent.student_id,
-                        student_name: `${singleStudent.user_firstname} ${singleStudent.user_lastname}`,
+                        student_name: `${singleStudent?.user_firstname} ${singleStudent?.user_lastname}`,
                         studentMark: studentMark,
                         totalMarks: typeof expectedMarks === "string" ? totalMarks : expectedMarks || totalMarks,
                         percentage: (((studentMark / (expectedMarks || 1))) * 100).toFixed(2),
@@ -1192,7 +1192,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
                                 const studentEntry = {
                                     student_id: student.student_id,
-                                    student_name: `${student.user_firstname} ${student.user_lastname}`,
+                                    student_name: `${student?.user_firstname} ${student?.user_lastname}`,
                                     studentMark: parseInt(total_student_obtained_marks),
                                     totalMarks: parseInt(total_student_marks) || 0,
                                     percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
@@ -1368,8 +1368,8 @@ exports.customWorksheetGenerated = async (request) => {
             let resultPdf = await createPDFandUpdateTemplateDetails(request);
             console.log(resultPdf.data);
 
-            request.data["question_paper_template"] = resultPdf.data.pdf_response
-            request.data["key_answer_template"] = resultPdf.data.answer_pdf_response
+            request.data["question_paper_template"] = resultPdf.data?.pdf_response
+            request.data["key_answer_template"] = resultPdf.data?.answer_pdf_response
 
             await testQuestionPaperRepository.updateTemplateDetails(request)
             return 200
