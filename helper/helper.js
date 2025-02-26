@@ -869,7 +869,7 @@ exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDup
                   function qtnLoop(ind){
                       if(ind < group_list.length){ 
 
-                        if(indheck.length < group_list[ind].group_question_id.length){
+                        if(indheck.length < Number(noOfQuestions)){ //group_list[ind].group_question_id.length
                             // Pick Random Questions out of each group : 
                             const randomIndex = Math.floor(Math.random() * group_list[ind].group_question_id.length); 
                             let qtn_id = group_list[ind].group_question_id[randomIndex]; 
