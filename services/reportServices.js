@@ -1097,7 +1097,6 @@ exports.viewClassReportFocusArea = async (request) => {
         })
         item.questions.map((question) => {
           if (q.questionId === question) {
-            console.log({ seconddddd: q });
             marks = marks + Number(q.marks)
           }
         })
@@ -1111,9 +1110,9 @@ exports.viewClassReportFocusArea = async (request) => {
     });
 
     const countPassed = studentsData.filter(student => student.passed).length;
-    item.passed = (countPassed / totalStudents) * 100 //[%] value
+    item.passed = (countPassed / allStudentsCount) * 100 //[%] value
     item.count = countPassed //pass % numerator
-    item.totalStudents = totalStudents //pass % denominator
+    item.totalStudents = allStudentsCount //pass % denominator
     let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
     if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
       item.successMatrix = "yes";
