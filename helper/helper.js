@@ -1243,6 +1243,56 @@ exports.formatDate =(isoString) => {
   
     return formattedLines;
   };
+
+  exports.extractValuesFromInputNew = async (input) => {
+    // Split the input string by newlines
+    let lines = input.split('\n');
+
+    console.log({ firstttttt: lines })
+
+    // Create an array to store the formatted lines as objects
+    let formattedLines = [];
+
+    // Helper function to process lines with a specific label
+    const processLine = (line, label) => {
+        console.log("label - ", label);
+        const [_, ...value] = line.slice(2).split(':');
+        formattedLines.push({
+            label: label,
+            value: value.join(':').replace(/\*/g, '').replace(/\\$/, '').trim()
+        });
+    };
+
+    // Iterate over each line and apply formatting
+    lines.forEach((line) => {
+        // Trim whitespace and skip empty lines
+        line = line.trim();
+        if (line === '') return;
+
+        // Process specific lines
+        if (line.includes('Set')) processLine(line, "set");
+        else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
+        else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
+        else if (line.includes('Class')) processLine(line, "Class");
+        else if (line.includes('Section')) processLine(line, "Section");
+        else if (line.includes('Subject Name')) processLine(line, "Subject Name");
+        else if (line.includes('Test ID')) processLine(line, "Test ID");
+        else if (line.includes('Roll No')) processLine(line, "Roll No");
+        else if (line.includes('Page')) {
+            const match = line.match(/Page No: (\d+)(?:\/\d+)?/);
+            console.log({ firstttttt: match })
+            if (match) {
+                formattedLines.push({
+                    label: "pageNo",
+                    value: match[1].replace(/\*/g, '').replace(/\\$/, '').trim()
+                });
+            }
+        }
+    });
+
+    return formattedLines;
+};
+
 //   exports.extractAnswersFromInput = async (input) => {
 //     // Split the input by newline
 //     let lines = input.split('\n');
@@ -1337,6 +1387,48 @@ exports.extractAnswersFromInput1 = async (input) => {
     return answers;
   };
   
+  exports.extractAnswersFromInputNew = async (input) => {
+    console.log({ input });
+
+    // Split the input by question numbers followed by '. Ans:'
+    let sections = input.split(/\d+\.?\s*ans:/gi).filter((sec) => sec.trim().length > 0);
+
+    let answers = [];
+
+    // Remove the first element which is before the first question
+    sections.shift();
+
+    let questionMatches = input.match(/\d+\.?\s*ans:/gi); // Matches all question numbers followed by "Ans:"
+
+    console.log({ firsttttt: questionMatches });
+
+    // If no questions are found, we return empty answers
+    if (!questionMatches) {
+        console.log("No question found.");
+        return [];
+    }
+
+    // Iterate over each section to process the answers
+    sections.forEach((section, index) => {
+        let trimmedSection = section.trim();
+
+        // Extract the question number from the questionMatches
+        let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
+
+
+        // Remove line breaks or replace them with a space to make the answer a complete string
+        let answer = trimmedSection.replace(/\n+/g, ' ').trim();
+
+        console.log({ firsttttt: answer });
+
+        // Push the full answer content as a single string for each question
+        answers.push({ question: questionNumber, answer: answer });
+    });
+
+    console.log("Extracted answers:", answers);
+
+    return answers;
+};
   
 // exports.extractAnswersFromInput = async (input) => {
 //     console.log({input})
