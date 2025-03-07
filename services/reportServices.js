@@ -415,6 +415,10 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
 
 
 exports.preLearningSummaryDetails = async (request) => {
+  const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
+
+  const class_percentage = schoolDetails.Items[0].pre_quiz_config.class_percentage;
+  
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
 
@@ -494,10 +498,20 @@ exports.preLearningSummaryDetails = async (request) => {
     });
   }
 
+  chapterDataRes.map((chapter) => {
+    chapter.avgClassAttendance = Number((chapter.totalStrength > 0 ? (chapter.student_attendance / chapter.totalStrength) * 100 : 0).toFixed(2));
+    chapter.classPercentage = class_percentage;
+    return chapter;
+  });
+  console.log({chapterDataRes});
   return chapterDataRes;
 };
 
 exports.postLearningSummaryDetails = async (request) => {
+  const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
+
+  const class_percentage = schoolDetails.Items[0].post_quiz_config.class_percentage
+  console.log({class_percentage});
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
 
@@ -592,7 +606,12 @@ exports.postLearningSummaryDetails = async (request) => {
       }
     });
   }
-
+  
+  chapterDataRes.map((chapter) => {
+    chapter.classPercentage = class_percentage;
+    return chapter;
+  });
+  console.log({chapterDataRes});
   return chapterDataRes;
 };
 
@@ -2576,7 +2595,9 @@ exports.getActionsAndRecommendations = async (request) => {
 
   console.log("quizDataRes.Items.length - ", quizDataRes.Items.length);
   console.log("quizDataRes.Items - ", quizDataRes.Items);
-
+  if(quizDataRes.Items.length === 0){
+    return []
+  }
   const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
     [...Object.values(quiz.question_track_details.qp_set_a || {}),
     ...Object.values(quiz.question_track_details.qp_set_b || {}),
@@ -2617,8 +2638,9 @@ exports.getActionsAndRecommendations = async (request) => {
 
   const chapterIds = [...new Set(quizDataRes.Items.map((quiz) => quiz.chapter_id))];
   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({
-    unit_chapter_id: chapterIds,
+      unit_chapter_id: chapterIds,
   });
+
 
   const topicIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({
