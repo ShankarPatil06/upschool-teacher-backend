@@ -116,7 +116,7 @@ exports.uploadQuizAnswerSheets2 = async (req, res, next) => {
   console.log("uploadAnswerSheets2 Controller!", req.body);
   let request = req.body;
   try {
-    const uploadQuizAnswerSheetsRes = await scannerServices.uploadQuizAnswerSheets2(request);
+    const uploadQuizAnswerSheetsRes = await scannerServices.uploadQuizAnswerSheetsNew(request);
     formatResponse(res, uploadQuizAnswerSheetsRes);
   } catch (error) {
     next(error);
@@ -144,7 +144,7 @@ exports.uploadAnswerSheets2 = async (req, res, next) => {
   console.log("uploadAnswerSheets2222 Controller!!!!", req.body);
   let request = req.body;
   try {
-    const uploadAnswerSheetsRes = await scannerServices.uploadAnswerSheets2(request);
+    const uploadAnswerSheetsRes = await scannerServices.uploadAnswerSheets2New(request);
     formatResponse(res, uploadAnswerSheetsRes);
   } catch (error) {
     next(error);
