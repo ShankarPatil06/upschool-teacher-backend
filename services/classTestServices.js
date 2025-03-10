@@ -200,7 +200,7 @@ exports.startEvaluationProcess = async (request) => {
             };
 
             const studentAnswers = mergedAnswers.map((mark, i) => {
-                const questionDetail = markDetails[0].qa_details[mergedAnswers[i]?.question - 1]
+                const questionDetail = studentMarkDetail.marks_details[0].qa_details[mergedAnswers[i]?.question - 1]
                 return { question_id: questionDetail?.question_id, answers: mergedAnswers[i].answer }
             })
 
