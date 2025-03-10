@@ -170,7 +170,16 @@ exports.startEvaluationProcess = async (request) => {
                 studentMarkDetail.marks_details = [];
             studentMarkDetail.marks_details = [marksFormat];
             const marksToUpdate = marksFormat.qa_details;
-            // const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
+            const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
+            const mergedAnswers = allStudentAnswers.reduce((acc, curr) => {
+                const existing = acc.find(item => item.question === curr.question);
+                if (existing) {
+                    existing.answer += ' ' + curr.answer; // Merge answers with a space
+                } else {
+                    acc.push({ ...curr });
+                }
+                return acc;
+            }, []);
             const getAnswerByQuestionNumber = (questionNumber) => {
                 for (const metadata of studentMarkDetail.answer_metadata) {
                     for (const answerObj of metadata.studentAnswer) {
