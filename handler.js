@@ -161,7 +161,6 @@ app.post("/v1/sendEmailToParent",studentController.sendEmailToParent);
 app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);
 app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise);
 
-
 app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
 
 function haltOnTimedout(req, res, next) {
