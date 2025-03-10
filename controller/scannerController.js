@@ -150,3 +150,14 @@ exports.uploadAnswerSheets2 = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.removeUploadedAnswerData = async (req, res, next) => {
+  console.log("removeUploadedAnswerData Controller!!!!", req.body);
+  let request = req.body;
+  try {
+    const removeUploadedAnswerDataRes = await scannerServices.removeUploadedAnswerData(request);
+    formatResponse(res, removeUploadedAnswerDataRes);
+  } catch (error) {
+    next(error);
+  }
+};

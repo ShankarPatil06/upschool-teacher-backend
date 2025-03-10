@@ -56,6 +56,7 @@ exports.validScannerUser = (req, res, next) => {
             let decode_token = helper.decodeJwtToken(token);
             console.log("decode_token : ", decode_token);
 
+            request.data = request.data || {};
             request.data["teacher_id"] = decode_token.teacher_id;
             request.data["test_id"] = decode_token.test_id;
 
