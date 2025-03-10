@@ -746,8 +746,8 @@ exports.uploadAnswerSheets2New = async (request) => {
     const scannedRes = await ocrServices.readOpenAiPage(request);
     console.log("OPENAI scanned Data:", scannedRes);
     if (scannedRes?.content) {
-        let pageDetailsRes = await helper.extractValuesFromInput(scannedRes.content);
-        const answers = await helper.extractAnswersFromInput(scannedRes.content);
+        let pageDetailsRes = await helper.extractValuesFromInputNew(scannedRes.content);
+        const answers = await helper.extractAnswersFromInputNew(scannedRes.content);
 
         console.log("PAGE DETAILS in openai: ", pageDetailsRes);
         const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
