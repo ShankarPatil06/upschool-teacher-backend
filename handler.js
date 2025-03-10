@@ -168,7 +168,6 @@ function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
 }
 
-
 app.use((err, req, res, next) => {
     console.log(`Path: ${req.path} -> Status Code: ${err.status || ERROR.INTERNAL_SERVER_ERROR} -> Stack: ${err.stack}`)
     res.status(err.status || ERROR.INTERNAL_SERVER_ERROR).send(err.message);
