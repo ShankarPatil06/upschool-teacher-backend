@@ -624,15 +624,15 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
                               res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
 
-                              if(setIndex === 1){
+                              if (setIndex === 1) {
                                 request.data.quiz_question_details.qp_set_a = questions_list
                                 request.data.question_track_details.qp_set_a = res_questionTrackData
-                              }else if(setIndex === 2){
+                              } else if (setIndex === 2) {
                                 request.data.quiz_question_details.qp_set_b = questions_list
                                 request.data.question_track_details.qp_set_b = res_questionTrackData
-                              } else if(setIndex === 3){
-                              request.data.quiz_question_details.qp_set_c = questions_list
-                              request.data.question_track_details.qp_set_c = res_questionTrackData
+                              } else if (setIndex === 3) {
+                                request.data.quiz_question_details.qp_set_c = questions_list
+                                request.data.question_track_details.qp_set_c = res_questionTrackData
                               }
                               non_considered_topic_data = res_non_considered_topic_data;
 
@@ -783,28 +783,35 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                         if (ind < data.group_list.length) {
 
                           if (indheck.length < Number(topicData.noOfQuestions)) {
-                            // Pick Random Questions out of each group : 
-                            const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                            let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                            let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
+                            if (data.group_list[ind].group_question_id.length > 0) {
 
-                            !indheck.includes(randomIndex) && indheck.push(randomIndex);
+                              // Pick Random Questions out of each group : 
+                              const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
+                              let qtn_id = data.group_list[ind].group_question_id[randomIndex];
+                              let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
 
-                            if (dupCheck.length > 0) {
-                              qtnLoop(ind);
-                            } else {
-                              questions_list.push(qtn_id);
-                              if(setIndex === 1){
-                                setADupCheck.push(qtn_id)
-                              }else if(setIndex === 2 ){
-                                setBDupCheck.push(qtn_id)
-                              }else if(setIndex === 3 ){
-                                setCDupCheck.push(qtn_id)
+                              !indheck.includes(randomIndex) && indheck.push(randomIndex);
+
+                              if (dupCheck.length > 0) {
+                                qtnLoop(ind);
+                              } else {
+                                questions_list.push(qtn_id);
+                                if (setIndex === 1) {
+                                  setADupCheck.push(qtn_id)
+                                } else if (setIndex === 2) {
+                                  setBDupCheck.push(qtn_id)
+                                } else if (setIndex === 3) {
+                                  setCDupCheck.push(qtn_id)
+                                }
+
+                                ind++;
+                                qtnLoop(ind);
                               }
-
+                            } else {
                               ind++;
-                              qtnLoop(ind);
+                              qtnLoop(ind)
                             }
+
                           } else {
                             console.log(constant.messages.INSUFFICIENT_QUESTIONS);
                             callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
@@ -1035,11 +1042,11 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
                                   qtnLoop(ind);
                                 } else {
                                   questions_list.push(qtn_id);
-                                  if(setIndex === 1){
+                                  if (setIndex === 1) {
                                     setADupCheck.push(qtn_id)
-                                  }else if(setIndex === 2){
+                                  } else if (setIndex === 2) {
                                     setBDupCheck.push(qtn_id)
-                                  }else if (setIndex === 3){
+                                  } else if (setIndex === 3) {
                                     setCDupCheck.push(qtn_id)
                                   }
                                   ind++;
