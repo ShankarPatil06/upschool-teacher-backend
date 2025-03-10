@@ -147,6 +147,13 @@ exports.messages = {
     COULDNT_READ_PAGE_DETAILS: "Couldn't extract basic page details, please re-upload!",
     COULDNT_READ_TEST_ID: "Couldn't extract Test ID, please re-upload!",
     COULDNT_READ_ROLL_NUMBER: "Couldn't extract student roll no, please enter it manually!",
+    
+    ANSWER_DATA_WAS_NOT_FOUND: "Answer Data not Found!",
+    STUDENT_DATA_NOT_FOUND: "Student Data not Found!",
+    TEST_DATA_NOT_FOUND: "Test Data not Found!",
+    QUIZ_DATA_NOT_FOUND: "Quiz Data not Found!",
+    UPLOADED_ANSWER_REMOVED: "Uploaded Answer Removed Successfully!",
+    UPLOADED_ANSWER_REMOVEAL_ISSUE: "Uploaded Answer Removeal Issue!",
 
     // Scanner
     UPLOAD_URL_Sent: "Please, check your email to access the URL to upload Answer Sheets!",
