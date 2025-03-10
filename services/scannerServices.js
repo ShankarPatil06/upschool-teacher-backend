@@ -1224,8 +1224,8 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                         return ("Image Uploaded successfully");
                     } else {
                         return ("New Student Insert issue in quiz");
-                    } s
-
+                    }
+                    
                 } else {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
@@ -1281,6 +1281,100 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
     } else {
         console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
         return (constant.messages.UNABLE_TO_EXTRACT_TEXT);
+    }
+}
+
+exports.removeUploadedAnswerData = async function (request) {
+
+    console.log("request data:----", request);
+    const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
+    console.log("Student data:----", studentData.Items);
+
+    if (studentData.Items.length > 0) {
+        request.data.student_id = studentData.Items[0].student_id;
+
+        if (request.data.test_type === 'classTest') {
+            request.data.class_test_id = request.data.exam_id;
+
+            // console.log("testResultData data:----", studentData.Items);
+            const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
+            if (testResultData.Items.length > 0) {
+
+                let pageDataExists = testResultData.Items[0].answer_metadata.find(value => value.url === request.data.Key[0]);
+
+                console.log("pageDataExists ---", pageDataExists);
+
+                if (pageDataExists) {
+                    testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.filter(value => value.url !== request.data.Key[0]);
+
+                    const updateRequest = {
+                        data: {
+                            result_id: testResultData.Items[0].result_id,
+                            answer_metadata: testResultData.Items[0].answer_metadata,
+                        }
+                    };
+                    console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
+                    const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
+
+                    console.log("updateResponse - ", updateResponse);
+
+                    if (updateResponse) {
+                        console.log("Uploaded test Answer Removed Successfully");
+                        return (constant.messages.UPLOADED_ANSWER_REMOVED);
+                    } else {
+                        console.log("Uploaded test Answer Removeal Issue");
+                        return (constant.messages.UPLOADED_ANSWER_REMOVEAL_ISSUE);
+                    }
+                } else {
+                    return (constant.messages.ANSWER_DATA_WAS_NOT_FOUND);
+                }
+            } else {
+                return (constant.messages.TEST_DATA_NOT_FOUND);
+            }
+        } else if (request.data.test_type === 'quiz') {
+            request.data.quiz_id = request.data.exam_id;
+
+            // console.log("testResultData data:----", studentData.Items);
+            const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
+
+            if (fetchQuizResultResponse.Items.length > 0) {
+    
+                let pageDataExists = fetchQuizResultResponse.Items[0].answer_metadata.find(value => value.url === request.data.Key[0]);
+    
+                console.log("pageDataExists --- quiz", pageDataExists);
+    
+                if (pageDataExists) {
+                    fetchQuizResultResponse.Items[0].answer_metadata = fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.url !== request.data.Key[0]);
+    
+                    const updateRequest = {
+                        data: {
+                            result_id: fetchQuizResultResponse.Items[0].result_id,
+                            answer_metadata: fetchQuizResultResponse.Items[0].answer_metadata,
+                            quiz_set: request.data.quiz_set
+                        }
+                    };
+                    console.log("Updating Page Metadata: quiz", updateRequest.data.answer_metadata);
+                    const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
+    
+                    console.log("updateResponse - quiz", updateQuizDataResponse);
+    
+                    if (updateQuizDataResponse) {
+                        console.log("Uploaded quiz Answer Removed Successfully");
+                        return (constant.messages.UPLOADED_ANSWER_REMOVED);
+                    } else {
+                        console.log("Uploaded quiz Answer Removeal Issue");
+                        return (constant.messages.UPLOADED_ANSWER_REMOVEAL_ISSUE);
+                    }
+                } else {
+                    return (constant.messages.ANSWER_DATA_WAS_NOT_FOUND);
+                }
+            } else {
+                return (constant.messages.TEST_DATA_NOT_FOUND);
+            }
+        }
+
+    } else {
+        return (constant.messages.STUDENT_DATA_NOT_FOUND);
     }
 }
 
