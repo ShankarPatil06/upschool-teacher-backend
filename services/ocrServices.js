@@ -183,6 +183,67 @@ async function convertImageToBase64(imageUrl) {
   }
 };
 
+const extractTextAndEquationsss = async (imageUrls, predictiveText) => {
+  try {
+    const extractedTexts = [];
+  
+    for (const imageUrl of imageUrls) {
+      const base64Image = await convertImageToBase64(imageUrl);
+      if (base64Image) {
+        let response;
+
+        if (predictiveText && predictiveText === 'Yes') {
+          response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            temperature: 0,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  // { type: 'text', text: 'Extract text, images, and equations from the image exactly as it appears, without adding any additional formatting, symbols, or special characters like *. Also, read the page number (like Page no: 1/2) and roll no precisely. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },
+
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No. If there are spelling or grammar mistakes, correct them and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).' },//uncomment this
+                  { type: 'text', text: '1.First,extract the "Set:", "Quiz ID:", "Quiz Name:", "Class:", "Section:", "Subject Name:", "Test ID:", "Roll No:", "Page No:" in the exact order and format while giving the output.2.Second extract text, images, and equations(Provide Equations in Latex) from the image.3. Correct spelling and grammar mistakes and highlight the corrected words in red using inline CSS (e.g., <span style="color:red;">corrected word</span>).4. For unclear handwriting, provide multiple possible interpretations of ambiguous words or phrases, displaying them in parentheses (e.g., word1/word2).5. Omit content that is scratched, scribbled over, or manually crossed out. Do not include parts of the text that are visibly altered by strikethroughs or manual cuts, as these indicate the student intent to remove them.6. If an answer is written by the student below or beside the scratched-out or manually cut part, include it in the output as part of the student response, provided it is clearly legible and not crossed out.7. Apply predictive corrections only to the final content clearly intended by the student while excluding manually crossed-out portions. Correct the intended response to improve readability while maintaining accuracy.8. Ensure the output provides the complete answer of the student response while balancing predictive assistance with accuracy and respecting the student original intent.9.Do not give any extra characters or symbols in the answersheet , just give the extracted content as it is.' },
+                  { type: 'image_url', image_url: { url: base64Image } },
+                ],
+              },
+            ],
+          });
+        }
+        else {
+          response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            temperature: 0,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number (like 1/2) and roll no precisely.' },
+
+                  // { type: 'text', text: 'Extract text, images, and equations from the image. Also, read the page number as Page No' },//uncomment this
+
+                  { type: 'text', text: '1.First,extract the "Set:", "Quiz ID:", "Quiz Name:", "Class:", "Section:", "Subject Name:", "Test ID:", "Roll No:", "Page No:" in the exact order and format while giving the output.2.Second extract text, images, and equations(Provide Equations in Latex) from the image.3. Provide multiple possible interpretations for ambiguous words or phrases, displaying them in parentheses (e.g., word1/word2), to assist evaluators in selecting the appropriate option.4. Omit any content that is scratched, scribbled over, or manually crossed out. Do not include any part of the text that is visibly altered by a strikethrough or cross mark, as this indicates the student intent to remove it. Only include the final content that is clearly legible and intended for submission.5. If an answer is written by the student below or beside the scratched or cut-out part, include it in the output as part of the student response, as long as it is not crossed out.6. Do not apply predictive corrections. Ensure that the text is extracted exactly as written by the student, preserving the original spelling, punctuation, and handwriting as much as possible. Only focus on precise extraction to maintain accuracy.7. Avoid interpreting or modifying the content beyond what is clearly written by the student. If there is ambiguity, include it verbatim, and where necessary, provide an alternative reading in parentheses to preserve accuracy.9.Do not give any extra characters or symbols in the answersheet , just give the extracted content as it is.' },
+                  { type: 'image_url', image_url: { url: base64Image } },
+                ],
+              },
+            ],
+          });
+        }
+
+        const extractedText = response?.choices[0].message;
+        if (extractedText) extractedTexts.push(extractedText);
+      } else {
+        console.error('Failed to convert image to base64 for URL:', imageUrl);
+      }
+    }
+
+    return extractedTexts;
+  } catch (error) {
+    console.error('Error processing images:', error);
+    return null;
+  }
+};
+
   // async function extractTextAndEquations(imageUrl ,predictiveText ) {
   //   try {
   //     const promptText = predictiveText && predictiveText === 'Yes'
@@ -316,4 +377,44 @@ const response = await responsePromise;
     }
   };
   
-
+  exports.readOpenAiPages = async (request) => {
+    try {
+      const { Keys } = request.data;
+      const imageUrls = await Promise.all(
+        Keys.map(async (Key) => {
+          return await s3Services.getS3SignedUrl(Key);
+        })
+      );
+  
+      console.log("Signed URLs:", imageUrls);
+  
+      // const imageUrl = await s3Services.getS3SignedUrl("quiz_uploads/c2ddd828-ab47-5a7a-9128-9243f107f187/student_answered_sheets/5e7af638-6523-5cf6-844b-f68b03b1041b.png");
+      // const imageUrl = "https://testing-upschool.s3.ap-south-1.amazonaws.com/quiz_uploads/144568c4-5cb6-5852-96a9-df46756f233f/student_answered_sheets/e9e38967-6113-4ebd-9f39-ec22010c9e50.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQREMEI3P6BDPNCX2%2F20241213%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20241213T042820Z&X-Amz-Expires=600&X-Amz-Signature=8040c9f039e230c5324ef262bac0c0ab0a75d920777201fcd29c0d8b3b12126f&X-Amz-SignedHeaders=host";
+  
+      // For testing, you can pass a hardcoded URL to extract text and equations
+      //   const imageUrl = request.data.url; // Replace with your image URL
+  
+      // const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
+      // // console.log("type",schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation)
+      //   const response = await extractTextAndEquations(imageUrl,schoolInfo?.Items[0].school_subscribtion_feature.predictive_evaluation);
+      const schoolInfoPromise = schoolRepository.getSchoolDetailsById2(request);
+  
+      console.log("schoolInfoPromise--", schoolInfoPromise)
+  
+      const responsePromise = schoolInfoPromise.then(schoolInfo =>
+        extractTextAndEquations(imageUrls, schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation ? schoolInfo?.Items[0]?.school_subscribtion_feature?.predictive_evaluation : 'NO')
+      );
+  
+      // Wait for both promises to resolve
+      const schoolInfo = await schoolInfoPromise;
+      const response = await responsePromise;
+  
+  
+      console.log('Analysis result:', response);
+      return response;
+  
+    } catch (error) {
+      console.error('Error in readOpenAiPage:', error);
+      return { error: 'Error in processing the image' };
+    }
+  };
