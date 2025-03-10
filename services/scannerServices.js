@@ -330,29 +330,6 @@ exports.fetchSignedURLForAnswers = async (request) => {
     }];
 };
 
-exports.fetchSignedURLForAnswers = async (request) => {
-    const folderPath = constant.testFolder.studAnswerSheets.replace("**REPLACE**", request.data.test_id);
-
-    // Ensure request.data.ext_file is an array
-    const extFiles = Array.isArray(request.data.ext_files) ? request.data.ext_files : [request.data.ext_files];
-    // Generate signed URLs for all files
-    const signedUrls = await Promise.all(
-        extFiles.map(async (fileName) => {
-            const extFilesS3 = await helper.PutObjectS3SigneUdrl(fileName, folderPath);
-
-            return {
-                file_name: fileName,
-                s3Url: extFilesS3.uploadURL,
-                Key: extFilesS3.Key
-            };
-        })
-    );
-
-    console.log({ signedUrls });
-
-    return signedUrls; // Return as an array
-};
-
 exports.uploadAnswerSheets = async function (request, callback) {
 
     let pageMetadata = {};
