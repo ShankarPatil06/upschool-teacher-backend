@@ -503,7 +503,7 @@ exports.preLearningSummaryDetails = async (request) => {
     chapter.classPercentage = class_percentage;
     return chapter;
   });
-  console.log({chapterDataRes});
+  console.log({ chapterDataRes });
   return chapterDataRes;
 };
 
@@ -556,10 +556,11 @@ exports.postLearningSummaryDetails = async (request) => {
   const quizIds = chapterDataRes.flatMap(
     (val) => val.quiz_id?.map((quiz) => quiz.id) || []
   );
-  const quizResultDataRes =
-    await quizResultRepository.fetchBulkQuizResultsByID2({
-      unit_Quiz_id: quizIds,
-    });
+
+  if (!quizIds.length) return [];
+  const quizResultDataRes = await quizResultRepository.fetchBulkQuizResultsByID2({
+    unit_Quiz_id: quizIds,
+  });
 
   chapterDataRes.forEach((val) => {
     val.totalStrength = studentsCount;
@@ -688,7 +689,7 @@ exports.viewClassReportQuestions = async (request) => {
   ]);
   // console.log("QUIZRESULT", quizResult.Items[1].marks_details[0]);
   // console.log("quizData", quizData);
-
+  if (quizResult.Items.length === 0) return [];
   const quizResultMarksData = quizResult.Items
     .filter((item) => item.evaluated === "Yes")
     .map((item) => item.marks_details?.[0]?.qa_details);
@@ -790,18 +791,6 @@ exports.viewClassReportQuestions = async (request) => {
         count > 0 ? (count / totalStudents) * 100 : 0;
     });
     //% of correct answers
-    let correctAnswer = question.answers_of_question.find(
-      (answer) => answer.answer_display === "Yes"
-    );
-    if (correctAnswer) {
-      if (correctAnswer.answer_type === "Image") {
-        correctAnswer.answer_content = await s3Services.getS3SignedUrl(correctAnswer.answer_content);
-      }
-      question.correctAnswer = correctAnswer.answer_content;
-    } else {
-      question.correctAnswer = "N.A";
-    }
-      
     if (allAnswers.length === 0) {
       question.correctAnswerPercentage = 0;
     } else {
@@ -851,11 +840,13 @@ exports.viewClassReportQuestions = async (request) => {
     }
   });
 
-  const mergedData = averageData.reduce((acc, item) => {
+
+  let mergedData = averageData.reduce((acc, item) => {
     const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
     if (existingSkill) {
-      existingSkill.totalPercentage += parseFloat(item.percentage);
+      existingSkill.totalPercentage += item.percentage ? parseFloat(item.percentage) : 0;
       existingSkill.count += 1;
+      // existingSkill.level = item.level;
     } else {
       acc.push({
         skill: item.skill,
@@ -870,6 +861,25 @@ exports.viewClassReportQuestions = async (request) => {
     percentage: (skillItem.totalPercentage / skillItem.count).toFixed(2),
     level: skillItem.level
   }));
+
+  let mergedDataForLevel = averageData.reduce((acc, item) => {
+    const existingLevel = acc.find(levelItem => levelItem.level === item.level);
+    console.log({ existingLevel });
+    console.log({ acc });
+    console.log({ item });
+    if (existingLevel) {
+      existingLevel.totalPercentage += item.percentage ? parseFloat(item.percentage) : 0;
+      existingLevel.count += 1;
+    } else {
+      acc.push({
+        level: item.level,
+        totalPercentage: parseFloat(item.percentage),
+        count: 1,
+      });
+    }
+    return acc;
+  }, [])
+
 
   const skillCounts = averageData.reduce((acc, item) => {
     const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
@@ -897,12 +907,23 @@ exports.viewClassReportQuestions = async (request) => {
     skillTotals[skill].total = percentage;
     skillTotals[skill].count += intelligenceCount?.count;
 
+    // if (level !== "N.A") {
+    //   if (!levelTotals[level]) {
+    //     levelTotals[level] = { total: 0, count: 0 };
+    //   }else{
+    //     levelTotals[level].total += parseFloat(percentage);
+    //     levelTotals[level].count += 1;
+    //   }
+    // }
+  });
+
+  mergedDataForLevel?.forEach(({ level, totalPercentage, count }) => {
     if (level !== "N.A") {
       if (!levelTotals[level]) {
         levelTotals[level] = { total: 0, count: 0 };
       }
-      levelTotals[level].total += percentage;
-      levelTotals[level].count += 1;
+      levelTotals[level].total += totalPercentage;
+      levelTotals[level].count += count;
     }
   });
 
@@ -914,7 +935,7 @@ exports.viewClassReportQuestions = async (request) => {
 
   const difficultyResult = Object.keys(levelTotals).map((level) => ({
     level,
-    averagePercentage: levelTotals[level].total / levelTotals[level].count,
+    averagePercentage: parseFloat((levelTotals[level].total / levelTotals[level].count).toFixed(2)),
     noOfQuestions: levelTotals[level].count,
   }));
   // console.log("possiblemarks", possiblemarks);
@@ -922,18 +943,36 @@ exports.viewClassReportQuestions = async (request) => {
   // console.log("totalStudents", totalStudents);
 
   const pieValue = (totalMarkObtainedByStudents / totalMarkExpectedFromStudents) * 100
-  await Promise.all( questions.map(async (question, i) => {
+  await Promise.all(questions.map(async (question) => {
+    // Fetch signed URLs for answers with "Image" or "Audio File" types
     await Promise.all(
       question.answers_of_question.map(async (ans) => {
-        if (
-          ans.answer_type === "Image" ||
-          ans.answer_type === "Audio File"
-        ) {
+        if (ans.answer_type === "Image" || ans.answer_type === "Audio File") {
           ans.answer_content = await s3Services.getS3SignedUrl(ans.answer_content);
         }
       })
-    )
+    );
+
+    // Handle the correct answer part with Promises
+
+    await Promise.all([
+      (async () => {
+        const correctAnswer = question.answers_of_question.find(
+          (answer) => answer.answer_display === "Yes"
+        );
+
+        if (correctAnswer) {
+          // if (correctAnswer.answer_type === "Image") {
+          //   correctAnswer.answer_content = await s3Services.getS3SignedUrl(correctAnswer.answer_content);
+          // }
+          question.correctAnswer = correctAnswer.answer_content;
+        } else {
+          question.correctAnswer = "N.A";
+        }
+      })()
+    ]);
   }));
+
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
 
@@ -1013,7 +1052,7 @@ exports.viewClassReportFocusArea = async (request) => {
   const allConceptIds = new Set([...conceptIdsSetC, ...conceptIdsSetB, ...conceptIdsSetA]);
 
   const questions = await new Promise((resolve, reject) => {
-    questionRepository.fetchBulkQuestionsNameById(
+    questionRepository.fetchBulkQuestionsNameById3(
       { question_id: allQuestionIds },
       (err, res) => {
         if (err) {
@@ -1196,7 +1235,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
     console.log("questionsids", questionIds.length)
     // Fetch question
     const questions = await new Promise((resolve, reject) => {
-      questionRepository.fetchBulkQuestionsNameById({ question_id: questionIds }, (err, res) => {
+      questionRepository.fetchBulkQuestionsNameById3({ question_id: questionIds }, (err, res) => {
         if (err) {
           console.log(err);
           return reject(err);
@@ -1508,7 +1547,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   ]);
   // if(allQuestionIds.length ==0)return [];
 
-  const questions = allQuestionIds.length && await questionRepository.fetchBulkQuestionsNameById2({
+  const questions = allQuestionIds.length && await questionRepository.fetchBulkQuestionsNameById5({
     question_id: [...new Set(allQuestionIds)],
   });
 
@@ -1778,7 +1817,7 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
   ]);
 
   if (allQuestionIds.length == 0) return [];
-  const questions = await questionRepository.fetchBulkQuestionsNameById2({
+  const questions = await questionRepository.fetchBulkQuestionsNameById5({
     question_id: [...new Set(allQuestionIds)],
   });
 
@@ -2086,7 +2125,7 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   ]);
 
   if (allQuestionIds.length == 0) return [];
-  const questions = await questionRepository.fetchBulkQuestionsNameById2({
+  const questions = await questionRepository.fetchBulkQuestionsNameById5({
     question_id: [...new Set(allQuestionIds)],
   });
 
@@ -2627,7 +2666,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
   const questions = await new Promise((resolve, reject) => {
     if (questionIdsSetA.length > 0) {
-      questionRepository.fetchBulkQuestionsNameById(
+      questionRepository.fetchBulkQuestionsNameById3(
         { question_id: questionIdsSetA },
         (err, res) => (err ? reject(err) : resolve(res))
       );
