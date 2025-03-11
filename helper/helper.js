@@ -1390,43 +1390,25 @@ exports.extractAnswersFromInput1 = async (input) => {
   exports.extractAnswersFromInputNew = async (input) => {
     console.log({ input });
 
-    // Split the input by question numbers followed by '. Ans:'
-    let sections = input.split(/\d+\.?\s*ans:/gi).filter((sec) => sec.trim().length > 0);
+    // Match all question numbers with "ans:"
+    let questionMatches = input.match(/\d+\.?\s*ans:/gi) || [];
 
     let answers = [];
 
-    // Remove the first element which is before the first question
-    sections.shift();
+    // Iterate over each match and extract the corresponding answer
+    questionMatches.forEach((match) => {
+        let questionNumber = match.match(/\d+/)[0]; // Extract the question number
 
-    let questionMatches = input.match(/\d+\.?\s*ans:/gi); // Matches all question numbers followed by "Ans:"
+        // Use regex to find the answer after the question number
+        let regex = new RegExp(`${match}\\s*(.*?)\\s*(?=\\d+\\.\\s*ans:|$)`, "is");
+        let answerMatch = input.match(regex);
 
-    console.log({ firsttttt: questionMatches });
+        let answer = answerMatch ? answerMatch[1].trim() : "";
 
-    // If no questions are found, we return empty answers
-    if (!questionMatches) {
-        console.log("No question found.");
-        return [];
-    }
-
-    // Iterate over each section to process the answers
-    sections.forEach((section, index) => {
-        let trimmedSection = section.trim();
-
-        // Extract the question number from the questionMatches
-        let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
-
-
-        // Remove line breaks or replace them with a space to make the answer a complete string
-        let answer = trimmedSection.replace(/\n+/g, ' ').trim();
-
-        console.log({ firsttttt: answer });
-
-        // Push the full answer content as a single string for each question
         answers.push({ question: questionNumber, answer: answer });
     });
 
     console.log("Extracted answers:", answers);
-
     return answers;
 };
   
