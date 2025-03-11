@@ -1,5 +1,5 @@
 const chapterServices = require("../services/chapterServices");
-const { schoolRepository,chapterRepository,topicRepository,teachingActivityRepository,conceptRepository } = require("../repository")
+const { schoolRepository,chapterRepository,topicRepository,teachingActivityRepository,conceptRepository, groupRepository } = require("../repository")
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 
@@ -164,10 +164,10 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                         })
                     });
 
-                    basic_groups = helper.removeDuplicates(basic_groups); 
-                    intermediate_groups = helper.removeDuplicates(intermediate_groups); 
-                    advanced_groups = helper.removeDuplicates(advanced_groups); 
-                
+                    basic_groups = await processGroups(basic_groups); 
+                    intermediate_groups = await processGroups(intermediate_groups); 
+                    advanced_groups = await processGroups(advanced_groups); 
+                    
                     exports.calculateMatrix(basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, (matrix_err, matrix_response) => {
                     if(matrix_err){
                         callback(400, matrix_err); 
@@ -277,6 +277,18 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
         }
     })
 }
+
+const processGroups = async (groupArray) => {
+    groupArray = helper.removeDuplicates(groupArray);
+
+    if (groupArray.length === 0) return [];
+
+    const groupDetails = await groupRepository.fetchGroupsData2({ group_array: groupArray });
+
+    return groupDetails
+        .filter(group => group.group_question_id.length > 0)
+        .map(group => group.group_id);
+};
 
 exports.calculateMatrix = function (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, callback) {  
 
