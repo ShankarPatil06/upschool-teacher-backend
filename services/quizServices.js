@@ -1027,7 +1027,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
                 totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
                 mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
-                mark.student_answer = questionAnswerPairs[index].studentAnswer;
+                mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
                 // console.log("scores[index] - ", scores[index]);
 
                 answerCompareArray.push({
