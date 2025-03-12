@@ -448,9 +448,9 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
             advanced_groups.push(...e.concept_group_id.advanced)
           });
 
-          basic_groups = helper.removeDuplicates(basic_groups);
-          intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          advanced_groups = helper.removeDuplicates(advanced_groups);
+          basic_groups = await questionServices.processGroups(basic_groups); //helper.removeDuplicates(basic_groups);
+          intermediate_groups = await questionServices.processGroups(intermediate_groups); //helper.removeDuplicates(intermediate_groups);
+          advanced_groups =await questionServices.processGroups(advanced_groups); //helper.removeDuplicates(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async function (matrix_count_err, matrix_count_response) {
             if (matrix_count_err) {
@@ -556,6 +556,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             for (var i in non_considered_topic_data) {
                               non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
                             };
+                            console.log({ request , "quiz_duration" : quiz_duration , questions_list});
 
                             quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
                               if (addQuiz_err) {

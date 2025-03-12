@@ -164,9 +164,9 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                         })
                     });
 
-                    basic_groups = await processGroups(basic_groups); 
-                    intermediate_groups = await processGroups(intermediate_groups); 
-                    advanced_groups = await processGroups(advanced_groups); 
+                    basic_groups = await exports.processGroups(basic_groups); 
+                    intermediate_groups = await exports.processGroups(intermediate_groups); 
+                    advanced_groups = await exports.processGroups(advanced_groups); 
                     
                     exports.calculateMatrix(basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, (matrix_err, matrix_response) => {
                     if(matrix_err){
@@ -278,16 +278,28 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
     })
 }
 
-const processGroups = async (groupArray) => {
+exports.processGroups = async (groupArray) => {
     groupArray = helper.removeDuplicates(groupArray);
 
     if (groupArray.length === 0) return [];
 
     const groupDetails = await groupRepository.fetchGroupsData2({ group_array: groupArray });
 
+    const questionIdCount = new Map();
+
+    groupDetails.forEach(group => {
+        group.group_question_id.forEach(questionId => {
+            questionIdCount.set(questionId, (questionIdCount.get(questionId) || 0) + 1);
+        });
+    });
+
     return groupDetails
-        .filter(group => group.group_question_id.length > 0)
+        .filter(group => group.group_question_id.some(questionId => questionIdCount.get(questionId) === 1))
         .map(group => group.group_id);
+
+    // return groupDetails
+    //     .filter(group => group.group_question_id.length > 0)
+    //     .map(group => group.group_id);
 };
 
 exports.calculateMatrix = function (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, callback) {  
