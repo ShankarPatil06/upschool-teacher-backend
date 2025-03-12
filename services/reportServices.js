@@ -418,7 +418,7 @@ exports.preLearningSummaryDetails = async (request) => {
   const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
 
   const class_percentage = schoolDetails.Items[0].pre_quiz_config.class_percentage;
-  
+
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
 
@@ -511,7 +511,7 @@ exports.postLearningSummaryDetails = async (request) => {
   const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
 
   const class_percentage = schoolDetails.Items[0].post_quiz_config.class_percentage
-  console.log({class_percentage});
+  console.log({ class_percentage });
   const studentsDataRes = await studentRepository.getStudentsData2(request);
   const studentsCount = studentsDataRes.Items.length;
 
@@ -607,12 +607,12 @@ exports.postLearningSummaryDetails = async (request) => {
       }
     });
   }
-  
+
   chapterDataRes.map((chapter) => {
     chapter.classPercentage = class_percentage;
     return chapter;
   });
-  console.log({chapterDataRes});
+  console.log({ chapterDataRes });
   return chapterDataRes;
 };
 
@@ -621,7 +621,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
   const studentsDataRes =
     await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === "Yes" ) {
+  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === "Yes") {
     const setKey = studentsDataRes.Items[0].marks_details[0].set_key;
 
     const questionTrackDetails = quizData.Item.question_track_details[setKey];
@@ -2634,7 +2634,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
   console.log("quizDataRes.Items.length - ", quizDataRes.Items.length);
   console.log("quizDataRes.Items - ", quizDataRes.Items);
-  if(quizDataRes.Items.length === 0){
+  if (quizDataRes.Items.length === 0) {
     return []
   }
   const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
@@ -2677,7 +2677,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
   const chapterIds = [...new Set(quizDataRes.Items.map((quiz) => quiz.chapter_id))];
   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({
-      unit_chapter_id: chapterIds,
+    unit_chapter_id: chapterIds,
   });
 
 
@@ -2852,6 +2852,13 @@ exports.getActionsAndRecommendationDetail = async (request) => {
     ...new Set(Object.values(quizData.Item.question_track_details.qp_set_a).flat())
   ];
 
+  const allAuestionSet = [
+    ...new Set(Object.values(quizData.Item.question_track_details.qp_set_a).flat()),
+    ...new Set(Object.values(quizData.Item.question_track_details.qp_set_b).flat()),
+    ...new Set(Object.values(quizData.Item.question_track_details.qp_set_c).flat()),
+  ];
+
+
   const conceptAndQuestions = questionSetA.reduce((acc, item) => {
     const existingConcept = acc?.find((concept) => concept.concept === item.concept_id);
     if (existingConcept) {
@@ -2868,6 +2875,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
   const conceptIdsSetA = questionSetA.map((item) => item.concept_id);
   const questionIdsSetA = questionSetA.map((item) => item.question_id);
+  const allQuestionIdSet = allAuestionSet.map((item) => item.question_id);
 
   const questions = await new Promise((resolve, reject) => {
     questionRepository.fetchBulkQuestionsNameById(
@@ -2900,7 +2908,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   const marksOfEachStudent = [];
   quizResultMarksData.forEach((qdata) => {
     qdata.marks.forEach((marks) => {
-      questionIdsSetA.forEach((question) => {
+      allQuestionIdSet.forEach((question) => {
         if (question === marks.question_id) {
           let marksValue = marks.modified_marks === "N.A."
             ? marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks
@@ -2937,16 +2945,16 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   let conceptsToFocus = [];
 
   let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.chapter_title || "Unknown Chapter";
-  console.log({questions123:questions, conceptAndQuestions ,});
+  console.log({ questions123: questions, conceptAndQuestions, });
   conceptAndQuestions.forEach((item) => {
     let studentsData = [];
     let studentPerformance = [];
     item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
-    
+
     const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
-    
-    const conceptQuestionDetails = questions.filter((question) => item?.questions?.find((q) => q === question.question_id) );
+
+    const conceptQuestionDetails = questions.filter((question) => item?.questions?.find((q) => q === question.question_id));
 
     const totalMarksForThisQuiz = quizData.Item.question_track_details.qp_set_a.reduce(
       (total, question) => {
