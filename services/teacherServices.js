@@ -718,9 +718,14 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       let intermediate_groups = splitGroups.intermediate_groups;
       let advanced_groups = splitGroups.advanced_groups;
 
-      basic_groups = helper.removeDuplicates(basic_groups);
-      intermediate_groups = helper.removeDuplicates(intermediate_groups);
-      advanced_groups = helper.removeDuplicates(advanced_groups);
+      // basic_groups = helper.removeDuplicates(basic_groups);
+      // intermediate_groups = helper.removeDuplicates(intermediate_groups);
+      // advanced_groups = helper.removeDuplicates(advanced_groups);
+
+      basic_groups = await questionServices.processGroups(basic_groups); 
+      intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+      advanced_groups = await questionServices.processGroups(advanced_groups);
+
 
       questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
         if (matrix_err) {
@@ -967,9 +972,13 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           let intermediate_groups = conceptData[0].concept_group_id.intermediate;
           let advanced_groups = conceptData[0].concept_group_id.advanced;
 
-          basic_groups = helper.removeDuplicates(basic_groups);
-          intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          advanced_groups = helper.removeDuplicates(advanced_groups);
+          // basic_groups = helper.removeDuplicates(basic_groups);
+          // intermediate_groups = helper.removeDuplicates(intermediate_groups);
+          // advanced_groups = helper.removeDuplicates(advanced_groups);
+
+          basic_groups = await questionServices.processGroups(basic_groups); 
+          intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+          advanced_groups = await questionServices.processGroups(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
             if (matrix_err) {
