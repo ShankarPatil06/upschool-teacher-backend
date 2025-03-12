@@ -455,6 +455,14 @@ exports.fetchBulkDataWithProjection2 = async (request) => {
   }
 };
 
+const chunkArray = (array, chunkSize) => {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
+
 exports.fetchBulkDataWithProjection3 = async (request) => {
   let { IdArray, fetchIdName, TableName, projectionExp } = request;
 
@@ -479,27 +487,31 @@ exports.fetchBulkDataWithProjection3 = async (request) => {
     const result = await DATABASE_TABLE2.query(read_params);
     return result.Items || [];
   } else {
-    const keys = IdArray.map(id => ({
-      [fetchIdName]: id,
-    }));
+    const idChunks = chunkArray(IdArray, 100);
+    let allResponses = [];
 
-    let batchParams = {
-      RequestItems: {
-        [TableName]: {
-          Keys: keys,
-          ProjectionExpression: projectionExp.join(", "), 
+    for (const chunk of idChunks) {
+      const keys = chunk.map(id => ({ [fetchIdName]: id }));
+
+      let batchParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys,
+            ProjectionExpression: projectionExp.join(", "),
+          },
         },
-      },
-    };
+      };
 
-    console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
-    const response = await DATABASE_TABLE2.getByObjects(batchParams);
-    return response.Responses ? response.Responses[TableName] : [];
+      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+      const response = await DATABASE_TABLE2.getByObjects(batchParams);
+      if (response.Responses && response.Responses[TableName]) {
+        allResponses = allResponses.concat(response.Responses[TableName]);
+      }
+    }
+
+    return allResponses;
   }
 };
-
-
-
 
 exports.bulkBatchWrite = async (itemsToWrite, userTable) => {
   if (itemsToWrite.length > 0) {

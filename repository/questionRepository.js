@@ -13,7 +13,7 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
             callback(500, constant.messages.DATABASE_ERROR);
         } else {
             let { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
-            
+
             let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
             let expAttributeVal = {};
 
@@ -27,9 +27,8 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
             if (IdArray.length === 0) {
                 console.log("EMPTY BULK ID");
                 callback(0, { Items: [] });
-            } 
-            else if (IdArray.length === 1) 
-            {
+            }
+            else if (IdArray.length === 1) {
                 expAttributeVal[":" + fetchIdName] = IdArray[0];
                 expAttributeVal[":question_status"] = questionStatus;
                 expAttributeVal[":question_source0"] = "71416d29-c96b-5889-9b90-580567446dbc";
@@ -45,7 +44,7 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
                 console.log("READ PARAMS : ", read_params);
 
                 DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-            } 
+            }
             else {
                 IdArray.forEach((element, index) => {
                     if (index < IdArray.length - 1) {
@@ -83,7 +82,7 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
 //             callback(500, constant.messages.DATABASE_ERROR);
 //         } else {
 //             let { IdArray, fetchIdName, TableName, projectionExp, questionStatus, sourceIds } = request;
-            
+
 //             let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
 //             let expAttributeVal = {};
 
@@ -228,7 +227,7 @@ exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (reque
 //             callback(500, constant.messages.DATABASE_ERROR);
 //         } else {
 //             let { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
-            
+
 //             let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
 //             let expAttributeVal = {};
 
@@ -310,7 +309,7 @@ exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (reque
 //                     },
 //                     ProjectionExpression: ["answers_of_question", "cognitive_skill", "question_id" ,"question_type" , "marks" , "difficulty_level" , "question_content"],
 //                 }
-    
+
 //                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
 //             }else{
@@ -466,31 +465,31 @@ exports.fetchBulkQuestionsNameById3 = function (request, callback) {
 };
 
 
-
 exports.fetchBulkQuestionsNameById2 = async (request) => {
-        const question_ids = [...new Set(request.question_id)]; // Remove duplicates
+    const question_ids = [...new Set(request.question_id)];
+    console.log("Question IDs: ", question_ids);
 
-        if (question_ids.length === 1) {
-            // When there is only one question ID
+    if (question_ids.length === 0) {
+        return [];
+    } else if (question_ids.length === 1) {
+        const params = {
+            TableName: TABLE_NAMES.upschool_question_table,
+            KeyConditionExpression: "question_id = :question_id",
+            ExpressionAttributeValues: { ":question_id": question_ids[0] },
+            ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
+        };
+
+        const result = await DATABASE_TABLE2.query(params);
+        return result.Items || [];
+    } else {
+        const idChunks = chunkArray(question_ids, 100);
+        let allResponses = [];
+
+        for (const chunk of idChunks) {
+            const keys = chunk.map(id => ({ question_id: id }));
+
             const params = {
-                TableName: TABLE_NAMES.upschool_question_table,
-                KeyConditionExpression: "question_id = :question_id",
-                ExpressionAttributeValues: { 
-                    ":question_id": question_ids[0]
-                },
-                ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
-            };
-
-            const result = await DATABASE_TABLE2.query(params);
-            return result.Items;
-        } else {
-            // When there are multiple question IDs
-            const keys = question_ids.map((id) => ({
-                question_id: id
-            }));
-
-            const params = {
-                RequestItems: { 
+                RequestItems: {
                     [TABLE_NAMES.upschool_question_table]: {
                         Keys: keys,
                         ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
@@ -498,11 +497,17 @@ exports.fetchBulkQuestionsNameById2 = async (request) => {
                 }
             };
 
+            console.log("BATCH GET PARAMS : ", JSON.stringify(params, null, 2));
             const result = await DATABASE_TABLE2.getByObjects(params);
-            return result.Responses[TABLE_NAMES.upschool_question_table];
+            if (result.Responses && result.Responses[TABLE_NAMES.upschool_question_table]) {
+                allResponses = allResponses.concat(result.Responses[TABLE_NAMES.upschool_question_table]);
+            }
         }
 
+        return allResponses;
+    }
 };
+
 exports.fetchBulkQuestionsNameById5 = async (request) => {
     const question_ids = [...new Set(request.question_id)]; // Remove duplicates
 
