@@ -975,7 +975,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
 
             const response = await openai.chat.completions.create({
-                model: 'gpt-4',
+                model: 'gpt-4-turbo',
                 messages: [
                     {
                         role: 'system',
