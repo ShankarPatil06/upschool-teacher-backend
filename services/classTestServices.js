@@ -170,7 +170,16 @@ exports.startEvaluationProcess = async (request) => {
                 studentMarkDetail.marks_details = [];
             studentMarkDetail.marks_details = [marksFormat];
             const marksToUpdate = marksFormat.qa_details;
-            // const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
+            const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
+            const mergedAnswers = allStudentAnswers.reduce((acc, curr) => {
+                const existing = acc.find(item => item.question === curr.question);
+                if (existing) {
+                    existing.answer += ' ' + curr.answer; // Merge answers with a space
+                } else {
+                    acc.push({ ...curr });
+                }
+                return acc;
+            }, []);
             const getAnswerByQuestionNumber = (questionNumber) => {
                 for (const metadata of studentMarkDetail.answer_metadata) {
                     for (const answerObj of metadata.studentAnswer) {
@@ -190,8 +199,21 @@ exports.startEvaluationProcess = async (request) => {
                 return null;
             };
 
+            const studentAnswers = mergedAnswers.map((mark, i) => {
+                const questionDetail = studentMarkDetail.marks_details[0].qa_details[mergedAnswers[i]?.question - 1]
+                return { question_id: questionDetail?.question_id, answers: mergedAnswers[i].answer }
+            })
+
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
-                const studentAnswer = getAnswerByQuestionNumber(i + 1);
+                // const studentAnswer = getAnswerByQuestionNumber(i + 1);
+
+                let studentAnswer = "";
+                studentAnswers.forEach(ans => {
+                    if (ans.question_id === mark.question_id) {
+                        studentAnswer = ans.answers;
+                    }
+                })
+
                 // const correctAnswer = questionDataRes.find((q) => q.question_id === mark.question_id)
                 //     ?.answers_of_question.find((ans) => ans.answer_display === "Yes" || !ans.answer_display)?.answer_content || "";
                 let correctAnswer = "";
@@ -212,7 +234,7 @@ exports.startEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
                         console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
@@ -251,7 +273,7 @@ exports.startEvaluationProcess = async (request) => {
                 normalized = normalized.replace(/[,;!?]/g, "");
                 return normalized;
             };
-            
+
             const extractValidAnswers = (correctAnswer) => {
                 return correctAnswer
                     ?.split(/\s*or\s*/i)
@@ -271,7 +293,7 @@ exports.startEvaluationProcess = async (request) => {
             Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
                 }).join("\n") + `.
             In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
-            
+
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
                 messages: [
@@ -312,6 +334,7 @@ exports.startEvaluationProcess = async (request) => {
                         mark.obtained_marks = 0;
                     }
                 }
+                mark.student_answer = questionAnswerPairs[index].studentAnswer;
             });
 
             console.log("studentMarkDetail.marks_details - ", studentMarkDetail.marks_details);

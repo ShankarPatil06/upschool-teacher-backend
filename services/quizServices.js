@@ -69,7 +69,7 @@ const checkDuplicateTopics = async (resTopics, checkTopics) => {
 exports.fetchQuizBasedonStatus = async (request) => {
     try {
         // return await new Promise((resolve) => {
-           return quizRepository.getQuizBasedonStatus2(request)
+        return quizRepository.getQuizBasedonStatus2(request)
         //         if (response?.Items?.length > 0) {
         //             resolve(response?.Items);
         //         } else {
@@ -334,11 +334,11 @@ exports.fetchQuizTemplates = async (request) => {
                     ? await s3Services.getS3SignedUrl(answerTemp)
                     : "N.A.";
 
-                    const keyanswerTemp = quizTemplate.key_answer || "N.A.";
-                    const keyanswerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
-                    quizTemplate.key_answer_url = answerTemp.includes(keyanswerUrlCheck)
-                        ? await s3Services.getS3SignedUrl(keyanswerTemp)
-                        : "N.A.";
+                const keyanswerTemp = quizTemplate.key_answer || "N.A.";
+                const keyanswerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                quizTemplate.key_answer_url = answerTemp.includes(keyanswerUrlCheck)
+                    ? await s3Services.getS3SignedUrl(keyanswerTemp)
+                    : "N.A.";
             }
         } else {
             quizRes.Items[0].quiz_template_details = {};
@@ -391,7 +391,7 @@ const mergeStudentAnswers = (answerMetadata) => {
 // advancedQuestions -  9 12 0.4
 
 function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pass_percentage, quizTestRes) {
-    console.log("questionDataRes", questionDataRes);
+    // console.log("questionDataRes", questionDataRes);
     const questionMarksMap = {};
 
     markAssignRes[0].answer_metadata = mergeStudentAnswers(markAssignRes[0].answer_metadata);
@@ -402,7 +402,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         }
     });
 
-    console.log("questionMarksMap - ", questionMarksMap);
+    // console.log("questionMarksMap - ", questionMarksMap);
     const basicThreshold = group_pass_percentage.Basic / 100;
     const intermediateThreshold = group_pass_percentage.Intermediate / 100;
     const advancedThreshold = group_pass_percentage.Advanced / 100;
@@ -882,9 +882,19 @@ exports.startQuizEvaluationProcess = async (request) => {
                 return acc;
             }, []);
 
+            const studentAnswers = mergedAnswers.map((mark, i) => {
+                const questionDetail = markDetails[0].qa_details[mergedAnswers[i]?.question - 1]
+                return { question_id: questionDetail?.question_id, answers: mergedAnswers[i].answer }
+            })
+
             const questionAnswerPairs = marksToUpdate.map((mark, i) => {
 
-                const studentAnswer = mergedAnswers[i]?.answer;
+                let studentAnswer = "";
+                studentAnswers.forEach(ans => {
+                    if (ans.question_id === mark.question_id) {
+                        studentAnswer = ans.answers;
+                    }
+                })
 
                 let correctAnswer = "";
 
@@ -904,7 +914,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
                         console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
@@ -943,7 +953,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 normalized = normalized.replace(/[,;!?]/g, "");
                 return normalized;
             };
-            
+
             const extractValidAnswers = (correctAnswer) => {
                 return correctAnswer
                     ?.split(/\s*or\s*/i)
@@ -954,7 +964,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             const userPrompt = `Please compare the following answers for similarity. 
             Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
             Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
-            
+
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
                     const correctAnswers = extractValidAnswers(pair.correctAnswer);
@@ -963,7 +973,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
                 }).join("\n") + `.
             In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
-            
+
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
                 messages: [
@@ -1017,6 +1027,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
                 totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
                 mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
+                mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
                 // console.log("scores[index] - ", scores[index]);
 
                 answerCompareArray.push({

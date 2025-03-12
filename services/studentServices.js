@@ -47,7 +47,8 @@ exports.topAndBottomPerformers = async function (request, callback) {
             } else {
                 quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
             }
-            quiz_question_ids = await quiz_results.flatMap(quiz =>
+            console.log({quiz_results});
+            quiz_question_ids = await quiz_results?.flatMap(quiz =>
                 quiz.marks_details.flatMap(mark =>
                     mark.qa_details.map(qa => qa.question_id)
                 )
@@ -60,15 +61,17 @@ exports.topAndBottomPerformers = async function (request, callback) {
         const test_Ids = allTests.map(test => test.class_test_id);
         request["class_test_id"] = test_Ids;
         let recentTest;
+        console.log({allTests});
         if (allTests?.length) {
             if (request.data.isRecent) {
                 const { test, test_results } = await getRecentTestForMe(allTests);
+                console.log({test});
                 testResults = test_results;
                 recentTest = test;
             } else {
                 testResults = await fetchStudentresultMetadata3(request);
             }
-            test_question_ids = await testResults.flatMap(test =>
+            test_question_ids = await testResults?.flatMap(test =>
                 test.marks_details.flatMap(mark =>
                     mark.qa_details.map(qa => qa.question_id)
                 )
@@ -480,7 +483,7 @@ const getRecentTest = async (testDetails) => {
 }
 
 const getRecentQuizForMe = async (quizDetails) => {
-    let recentQuiz;
+    let recentQuiz ={quiz:[],quizResults:[]};
     for (const quiz of quizDetails) {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
         if (quizResults.length > 0) {
@@ -491,12 +494,18 @@ const getRecentQuizForMe = async (quizDetails) => {
 }
 
 const getRecentTestForMe = async (testDetails) => {
+    console.log({ testDetails});
+    let recentTest ={test:[],test_results:[]};
     for (const test of testDetails) {
         const test_results = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
+        console.log({ test_results});
         if (test_results.length > 0) {
+            console.log({ test_results , test});
             return { test, test_results };
         }
     }
+    return recentTest;
+
 }
 
 exports.studentChaptersPerformance = async (request) => {

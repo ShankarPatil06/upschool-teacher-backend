@@ -448,9 +448,9 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
             advanced_groups.push(...e.concept_group_id.advanced)
           });
 
-          basic_groups = helper.removeDuplicates(basic_groups);
-          intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          advanced_groups = helper.removeDuplicates(advanced_groups);
+          basic_groups = await questionServices.processGroups(basic_groups); //helper.removeDuplicates(basic_groups);
+          intermediate_groups = await questionServices.processGroups(intermediate_groups); //helper.removeDuplicates(intermediate_groups);
+          advanced_groups =await questionServices.processGroups(advanced_groups); //helper.removeDuplicates(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async function (matrix_count_err, matrix_count_response) {
             if (matrix_count_err) {
@@ -556,6 +556,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             for (var i in non_considered_topic_data) {
                               non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
                             };
+                            console.log({ request , "quiz_duration" : quiz_duration , questions_list});
 
                             quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
                               if (addQuiz_err) {
@@ -624,15 +625,15 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
                               res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
 
-                              if(setIndex === 1){
+                              if (setIndex === 1) {
                                 request.data.quiz_question_details.qp_set_a = questions_list
                                 request.data.question_track_details.qp_set_a = res_questionTrackData
-                              }else if(setIndex === 2){
+                              } else if (setIndex === 2) {
                                 request.data.quiz_question_details.qp_set_b = questions_list
                                 request.data.question_track_details.qp_set_b = res_questionTrackData
-                              } else if(setIndex === 3){
-                              request.data.quiz_question_details.qp_set_c = questions_list
-                              request.data.question_track_details.qp_set_c = res_questionTrackData
+                              } else if (setIndex === 3) {
+                                request.data.quiz_question_details.qp_set_c = questions_list
+                                request.data.question_track_details.qp_set_c = res_questionTrackData
                               }
                               non_considered_topic_data = res_non_considered_topic_data;
 
@@ -717,9 +718,14 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       let intermediate_groups = splitGroups.intermediate_groups;
       let advanced_groups = splitGroups.advanced_groups;
 
-      basic_groups = helper.removeDuplicates(basic_groups);
-      intermediate_groups = helper.removeDuplicates(intermediate_groups);
-      advanced_groups = helper.removeDuplicates(advanced_groups);
+      // basic_groups = helper.removeDuplicates(basic_groups);
+      // intermediate_groups = helper.removeDuplicates(intermediate_groups);
+      // advanced_groups = helper.removeDuplicates(advanced_groups);
+
+      basic_groups = await questionServices.processGroups(basic_groups); 
+      intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+      advanced_groups = await questionServices.processGroups(advanced_groups);
+
 
       questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
         if (matrix_err) {
@@ -783,28 +789,35 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                         if (ind < data.group_list.length) {
 
                           if (indheck.length < Number(topicData.noOfQuestions)) {
-                            // Pick Random Questions out of each group : 
-                            const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                            let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                            let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
+                            if (data.group_list[ind].group_question_id.length > 0) {
 
-                            !indheck.includes(randomIndex) && indheck.push(randomIndex);
+                              // Pick Random Questions out of each group : 
+                              const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
+                              let qtn_id = data.group_list[ind].group_question_id[randomIndex];
+                              let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
 
-                            if (dupCheck.length > 0) {
-                              qtnLoop(ind);
-                            } else {
-                              questions_list.push(qtn_id);
-                              if(setIndex === 1){
-                                setADupCheck.push(qtn_id)
-                              }else if(setIndex === 2 ){
-                                setBDupCheck.push(qtn_id)
-                              }else if(setIndex === 3 ){
-                                setCDupCheck.push(qtn_id)
+                              !indheck.includes(randomIndex) && indheck.push(randomIndex);
+
+                              if (dupCheck.length > 0) {
+                                qtnLoop(ind);
+                              } else {
+                                questions_list.push(qtn_id);
+                                if (setIndex === 1) {
+                                  setADupCheck.push(qtn_id)
+                                } else if (setIndex === 2) {
+                                  setBDupCheck.push(qtn_id)
+                                } else if (setIndex === 3) {
+                                  setCDupCheck.push(qtn_id)
+                                }
+
+                                ind++;
+                                qtnLoop(ind);
                               }
-
+                            } else {
                               ind++;
-                              qtnLoop(ind);
+                              qtnLoop(ind)
                             }
+
                           } else {
                             console.log(constant.messages.INSUFFICIENT_QUESTIONS);
                             callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
@@ -959,9 +972,13 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           let intermediate_groups = conceptData[0].concept_group_id.intermediate;
           let advanced_groups = conceptData[0].concept_group_id.advanced;
 
-          basic_groups = helper.removeDuplicates(basic_groups);
-          intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          advanced_groups = helper.removeDuplicates(advanced_groups);
+          // basic_groups = helper.removeDuplicates(basic_groups);
+          // intermediate_groups = helper.removeDuplicates(intermediate_groups);
+          // advanced_groups = helper.removeDuplicates(advanced_groups);
+
+          basic_groups = await questionServices.processGroups(basic_groups); 
+          intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+          advanced_groups = await questionServices.processGroups(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
             if (matrix_err) {
@@ -1035,11 +1052,11 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
                                   qtnLoop(ind);
                                 } else {
                                   questions_list.push(qtn_id);
-                                  if(setIndex === 1){
+                                  if (setIndex === 1) {
                                     setADupCheck.push(qtn_id)
-                                  }else if(setIndex === 2){
+                                  } else if (setIndex === 2) {
                                     setBDupCheck.push(qtn_id)
-                                  }else if (setIndex === 3){
+                                  } else if (setIndex === 3) {
                                     setCDupCheck.push(qtn_id)
                                   }
                                   ind++;
