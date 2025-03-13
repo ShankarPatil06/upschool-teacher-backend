@@ -245,7 +245,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0].concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -310,7 +310,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0]?.concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                                     console.log({ conceptDetails });
 
                                     if (existingConcept) {
@@ -400,7 +400,7 @@ exports.needAttention = async (request) => {
                                 if (concept.concept_question_id.includes(mark.question_id)) {
                                     const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                                    const markValue = mark.modified_marks !== 'N.A.' ? parseInt(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== 'N.A.' ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -563,7 +563,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (concept.concept_question_id.includes(mark.question_id)) {
                             const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
 
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
@@ -592,7 +592,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of allTopics) {
@@ -626,7 +626,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -685,7 +685,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = preConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -714,7 +714,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of topicDetailsPre) {
@@ -744,7 +744,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -767,7 +767,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = postConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -796,7 +796,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of topicDetailsPost) {
@@ -827,7 +827,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -1195,25 +1195,25 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                                 let total_student_marks = quest?.marks || 0;
                                 let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                                total_marks += parseInt(total_student_marks);
-                                total_obtained_marks += parseInt(total_student_obtained_marks);
+                                total_marks += parseFloat(total_student_marks);
+                                total_obtained_marks += parseFloat(total_student_obtained_marks);
                                 let student = studentData.Items.find(s => s.student_id === test.student_id);
                                 if (!student) continue;
 
                                 const studentEntry = {
                                     student_id: student.student_id,
                                     student_name: `${student?.user_firstname} ${student?.user_lastname}`,
-                                    studentMark: parseInt(total_student_obtained_marks),
-                                    totalMarks: parseInt(total_student_marks) || 0,
-                                    percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                                    studentMark: parseFloat(total_student_obtained_marks),
+                                    totalMarks: parseFloat(total_student_marks) || 0,
+                                    percentage: (((parseFloat(total_student_obtained_marks) / (parseFloat(total_student_marks) || 1)) * 100).toFixed(2))
                                 };
 
                                 if (!studentMap.has(student.student_id)) {
                                     studentMap.set(student.student_id, studentEntry);
                                 } else {
                                     let existing = studentMap.get(student.student_id);
-                                    existing.studentMark += parseInt(studentEntry.studentMark);
-                                    existing.totalMarks += parseInt(studentEntry.totalMarks);
+                                    existing.studentMark += parseFloat(studentEntry.studentMark);
+                                    existing.totalMarks += parseFloat(studentEntry.totalMarks);
                                     existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
                                     studentMap.set(student.student_id, existing);
                                 }
@@ -1356,7 +1356,7 @@ exports.customWorksheetGenerated = async (request) => {
             const existingName = studentWorksheet.Items[0]?.question_paper_name || `${studentFirstName}_worksheet_0`;
             const nameParts = existingName.match(/^(.*?)(_(\d+))?$/);
             const baseName = nameParts[1];
-            const currentNumber = nameParts[3] ? parseInt(nameParts[3], 10) : 0;
+            const currentNumber = nameParts[3] ? parseFloat(nameParts[3], 10) : 0;
             const question_paper_name = `${baseName}_${currentNumber + 1}`;
 
 
