@@ -164,9 +164,9 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                         })
                     });
 
-                    basic_groups = await processGroups(basic_groups); 
-                    intermediate_groups = await processGroups(intermediate_groups); 
-                    advanced_groups = await processGroups(advanced_groups); 
+                    basic_groups = await exports.processGroups(basic_groups); 
+                    intermediate_groups = await exports.processGroups(intermediate_groups); 
+                    advanced_groups = await exports.processGroups(advanced_groups); 
                     
                     exports.calculateMatrix(basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, (matrix_err, matrix_response) => {
                     if(matrix_err){
@@ -186,7 +186,7 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                     // code block
                     let topicData = []; 
 
-                    finalPreTopicData.map((e) => {
+                    await Promise.all(finalPreTopicData.map(async (e) => {
                         let basic_groups = []; 
                         let intermediate_groups = []; 
                         let advanced_groups = []; 
@@ -200,10 +200,14 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                             }); 
                         })
                     
-                        basic_groups = helper.removeDuplicates(basic_groups); 
-                        intermediate_groups = helper.removeDuplicates(intermediate_groups); 
-                        advanced_groups = helper.removeDuplicates(advanced_groups); 
-                    
+                        // basic_groups = helper.removeDuplicates(basic_groups); 
+                        // intermediate_groups = helper.removeDuplicates(intermediate_groups); 
+                        // advanced_groups = helper.removeDuplicates(advanced_groups); 
+                        
+                        basic_groups = await exports.processGroups(basic_groups); 
+                        intermediate_groups = await exports.processGroups(intermediate_groups); 
+                        advanced_groups = await exports.processGroups(advanced_groups);
+
                         exports.calculateMatrix(basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, (matrix_err, matrix_response) => {
                             if(matrix_err){
                                 callback(400, matrix_err); 
@@ -217,7 +221,7 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                                     )
                             }
                         }); 
-                    }); 
+                    })); 
                     
                     let response = {
                     minNoOfQuestions : pre_post_quiz_config.min_qn_at_topic_level,
@@ -229,40 +233,41 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                     // code block 
                     let topicArray = []; 
 
-                    finalPreTopicData.map((e) => {
+                    await Promise.all( finalPreTopicData.map(async (e) => {
                         
                         let conceptData = []; 
-
-                        e.topic_concept_id.map((f) => {
-                            concept_response.Items.map((a) => { 
-      
-                                a.concept_group_id.basic = helper.removeDuplicates(a.concept_group_id.basic); 
-                                a.concept_group_id.intermediate = helper.removeDuplicates(a.concept_group_id.intermediate); 
-                                a.concept_group_id.advanced = helper.removeDuplicates(a.concept_group_id.advanced); 
-                            
-                                a.concept_id === f && exports.calculateMatrix(a.concept_group_id.basic, a.concept_group_id.intermediate, a.concept_group_id.advanced, pre_post_quiz_config, (matrix_err, matrix_response) => {
-                                    if(matrix_err){
-                                        callback(400, matrix_err); 
-                                    }else{
-                                        // console.log("a.concept_title : ", a.concept_title);
-                                        conceptData.push(
-                                            {
-                                                concept_id:  a.concept_id, 
-                                                concept_name:  a.concept_title, 
-                                                totalNumOfQuestions:  matrix_response 
-                                            }
-                                        ) 
-                                    }
-                                    }); 
-                            }); 
-                        }) 
+                        await Promise.all(
+                            e.topic_concept_id.map(async (f) => {
+                                await Promise.all(concept_response.Items.map(async (a) => { 
+            
+                                    a.concept_group_id.basic = await exports.processGroups(a.concept_group_id.basic);
+                                    a.concept_group_id.intermediate =await exports.processGroups(a.concept_group_id.intermediate);
+                                    a.concept_group_id.advanced = await exports.processGroups(a.concept_group_id.advanced);
+                                
+                                    a.concept_id === f && exports.calculateMatrix(a.concept_group_id.basic, a.concept_group_id.intermediate, a.concept_group_id.advanced, pre_post_quiz_config, (matrix_err, matrix_response) => {
+                                        if(matrix_err){
+                                            callback(400, matrix_err); 
+                                        }else{
+                                            // console.log("a.concept_title : ", a.concept_title);
+                                            conceptData.push(
+                                                {
+                                                    concept_id:  a.concept_id, 
+                                                    concept_name:  a.concept_title, 
+                                                    totalNumOfQuestions:  matrix_response 
+                                                }
+                                            ) 
+                                        }
+                                        }); 
+                                })); 
+                            })
+                        )
                         e.isArchived === "No" && topicArray.push(
                             {
                                 topic_name: e.topic_title,
                                 topic_id: e.topic_id,
                                 conceptData: conceptData
                             })
-                    }) 
+                    }))
                     let finalResponse = {
                         minNoOfQuestions : pre_post_quiz_config.min_qn_at_topic_level,
                         topicData: topicArray
@@ -278,16 +283,28 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
     })
 }
 
-const processGroups = async (groupArray) => {
+exports.processGroups = async (groupArray) => {
     groupArray = helper.removeDuplicates(groupArray);
 
     if (groupArray.length === 0) return [];
 
     const groupDetails = await groupRepository.fetchGroupsData2({ group_array: groupArray });
 
+    const questionIdCount = new Map();
+
+    groupDetails.forEach(group => {
+        group.group_question_id.forEach(questionId => {
+            questionIdCount.set(questionId, (questionIdCount.get(questionId) || 0) + 1);
+        });
+    });
+
     return groupDetails
-        .filter(group => group.group_question_id.length > 0)
+        .filter(group => group.group_question_id.some(questionId => questionIdCount.get(questionId) === 1))
         .map(group => group.group_id);
+
+    // return groupDetails
+    //     .filter(group => group.group_question_id.length > 0)
+    //     .map(group => group.group_id);
 };
 
 exports.calculateMatrix = function (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, callback) {  
