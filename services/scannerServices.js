@@ -1350,7 +1350,7 @@ exports.removeUploadedAnswerData = async function (request) {
                         data: {
                             result_id: fetchQuizResultResponse.Items[0].result_id,
                             answer_metadata: fetchQuizResultResponse.Items[0].answer_metadata,
-                            quiz_set: request.data.quiz_set
+                            quiz_set: request.data.set
                         }
                     };
                     console.log("Updating Page Metadata: quiz", updateRequest.data.answer_metadata);
