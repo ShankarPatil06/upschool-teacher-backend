@@ -14,18 +14,18 @@ exports.getContentCategories = function (request, callback) {
         } else {
 
             let docClient = dynamoDBCall;
-            
+
             let read_params = {
                 TableName: TABLE_NAMES.upschool_content_category,
                 IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "category_type = :category_type AND category_status = :category_status", 
-                ExpressionAttributeValues: { 
+                FilterExpression: "category_type = :category_type AND category_status = :category_status",
+                ExpressionAttributeValues: {
                     ":category_type": request.data.category_type,
                     ":category_status": request.data.category_status,
-                    ":common_id": constant.constValues.common_id, 
+                    ":common_id": constant.constValues.common_id,
                 },
-                ProjectionExpression: ["category_id", "category_name"], 
+                ProjectionExpression: ["category_id", "category_name"],
             }
             console.log("REQUEST : ", read_params);
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
@@ -52,7 +52,7 @@ exports.fetchCategoryByName = function (request, callback) {
                 ExpressionAttributeValues: {
                     ":common_id": constant.constValues.common_id,
                     ":category_type": request.data.category_type,
-                    ":lc_category_name": request.data.category_name.toLowerCase().replace(/ /g,'')
+                    ":lc_category_name": request.data.category_name.toLowerCase().replace(/ /g, '')
                 }
             }
 
@@ -78,8 +78,8 @@ exports.insertContentCategory = function (request, callback) {
                     "category_id": helper.getRandomString(),
                     "category_type": request.data.category_type,
                     "category_name": request.data.category_name,
-                    "lc_category_name": request.data.category_name.toLowerCase().replace(/ /g,''),
-                    "category_status": "Active",                                        
+                    "lc_category_name": request.data.category_name.toLowerCase().replace(/ /g, ''),
+                    "category_status": "Active",
                     "common_id": constant.constValues.common_id,
                     "created_ts": helper.getCurrentTimestamp(),
                     "updated_ts": helper.getCurrentTimestamp(),
@@ -133,7 +133,7 @@ exports.updateCategory = function (request, callback) {
                 UpdateExpression: "set category_name = :category_name, lc_category_name = :lc_category_name, updated_ts = :updated_ts",
                 ExpressionAttributeValues: {
                     ":category_name": request.data.category_name,
-                    ":lc_category_name": request.data.category_name.toLowerCase().replace(/ /g,''),
+                    ":lc_category_name": request.data.category_name.toLowerCase().replace(/ /g, ''),
                     ":updated_ts": helper.getCurrentTimestamp(),
                 },
             };
@@ -181,21 +181,21 @@ exports.getContentDisclaimers = function (request, callback) {
         } else {
 
             let docClient = dynamoDBCall;
-            
+
             let read_params = {
                 TableName: TABLE_NAMES.upschool_content_disclaimer,
                 IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "disclaimer_type = :disclaimer_type AND disclaimer_status = :disclaimer_status", 
-                ExpressionAttributeValues: { 
+                FilterExpression: "disclaimer_type = :disclaimer_type AND disclaimer_status = :disclaimer_status",
+                ExpressionAttributeValues: {
                     ":disclaimer_type": request.data.disclaimer_type,
                     ":disclaimer_status": request.data.disclaimer_status,
-                    ":common_id": constant.constValues.common_id, 
+                    ":common_id": constant.constValues.common_id,
                 },
-                ProjectionExpression: ["disclaimer_id", "disclaimer_label"], 
+                ProjectionExpression: ["disclaimer_id", "disclaimer_label"],
             }
             console.log("REQUEST : ", read_params);
-            
+
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
     });
@@ -220,7 +220,7 @@ exports.fetchDisclaimerByLabel = function (request, callback) {
                 ExpressionAttributeValues: {
                     ":common_id": constant.constValues.common_id,
                     ":disclaimer_type": request.data.disclaimer_type,
-                    ":lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g,'')
+                    ":lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g, '')
                 }
             }
 
@@ -246,9 +246,9 @@ exports.insertContentDisclaimer = function (request, callback) {
                     "disclaimer_id": helper.getRandomString(),
                     "disclaimer_type": request.data.disclaimer_type,
                     "disclaimer_label": request.data.disclaimer_label,
-                    "lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g,''),
+                    "lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g, ''),
                     "disclaimer": request.data.disclaimer,
-                    "disclaimer_status": "Active",                                        
+                    "disclaimer_status": "Active",
                     "common_id": constant.constValues.common_id,
                     "created_ts": helper.getCurrentTimestamp(),
                     "updated_ts": helper.getCurrentTimestamp(),
@@ -302,7 +302,7 @@ exports.updateDisclaimer = function (request, callback) {
                 UpdateExpression: "set disclaimer_label = :disclaimer_label, lc_disclaimer_label = :lc_disclaimer_label, disclaimer =:disclaimer, updated_ts = :updated_ts",
                 ExpressionAttributeValues: {
                     ":disclaimer_label": request.data.disclaimer_label,
-                    ":lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g,''),
+                    ":lc_disclaimer_label": request.data.disclaimer_label.toLowerCase().replace(/ /g, ''),
                     ":disclaimer": request.data.disclaimer,
                     ":updated_ts": helper.getCurrentTimestamp(),
                 },
@@ -351,21 +351,21 @@ exports.getQuestionSources = function (request, callback) {
         } else {
 
             let docClient = dynamoDBCall;
-            
+
             let read_params = {
                 TableName: TABLE_NAMES.upschool_question_source,
                 IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "source_type = :source_type AND source_status = :source_status", 
-                ExpressionAttributeValues: { 
+                FilterExpression: "source_type = :source_type AND source_status = :source_status",
+                ExpressionAttributeValues: {
                     ":source_type": request.data.source_type,
                     ":source_status": request.data.source_status,
-                    ":common_id": constant.constValues.common_id, 
+                    ":common_id": constant.constValues.common_id,
                 },
-                ProjectionExpression: ["source_id", "source_name"], 
+                ProjectionExpression: ["source_id", "source_name"],
             }
             console.log("REQUEST : ", read_params);
-            
+
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
     });
@@ -390,18 +390,18 @@ exports.getQuestionSources = function (request, callback) {
 exports.getQuestionSources2 = async (request) => {
     const params = {
         TableName: TABLE_NAMES.upschool_question_source,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "source_type = :source_type AND source_status = :source_status", 
-                ExpressionAttributeValues: { 
-                    ":source_type": request.data.source_type,
-                    ":source_status": request.data.source_status,
-                    ":common_id": constant.constValues.common_id, 
-                },
-                ProjectionExpression: "source_id, source_name",
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "source_type = :source_type AND source_status = :source_status",
+        ExpressionAttributeValues: {
+            ":source_type": request.data.source_type,
+            ":source_status": request.data.source_status,
+            ":common_id": constant.constValues.common_id,
+        },
+        ProjectionExpression: "source_id, source_name",
     };
-    console.log({params});
-    const data =await DATABASE_TABLE2.query(params); 
+    console.log({ params });
+    const data = await DATABASE_TABLE2.query(params);
     return data;
 };
 
@@ -424,7 +424,7 @@ exports.fetchSourceByLabel = function (request, callback) {
                 ExpressionAttributeValues: {
                     ":common_id": constant.constValues.common_id,
                     ":source_type": request.data.source_type,
-                    ":lc_source_name": request.data.source_name.toLowerCase().replace(/ /g,'')
+                    ":lc_source_name": request.data.source_name.toLowerCase().replace(/ /g, '')
                 }
             }
 
@@ -450,8 +450,8 @@ exports.insertSource = function (request, callback) {
                     "source_id": helper.getRandomString(),
                     "source_type": request.data.source_type,
                     "source_name": request.data.source_name,
-                    "lc_source_name": request.data.source_name.toLowerCase().replace(/ /g,''),
-                    "source_status": "Active",                                        
+                    "lc_source_name": request.data.source_name.toLowerCase().replace(/ /g, ''),
+                    "source_status": "Active",
                     "common_id": constant.constValues.common_id,
                     "created_ts": helper.getCurrentTimestamp(),
                     "updated_ts": helper.getCurrentTimestamp(),
@@ -505,7 +505,7 @@ exports.updateSource = function (request, callback) {
                 UpdateExpression: "set source_name = :source_name, lc_source_name = :lc_source_name, updated_ts = :updated_ts",
                 ExpressionAttributeValues: {
                     ":source_name": request.data.source_name,
-                    ":lc_source_name": request.data.source_name.toLowerCase().replace(/ /g,''),
+                    ":lc_source_name": request.data.source_name.toLowerCase().replace(/ /g, ''),
                     ":updated_ts": helper.getCurrentTimestamp(),
                 },
             };
@@ -553,21 +553,21 @@ exports.getCognitiveSkills = function (request, callback) {
         } else {
 
             let docClient = dynamoDBCall;
-            
+
             let read_params = {
                 TableName: TABLE_NAMES.upschool_cognitive_skill,
                 IndexName: Indexes.common_id_index,
                 KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "cognitive_type = :cognitive_type AND cognitive_status = :cognitive_status", 
-                ExpressionAttributeValues: { 
+                FilterExpression: "cognitive_type = :cognitive_type AND cognitive_status = :cognitive_status",
+                ExpressionAttributeValues: {
                     ":cognitive_type": request.data.cognitive_type,
                     ":cognitive_status": request.data.cognitive_status,
-                    ":common_id": constant.constValues.common_id, 
+                    ":common_id": constant.constValues.common_id,
                 },
-                ProjectionExpression: ["cognitive_id", "cognitive_name"], 
+                ProjectionExpression: ["cognitive_id", "cognitive_name"],
             }
             console.log("REQUEST : ", read_params);
-            
+
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
     });
@@ -592,7 +592,7 @@ exports.fetchCognitiveSkillByLabel = function (request, callback) {
                 ExpressionAttributeValues: {
                     ":common_id": constant.constValues.common_id,
                     ":cognitive_type": request.data.cognitive_type,
-                    ":lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g,'')
+                    ":lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g, '')
                 }
             }
 
@@ -618,8 +618,8 @@ exports.insertCognitiveSkill = function (request, callback) {
                     "cognitive_id": helper.getRandomString(),
                     "cognitive_type": request.data.cognitive_type,
                     "cognitive_name": request.data.cognitive_name,
-                    "lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g,''),
-                    "cognitive_status": "Active",                                        
+                    "lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g, ''),
+                    "cognitive_status": "Active",
                     "common_id": constant.constValues.common_id,
                     "created_ts": helper.getCurrentTimestamp(),
                     "updated_ts": helper.getCurrentTimestamp(),
@@ -673,7 +673,7 @@ exports.updateCognitiveSkill = function (request, callback) {
                 UpdateExpression: "set cognitive_name = :cognitive_name, lc_cognitive_name = :lc_cognitive_name, updated_ts = :updated_ts",
                 ExpressionAttributeValues: {
                     ":cognitive_name": request.data.cognitive_name,
-                    ":lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g,''),
+                    ":lc_cognitive_name": request.data.cognitive_name.toLowerCase().replace(/ /g, ''),
                     ":updated_ts": helper.getCurrentTimestamp(),
                 },
             };
@@ -713,55 +713,69 @@ exports.changeSkillStatus = function (request, callback) {
 
 
 
+const CHUNK_SIZE = 25; // Define the chunk size (adjust as needed)
+
 exports.fetchBulkCognitiveSkillNameById = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+    dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
         if (DBErr) {
-            console.log("Class Data Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR);
-        } else {
-            let docClient = dynamoDBCall;
-            let FilterExpressionDynamic = "";
-            let ExpressionAttributeValuesDynamic = {}; 
-            console.log("fetchChapterData request : ", request);
-            let cognitive_id = request.cognitive_id;
-            console.log("cognitive_id : ", cognitive_id);
-            if(cognitive_id.length === 1){
-                let read_params = {
-                    TableName: TABLE_NAMES.upschool_cognitive_skill,
-                    KeyConditionExpression: "cognitive_id = :cognitive_id",
-                    ExpressionAttributeValues: { 
-                        ":cognitive_id": cognitive_id[0]
-                    },
-                }
-    
-                DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+            console.log("Class Data Database Error", DBErr);
+            return callback(500, constant.messages.DATABASE_ERROR);
+        }
 
-            }else{
-                console.log(" Chapter Else");
-                cognitive_id.forEach((element, index) => { 
-                    console.log("element : ", element);
+        let docClient = dynamoDBCall;
+        console.log("fetchChapterData request:", request);
+        let cognitive_id = request.cognitive_id;
+        console.log("cognitive_id length:", cognitive_id.length);
 
-                    if(index < cognitive_id.length-1){ 
-                        FilterExpressionDynamic = FilterExpressionDynamic + "cognitive_id = :cognitive_id"+ index +" OR "
-                        ExpressionAttributeValuesDynamic[':cognitive_id'+ index] = element
-                    } else{
-                        FilterExpressionDynamic = FilterExpressionDynamic + "cognitive_id = :cognitive_id"+ index
-                        ExpressionAttributeValuesDynamic[':cognitive_id'+ index] = element;
-                    }
-                });
+        if (cognitive_id.length === 1) {
+            let read_params = {
+                TableName: TABLE_NAMES.upschool_cognitive_skill,
+                KeyConditionExpression: "cognitive_id = :cognitive_id",
+                ExpressionAttributeValues: { ":cognitive_id": cognitive_id[0] },
+            };
+            return DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+        }
+
+        // Split cognitive_id into chunks
+        let chunks = [];
+        for (let i = 0; i < cognitive_id.length; i += CHUNK_SIZE) {
+            chunks.push(cognitive_id.slice(i, i + CHUNK_SIZE));
+        }
+
+        console.log("Processing in chunks:", chunks.length);
+
+        try {
+            let results = await Promise.all(chunks.map(async (chunk) => {
+                let FilterExpressionDynamic = chunk.map((_, index) => `cognitive_id = :cognitive_id${index}`).join(" OR ");
+                let ExpressionAttributeValuesDynamic = chunk.reduce((acc, id, index) => {
+                    acc[`:cognitive_id${index}`] = id;
+                    return acc;
+                }, {});
 
                 let read_params = {
                     TableName: TABLE_NAMES.upschool_cognitive_skill,
                     FilterExpression: FilterExpressionDynamic,
                     ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-                }
-                DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-            }
+                };
+
+                return new Promise((resolve, reject) => {
+                    DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
+                        if (err) reject(err);
+                        else resolve(data);
+                    });
+                });
+            }));
+
+            // Merge all results
+            let mergedResults = results.flatMap(res => res.Items);// Flatten the array
+            console.log({ firstttttt: mergedResults })
+            callback(null, mergedResults); // Send the final response
+        } catch (error) {
+            console.error("Error fetching cognitive skills:", error);
+            callback(500, constant.messages.DATABASE_ERROR);
         }
     });
-}
+};
 
 exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
     const cognitive_ids = [...new Set(request.cognitive_id)]; // Remove duplicates
@@ -771,7 +785,7 @@ exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
         const params = {
             TableName: TABLE_NAMES.upschool_cognitive_skill,
             KeyConditionExpression: "cognitive_id = :cognitive_id",
-            ExpressionAttributeValues: { 
+            ExpressionAttributeValues: {
                 ":cognitive_id": cognitive_ids[0]
             }
         };
@@ -785,7 +799,7 @@ exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
         }));
 
         const params = {
-            RequestItems: { 
+            RequestItems: {
                 [TABLE_NAMES.upschool_cognitive_skill]: {
                     Keys: keys
                 }
