@@ -379,46 +379,89 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
     }
   });
 };
+
+// exports.fetchBulkDataWithProjection2 = async (request) => {
+//   // const fromatedRequest = await helper.getDataByFilterKey(request);
+//   // const params = {
+//   //   TableName: TABLE_NAMES.upschool_question_table,
+//   //   IndexName: Indexes.common_id_index,
+//   //   KeyConditionExpression: "common_id = :common_id",
+//   //   FilterExpression: fromatedRequest.FilterExpression,
+//   //   ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
+//   // };
+//   // try {
+//   //   console.log("params",params)
+//   //   return await DATABASE_TABLE2.query(params);    
+//   // } catch (error) {
+//   //   console.error(`Error fetching quiz results:`, error);
+//   //   throw error;
+//   // }
+//   const unit_Quiz_id = [...new Set(request.items)]; // Remove duplicates
+  
+//   const common_id = constant.constValues.common_id;
+
+//   // Create filter expression for multiple quiz_id
+//   const filterExpression = unit_Quiz_id.map((_, index) => `question_id = :question_id${index}`).join(" OR ");
+//   console.log("filterExpression",filterExpression);
+  
+//   const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
+//       acc[`:question_id${index}`] = quizId.question_id;
+//       return acc;
+//   },
+//    { ":common_id": common_id });
+//   console.log("expressionAttributeValues",expressionAttributeValues);
+  
+
+//   const params = {
+//       TableName: TABLE_NAMES.upschool_question_table,
+//       IndexName: Indexes.common_id_index,
+//       KeyConditionExpression: "common_id = :common_id",
+//       FilterExpression: filterExpression,
+//       ExpressionAttributeValues: expressionAttributeValues,
+//       // ProjectionExpression:["question_id","question_type","marks","answers_of_question"]
+//   };
+//   // console.log("params",params)
+
+//       const result = await DATABASE_TABLE2.query(params);
+//       return result.Items;
+// };
+
 exports.fetchBulkDataWithProjection2 = async (request) => {
-  // const fromatedRequest = await helper.getDataByFilterKey(request);
-  // const params = {
-  //   TableName: TABLE_NAMES.upschool_question_table,
-  //   IndexName: Indexes.common_id_index,
-  //   KeyConditionExpression: "common_id = :common_id",
-  //   FilterExpression: fromatedRequest.FilterExpression,
-  //   ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-  // };
-  // try {
-  //   console.log("params",params)
-  //   return await DATABASE_TABLE2.query(params);    
-  // } catch (error) {
-  //   console.error(`Error fetching quiz results:`, error);
-  //   throw error;
-  // }
-  const unit_Quiz_id = [...new Set(request.items)]; // Remove duplicates
-  const common_id = constant.constValues.common_id;
+  try {
+    const question_ids = [...new Set(request.items.map((item) => item.question_id))];
 
-  // Create filter expression for multiple quiz_id
-  const filterExpression = unit_Quiz_id.map((_, index) => `question_id = :question_id${index}`).join(" OR ");
-  const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
-      acc[`:question_id${index}`] = quizId.question_id;
-      return acc;
-  }, { ":common_id": common_id });
+    if (question_ids.length === 0) {
+      throw new Error("No question IDs provided.");
+    }
 
-  const params = {
-      TableName: TABLE_NAMES.upschool_question_table,
-      IndexName: Indexes.common_id_index,
-      KeyConditionExpression: "common_id = :common_id",
-      FilterExpression: filterExpression,
-      ExpressionAttributeValues: expressionAttributeValues,
-      // ProjectionExpression:["question_id","question_type","marks","answers_of_question"]
-  };
-  // console.log("params",params)
+    const queries = question_ids.map((question_id) => {
+      const params = {
+        TableName: TABLE_NAMES.upschool_question_table,
+        KeyConditionExpression: "question_id = :question_id",
+        ExpressionAttributeValues: {
+          ":question_id": question_id
+        }
+      };
+      return DATABASE_TABLE2.query(params);
+    });
 
-      const result = await DATABASE_TABLE2.query(params);
-      return result.Items;
+    const results = await Promise.all(queries);
+
+    const allResults = results.flatMap(result => result.Items || []);
+
+    return allResults;
+  } catch (error) {
+    throw new Error("Failed to fetch bulk data.");
+  }
 };
 
+const chunkArray = (array, chunkSize) => {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
 
 exports.fetchBulkDataWithProjection3 = async (request) => {
   let { IdArray, fetchIdName, TableName, projectionExp } = request;
@@ -444,27 +487,31 @@ exports.fetchBulkDataWithProjection3 = async (request) => {
     const result = await DATABASE_TABLE2.query(read_params);
     return result.Items || [];
   } else {
-    const keys = IdArray.map(id => ({
-      [fetchIdName]: id,
-    }));
+    const idChunks = chunkArray(IdArray, 100);
+    let allResponses = [];
 
-    let batchParams = {
-      RequestItems: {
-        [TableName]: {
-          Keys: keys,
-          ProjectionExpression: projectionExp.join(", "), 
+    for (const chunk of idChunks) {
+      const keys = chunk.map(id => ({ [fetchIdName]: id }));
+
+      let batchParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys,
+            ProjectionExpression: projectionExp.join(", "),
+          },
         },
-      },
-    };
+      };
 
-    console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
-    const response = await DATABASE_TABLE2.getByObjects(batchParams);
-    return response.Responses ? response.Responses[TableName] : [];
+      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+      const response = await DATABASE_TABLE2.getByObjects(batchParams);
+      if (response.Responses && response.Responses[TableName]) {
+        allResponses = allResponses.concat(response.Responses[TableName]);
+      }
+    }
+
+    return allResponses;
   }
 };
-
-
-
 
 exports.bulkBatchWrite = async (itemsToWrite, userTable) => {
   if (itemsToWrite.length > 0) {

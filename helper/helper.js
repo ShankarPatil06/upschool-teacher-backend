@@ -545,12 +545,13 @@ exports.getMarksDetailsFormat = async (secAndQues) => {
                     );
                 })
 
-                finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                // finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
+                finalDetials.push( ...questionArr );
                 i++;
                 secLoop(i);
             }
             else {
-                resolve(finalDetials);
+                resolve({qa_details : finalDetials});
             }
         }
         secLoop(0)
@@ -868,7 +869,7 @@ exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDup
                   function qtnLoop(ind){
                       if(ind < group_list.length){ 
 
-                        if(indheck.length < group_list[ind].group_question_id.length){
+                        if(indheck.length < Number(noOfQuestions)){ //group_list[ind].group_question_id.length
                             // Pick Random Questions out of each group : 
                             const randomIndex = Math.floor(Math.random() * group_list[ind].group_question_id.length); 
                             let qtn_id = group_list[ind].group_question_id[randomIndex]; 
@@ -891,7 +892,7 @@ exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDup
                          
                       }else{
 
-                        resolve({questions_list, randomDupCheck, quiz_duration}); 
+                        resolve({questions_list, randomDupCheck, quiz_duration,group_list}); 
     
                       }
                   }; 
@@ -1229,7 +1230,7 @@ exports.formatDate =(isoString) => {
       else if (line.includes('Subject Name')) processLine(line, "Subject Name");
       else if (line.includes('Test ID')) processLine(line, "Test ID");
       else if (line.includes('Roll No')) processLine(line, "Roll No");
-       else if (line.includes('Page No')) {
+       else if (line.includes('Page')) {
         const match = line.match(/Page No: (\d+)\/\d+/);
         if (match) {
           formattedLines.push({
@@ -1242,30 +1243,212 @@ exports.formatDate =(isoString) => {
   
     return formattedLines;
   };
-  exports.extractAnswersFromInput = async (input) => {
-    // Split the input by newline
+
+  exports.extractValuesFromInputNew = async (input) => {
+    // Split the input string by newlines
     let lines = input.split('\n');
+
+    console.log({ firstttttt: lines })
+
+    // Create an array to store the formatted lines as objects
+    let formattedLines = [];
+
+    // Helper function to process lines with a specific label
+    const processLine = (line, label) => {
+        console.log("label - ", label);
+        const [_, ...value] = line.slice(2).split(':');
+        formattedLines.push({
+            label: label,
+            value: value.join(':').replace(/\*/g, '').replace(/\\$/, '').trim()
+        });
+    };
+
+    // Iterate over each line and apply formatting
+    lines.forEach((line) => {
+        // Trim whitespace and skip empty lines
+        line = line.trim();
+        if (line === '') return;
+
+        // Process specific lines
+        if (line.includes('Set')) processLine(line, "set");
+        else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
+        else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
+        else if (line.includes('Class')) processLine(line, "Class");
+        else if (line.includes('Section')) processLine(line, "Section");
+        else if (line.includes('Subject Name')) processLine(line, "Subject Name");
+        else if (line.includes('Test ID')) processLine(line, "Test ID");
+        else if (line.includes('Roll No')) processLine(line, "Roll No");
+        else if (line.includes('Page')) {
+            const match = line.match(/Page No: (\d+)(?:\/\d+)?/);
+            console.log({ firstttttt: match })
+            if (match) {
+                formattedLines.push({
+                    label: "pageNo",
+                    value: match[1].replace(/\*/g, '').replace(/\\$/, '').trim()
+                });
+            }
+        }
+    });
+
+    return formattedLines;
+};
+
+//   exports.extractAnswersFromInput = async (input) => {
+//     // Split the input by newline
+//     let lines = input.split('\n');
     
-    // Array to store the extracted question-answer pairs
+//     // Array to store the extracted question-answer pairs
+//     let answers = [];
+    
+//     // Iterate over each line and check for answer format
+//     lines.forEach((line) => {
+//       // Trim the line to remove extra spaces
+//       line = line.trim();
+      
+//       // Check if the line starts with a number followed by 'Ans:'
+//       const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
+      
+//       if (match) {
+//         // Extract question number and the corresponding answer
+//         const question = match[1] + '.'; // e.g., "2."
+//         const answer = match[2]; // e.g., "one"
+        
+//         // Push the question-answer pair to the array
+//         answers.push({ question, answer });
+//       }
+//     });
+    
+//     return answers;
+//   }
+
+
+exports.extractAnswersFromInput1 = async (input) => {
+    console.log({input});
+    
+    // Split the input by question numbers followed by '. Ans:'
+    let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
+    
     let answers = [];
     
-    // Iterate over each line and check for answer format
-    lines.forEach((line) => {
-      // Trim the line to remove extra spaces
-      line = line.trim();
+    // Remove the first element which is before the first question
+    sections.shift();
+    
+    // Iterate over each section to process the answers
+    sections.forEach((section, index) => {
+      let trimmedSection = section.trim();
       
-      // Check if the line starts with a number followed by 'Ans:'
-      const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
+      let questionNumber = (index + 1) + '.';
+      let answer = trimmedSection;
       
-      if (match) {
-        // Extract question number and the corresponding answer
-        const question = match[1] + '.'; // e.g., "2."
-        const answer = match[2]; // e.g., "one"
-        
-        // Push the question-answer pair to the array
-        answers.push({ question, answer });
-      }
+      // Push the full answer content for each question
+      answers.push({ question: questionNumber, answer: answer });
     });
     
+    console.log("Extracted answers:", answers);
+    
     return answers;
-  }
+  };
+  exports.extractAnswersFromInput = async (input) => {
+    console.log({ input });
+  
+    // Split the input by question numbers followed by '. Ans:'
+    let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
+    
+    let answers = [];
+    
+    // Remove the first element which is before the first question
+    sections.shift();
+
+    let questionMatches = input.match(/\d+\.\s*Ans:/g); // Matches all question numbers followed by "Ans:"
+
+    // If no questions are found, we return empty answers
+    if (!questionMatches) {
+        console.log("No question found.");
+        return [];
+    }
+    
+    // Iterate over each section to process the answers
+    sections.forEach((section, index) => {
+      let trimmedSection = section.trim();
+      
+      // Extract the question number from the questionMatches
+      let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
+
+      
+      // Remove line breaks or replace them with a space to make the answer a complete string
+      let answer = trimmedSection.replace(/\n+/g, ' ').trim();
+      
+      // Push the full answer content as a single string for each question
+      answers.push({ question: questionNumber, answer: answer });
+    });
+    
+    console.log("Extracted answers:", answers);
+    
+    return answers;
+  };
+  
+  exports.extractAnswersFromInputNew = async (input) => {
+    console.log({ input });
+
+    // Match all question numbers with "ans:"
+    let questionMatches = input.match(/\d+\.?\s*ans:/gi) || [];
+
+    let answers = [];
+
+    // Iterate over each match and extract the corresponding answer
+    questionMatches.forEach((match) => {
+        let questionNumber = match.match(/\d+/)[0]; // Extract the question number
+
+        // Use regex to find the answer after the question number
+        let regex = new RegExp(`${match}\\s*(.*?)\\s*(?=\\d+\\.\\s*ans:|$)`, "is");
+        let answerMatch = input.match(regex);
+
+        let answer = answerMatch ? answerMatch[1].trim() : "";
+
+        answers.push({ question: questionNumber, answer: answer });
+    });
+
+    console.log("Extracted answers:", answers);
+    return answers;
+};
+  
+// exports.extractAnswersFromInput = async (input) => {
+//     console.log({input})
+//     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
+    
+//     let answers = [];
+    
+//     sections.shift();
+    
+//     sections.forEach((section, index) => {
+//       let trimmedSection = section.trim();
+      
+//       if (index < 6) {
+//         let questionNumber = (index + 1) + '.';
+//         let answer = trimmedSection.split("\n")[0].trim();
+//         answers.push({ question: questionNumber, answer: answer });
+//       } else {
+//         let questionNumber = (index + 1) + '.';
+//         let answer = trimmedSection;
+//         answers.push({ question: questionNumber, answer: answer });
+//       }
+//     });
+  
+//     console.log("Extracted answers:", answers);
+    
+//     return answers;
+//   };
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  

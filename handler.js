@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController, schoolController } = require('./controller')
+const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController, schoolController, sectionController } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -110,6 +110,7 @@ app.post("/v1/fetchSignedURLForAnswers", validator.validScannerUser, scannerCont
 app.post("/v1/uploadAnswerSheets", validator.validScannerUser, scannerController.uploadAnswerSheets2);
 app.post("/v1/fetchSignedURLForQuizAnswers", validator.validScannerUser, scannerController.fetchSignedURLForQuizAnswers) //Quiz
 app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2); // Quiz  validator.validScannerUser,
+app.post("/v1/removeUploadedAnswerData", scannerController.removeUploadedAnswerData); // Quiz  validator.validScannerUser,
 
 // Quiz
 app.post("/v1/checkDuplicateQuizName",  validator.validUser, quizController.checkDuplicateQuizName);
@@ -138,8 +139,11 @@ app.post("/v1/postLearningSummaryDetails",reportController.postLearningSummaryDe
 app.post("/v1/preLearningBlueprintDetails",reportController.preLearningBlueprintDetails);
 app.post("/v1/viewAnalysisIndividualReport",reportController.viewAnalysisIndividualReport);
 app.post("/v1/comprehensivePerformanceChapterWise",reportController.comprehensivePerformanceChapterWise);
+app.post("/v1/comprehensivePerformanceChapterWiseForTest",reportController.comprehensivePerformanceChapterWiseForTest);
 app.post("/v1/comprehensivePerformanceTopicWise",reportController.comprehensivePerformanceTopicWise);
+app.post("/v1/comprehensivePerformanceTopicWiseForTest",reportController.comprehensivePerformanceTopicWiseForTest);
 app.post("/v1/comprehensivePerformanceConceptWise",reportController.comprehensivePerformanceConceptWise);
+app.post("/v1/comprehensivePerformanceConceptWiseForTest",reportController.comprehensivePerformanceConceptWiseForTest);
 app.post("/v1/viewClassReportQuestions",reportController.viewClassReportQuestions);
 app.post("/v1/viewClassReportFocusArea",reportController.viewClassReportFocusArea);
 app.post("/v1/viewChapterwisePerformanceTracking",reportController.viewChapterwisePerformanceTracking);
@@ -147,11 +151,21 @@ app.post("/v1/getActionsAndRecommendations",reportController.getActionsAndRecomm
 app.post("/v1/getActionsAndRecommendationDetail",reportController.getActionsAndRecommendationDetail);
 app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
 
+// Student Dashboard
+app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers);
+app.post("/v1/needAttention",studentController.needAttention);
+app.post("/v1/studentChaptersPerformance",studentController.studentChaptersPerformance);
+app.post("/v1/customWorksheetGenerated",studentController.customWorksheetGenerated);
+app.post("/v1/fetchCustomWorksheet",studentController.fetchCustomWorksheet);
+app.post("/v1/sendEmailToParent",studentController.sendEmailToParent);
+app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);
+app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise);
+
+app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
 }
-
 
 app.use((err, req, res, next) => {
     console.log(`Path: ${req.path} -> Status Code: ${err.status || ERROR.INTERNAL_SERVER_ERROR} -> Stack: ${err.stack}`)

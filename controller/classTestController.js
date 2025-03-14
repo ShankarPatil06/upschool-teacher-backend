@@ -12,7 +12,7 @@ exports.addClassTest = async (req, res, next) => {
 exports.fetchClassTestsBasedonStatus = async (req, res, next) => {
     try {
         const request = req.body;
-        const reportData = await classTestServices.fetchClassTestsBasedonStatus(request);
+        const reportData = await classTestServices.fetchClassTestsBasedonStatus2(request);
         return formatResponse(res, reportData);
     } catch (error) {
         next(error)

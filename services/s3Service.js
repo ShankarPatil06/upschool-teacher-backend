@@ -85,6 +85,35 @@ const getFileByPartialKey = async(key) => {
         return false;
     }
 }
+const getFileBufferFromS3 = async (fileKey) => {
+    // const downloadParams = { Bucket: process.env.BUCKET_NAME, Key: fileKey };
+
+    // try {
+    //     const { Body } = await s3.getObject(downloadParams).promise();
+    //     console.log({ Body});
+    //     return Body;
+    // } catch (error) {
+    //     console.error('Error fetching file from S3:', error);
+    //     throw error;
+    // }
+
+    try {
+        let Key = fileKey;
+        let URL_EXPIRATION_SECONDS = 604800;
+        
+        let s3Params = {
+            Bucket: process.env.BUCKET_NAME,
+            Key,
+            Expires: URL_EXPIRATION_SECONDS,
+        }
+        
+        let signedS3URL = await s3.getSignedUrlPromise('getObject', s3Params)
+        
+        return signedS3URL;
+    } catch (error) {
+        throw error;
+    }
+}
 
 module.exports = {
     deleteFile,
@@ -92,5 +121,6 @@ module.exports = {
     getFile,
     getS3SignedUrl,
     upload,
-    getFileByPartialKey
+    getFileByPartialKey,
+    getFileBufferFromS3
 }

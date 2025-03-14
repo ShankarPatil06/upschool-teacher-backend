@@ -106,6 +106,7 @@ exports.insertClassTest2 = async (request) => {
             "test_end_time": request.data.test_end_time,
             "answer_sheet_template": request.data.answer_sheet_template,
             "question_paper_template": request.data.question_paper_template,
+            "key_answer_template": request.data.key_answer_template,
             "class_test_status": "Active",
             "common_id": constant.constValues.common_id,
             "created_ts": helper.getCurrentTimestamp(),
@@ -192,21 +193,21 @@ exports.getClassTestIdAndName = function (request, callback) {
         }
     });
 }
-exports.getClassTestIdAndName2 = async (request) => {
-    let params = {
-        TableName: TABLE_NAMES.upschool_class_test_table,
+// exports.getClassTestIdAndName2 = async (request) => {
+//     let params = {
+//         TableName: TABLE_NAMES.upschool_class_test_table,
 
-                KeyConditionExpression: "class_test_id = :class_test_id",
-                FilterExpression: "class_test_status = :class_test_status",
-                ExpressionAttributeValues: {
-                    ":class_test_id": request.data.class_test_id,
-                    ":class_test_status": request.data.class_test_status,
-                },
-                ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template"
+//                 KeyConditionExpression: "class_test_id = :class_test_id",
+//                 FilterExpression: "class_test_status = :class_test_status",
+//                 ExpressionAttributeValues: {
+//                     ":class_test_id": request.data.class_test_id,
+//                     ":class_test_status": request.data.class_test_status,
+//                 },
+//                 ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template, key_answer_template"
 
-    };
-    return await DATABASE_TABLE2.query(params);    
-}
+//     };
+//     return await DATABASE_TABLE2.query(params);    
+// }
 exports.getClassTestIdAndName2 = async (request) => {
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
@@ -217,7 +218,7 @@ exports.getClassTestIdAndName2 = async (request) => {
             ":class_test_id": request.data.class_test_id,
             ":class_test_status": request.data.class_test_status,
         },
-        ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template"
+        ProjectionExpression: "class_test_id, class_test_name, question_paper_id, answer_sheet_template, question_paper_template, key_answer_template"
     };
 
     const data = await DATABASE_TABLE2.query(params);
@@ -322,4 +323,38 @@ exports.updateClassTestStatus2 = async (request) => {
     }
     const data = (await DATABASE_TABLE2.updateService(params)).$metadata.httpStatusCode;
     return data;
+}
+
+exports.fetchAllTestBasedOnSubject = async (request) => {
+    let filterConditions = ["client_class_id = :client_class_id", "subject_id = :subject_id", "section_id = :section_id", "class_test_status = :class_test_status"];
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":section_id": request.data.section_id,
+        ":subject_id": request.data.subject_id,
+        ":client_class_id": request.data.client_class_id,
+        ":class_test_status": "Active",
+    };
+
+    if (request.data?.class_test_id) {
+        filterConditions.push("class_test_id = :class_test_id");
+        expressionAttributeValues[":class_test_id"] = request.data.class_test_id;
+    }
+    if (request.data?.start_date && request.data?.end_date) {
+        filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
+        expressionAttributeValues[":start_date"] = request.data.start_date;
+        expressionAttributeValues[":end_date"] = request.data.end_date;
+    }    
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterConditions.join(" AND "),
+        ExpressionAttributeValues: expressionAttributeValues,
+    };
+    const result = await DATABASE_TABLE2.query(params);
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+    return sortedItems;
 }

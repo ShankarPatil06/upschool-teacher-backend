@@ -28,3 +28,97 @@ exports.fetchAllStudents = (req, res, next) => {
     });
 };
 
+exports.topAndBottomPerformers = (req, res, next) => {
+    let request = req.body;
+    request["token"] = req.header('Authorization');
+    
+    studentServices.topAndBottomPerformers(request, function (top_and_bottom_performers_err, fetch_top_and_bottom_performers_response) {
+        if (top_and_bottom_performers_err) {
+            res.status(top_and_bottom_performers_err).json(fetch_top_and_bottom_performers_response);
+        } else {
+            console.log("Fetching Top and Bottom Performers Successfull");
+            res.json(fetch_top_and_bottom_performers_response);
+        }
+    });
+};
+
+exports.needAttention = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.needAttention(request);
+        console.log("Fetch All Need Attention Students Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching need attention students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+exports.studentChaptersPerformance = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentChaptersPerformance(request);
+        console.log("Fetch studentPerformance Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching studentPerformance students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+
+exports.studentAvgVsClassAvg = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentAvgVsClassAvg(request);
+        console.log("Fetch student and class average Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching student and class average students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+
+exports.studentAvgVsClassAvgChapterWise = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.studentAvgVsClassAvgChapterWise(request);
+        console.log("Fetch student and class average Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching student and class average students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+
+exports.customWorksheetGenerated = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.customWorksheetGenerated(request);
+        console.log("generated customWorksheetGenerated Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error generated customWorksheetGenerated students:", error);
+        res.status(500).json({ message: "An error occurred while generated data.", details: error.message });
+    }
+};
+exports.fetchCustomWorksheet = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.fetchCustomWorksheet(request);
+        console.log(" fetch CustomWorksheet Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching  CustomWorksheet students:", error);
+        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
+    }
+};
+exports.sendEmailToParent = async (req, res, next) => {
+    let request = req.body;
+    try {
+        const result = await studentServices.sendEmailToParent(request);
+        console.log(" sent email Successful");
+        res.json(result);
+    } catch (error) {
+        console.error("Error while sending  email:", error);
+        res.status(500).json({ message: "An error occurred while sending  email.", details: error.message });
+    }
+};
