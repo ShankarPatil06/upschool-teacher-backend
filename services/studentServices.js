@@ -253,7 +253,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: conceptDetails[0].concept_id,
-                                            concept_title: conceptDetails[0].concept_title,
+                                            concept_title: conceptDetails[0].display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -319,7 +319,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: conceptDetails[0]?.concept_id,
-                                            concept_title: conceptDetails[0]?.concept_title,
+                                            concept_title: conceptDetails[0]?.display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -408,7 +408,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: concept.concept_id,
-                                            concept_title: concept.concept_title,
+                                            concept_title: concept.display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -571,7 +571,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 matchedConcepts.push({
                                     concept_id: concept.concept_id,
-                                    concept_title: concept.concept_title,
+                                    concept_title: concept.display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -610,7 +610,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < test_config.pct_of_student_for_reteach) ? [matchConcept] : [],
@@ -692,7 +692,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 matchedConcepts.push({
                                     concept_id: conceptDetails[0]?.concept_id,
-                                    concept_title: conceptDetails[0]?.concept_title,
+                                    concept_title: conceptDetails[0]?.display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -729,7 +729,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < pre_quiz_config.pct_of_student_for_reteach) ? [matchConcept] : [],
@@ -774,7 +774,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 matchedConcepts.push({
                                     concept_id: conceptDetails[0].concept_id,
-                                    concept_title: conceptDetails[0].concept_title,
+                                    concept_title: conceptDetails[0].display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -811,7 +811,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < post_quiz_config.pct_of_student_for_reteach) ? [matchConcept] : [],
