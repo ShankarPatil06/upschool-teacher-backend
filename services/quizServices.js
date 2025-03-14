@@ -839,7 +839,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             groupPassPercentage = schoolDataRes.Items[0].post_quiz_config.group_pass_percentage
         }
 
-        const studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
+        let studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
 
         if (studentMetaRes.Items.length === 0) {
             throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
@@ -860,11 +860,12 @@ exports.startQuizEvaluationProcess = async (request) => {
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
 
-        console.log("setsMarkFormat - ", setsMarkFormat);
+        // console.log("setsMarkFormat - ", setsMarkFormat);
 
-        let i = 0;
-        for (let studentMarkDetail of studentMetaRes.Items) {
-            const studentData = studentMetaRes.Items[i++];
+        let totalMarkCopyArray = []
+        let qa_detailsCopyArray = []
+        for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
+            const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 
             const markDetails = setsMarkFormat.filter(markForm => markForm.set_key === quizSetKey);
@@ -908,24 +909,24 @@ exports.startQuizEvaluationProcess = async (request) => {
                             .filter((ans) => ans.answer_weightage > 0)
                             .map((ans) => ans.answer_content) // Extract all answer_content
                             .join(" ");
-                        console.log("DESCRIPTIKJKJN", correctAnswer)
+                        // console.log("DESCRIPTIKJKJN", correctAnswer)
                     } else if (question.question_type === "Objective") {
                         const index = question.answers_of_question.findIndex(
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
                         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
-                        console.log("objective", question.answers_of_question, correctAnswer)
+                        // console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
                             .map((ans) => ans.answer_content)               // Extract the answer_content
                             .join(" ");                                     // Join the answer contents into a single string
 
-                        console.log(correctAnswer);
+                        // console.log(correctAnswer);
                     }
                 }
-                console.log("correct answers:::", correctAnswer)
+                // console.log("correct answers:::", correctAnswer)
                 const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
                 const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
                 return {
@@ -990,14 +991,15 @@ exports.startQuizEvaluationProcess = async (request) => {
             console.log("scores - ", scores);
             let totalMarks = 0;
             let totalExpectedMarks = 0;
+            qa_detailsCopyArray.push([]);
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
                 // console.log("type", questionAnswerPairs[index].question_type)
 
                 if (questionAnswerPairs[index].question_type === "Descriptive") {
-                    console.log("Descriptive -  ", questionAnswerPairs[index].marks);
+                    // console.log("Descriptive -  ", questionAnswerPairs[index].marks);
                     const range = 100 / Number(questionAnswerPairs[index].marks)
-                    if (scores[index] === NaN || scores[index] < 10) mark.obtained_marks = 0;
+                    if (Number.isNaN(scores[index]) || scores[index] < 10) mark.obtained_marks = 0;
                     else {
                         for (let i = 1; i <= questionAnswerPairs[index].marks; i++) {
                             if (scores[index] <= i * range) {
@@ -1008,7 +1010,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                                 break;
                             }
                         }
-                        console.log("mark for that question  -- - ", totalMarks);
+                        // console.log("mark for that question  -- - ", totalMarks);
                     }
                 }
                 else {
@@ -1016,8 +1018,8 @@ exports.startQuizEvaluationProcess = async (request) => {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         // totalMarks += questionAnswerPairs[index].marks;
-                        console.log("mark for that question  -- - ", totalMarks);
-                        console.log("non Descriptive ");
+                        // console.log("mark for that question  -- - ", totalMarks);
+                        // console.log("non Descriptive ");
 
                     }
                     if (scores[index] === NaN) {
@@ -1030,6 +1032,9 @@ exports.startQuizEvaluationProcess = async (request) => {
                 mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
                 // console.log("scores[index] - ", scores[index]);
 
+                let newMarksData = { ...mark }
+                qa_detailsCopyArray[i].push(newMarksData);
+
                 answerCompareArray.push({
                     question_id: questionAnswerPairs[index].question_id,
                     extractedAns: questionAnswerPairs[index].studentAnswer,
@@ -1038,15 +1043,35 @@ exports.startQuizEvaluationProcess = async (request) => {
                 });
             });
 
-            console.log("totalMark -- - ", totalMarks);
-            studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
-            studentMarkDetail.evaluated = "Yes";
-            studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
-            studentMarkDetail.marks_details[0].totalMark = totalMarks;
-            studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
+            // console.log("totalMark -- - ", totalMarks);
+            studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
+            studentMetaRes.Items[i].evaluated = "Yes";
+            studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
+            studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
+            studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
+
+            totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
         }
+    // )
 
         // console.log("Answer Comparison Details: ", answerCompareArray);
+
+        qa_detailsCopyArray.forEach((marksDataArray, i) => {
+            if (!studentMetaRes.Items[i] || !totalMarkCopyArray[i]) return; // Prevent undefined access
+
+            // Directly mutate the object inside `studentMetaRes.Items`
+            studentMetaRes.Items[i] = {
+                ...studentMetaRes.Items[i],
+                marks_details: [
+                    {
+                        ...studentMetaRes.Items[i].marks_details[0],
+                        qa_details: JSON.parse(JSON.stringify(marksDataArray)),
+                        totalMark: totalMarkCopyArray[i].totalMark ?? 0
+                    }
+                ]
+            };
+
+        });
 
         const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
 
