@@ -114,7 +114,7 @@ exports.fetchChapterData2 = async (request) => {
                 RequestItems: {
                     [TABLE_NAMES.upschool_chapter_table]: {
                         Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
-                        ProjectionExpression: "chapter_id, chapter_title, chapter_status, chapter_updated_ts"
+                        ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
                     }
                 }
             };
