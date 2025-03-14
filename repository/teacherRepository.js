@@ -200,7 +200,7 @@ exports.fetchTeacherSubjectData2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: fromatedRequest.FilterExpression,
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-        ProjectionExpression: "subject_id, subject_title"
+        ProjectionExpression: "subject_id, display_name"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
