@@ -27,7 +27,7 @@ exports.fetchUnitData = function (request, callback) {
                         ":unit_id": subject_unit_id[0],
                         ":unit_status": "Active",
                     },
-                    ProjectionExpression: ["unit_id", "unit_chapter_id", "unit_status", "unit_title", "unit_updated_ts"],
+                    ProjectionExpression: ["unit_id", "unit_chapter_id", "unit_status", "unit_title", "display_name", "unit_updated_ts"],
                 }
                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
@@ -47,7 +47,7 @@ exports.fetchUnitData = function (request, callback) {
                     TableName: TABLE_NAMES.upschool_unit_table,
                     FilterExpression: FilterExpressionDynamic,
                     ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-                    ProjectionExpression: ["unit_id", "unit_chapter_id", "unit_status", "unit_title", "unit_updated_ts"],
+                    ProjectionExpression: ["unit_id", "unit_chapter_id", "unit_status", "unit_title", "display_name", "unit_updated_ts"],
                 }
 
                 DATABASE_TABLE.scanRecord(docClient, read_params, callback);
@@ -71,7 +71,7 @@ exports.fetchUnitData2 = async (request) => {
                 ":unit_id": subject_unit_id[0],
                 ":unit_status": "Active",
             },
-            ProjectionExpression: "unit_id, unit_chapter_id, unit_status, unit_title, unit_updated_ts",
+            ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
         };
         const unit_data = await DATABASE_TABLE2.query(params);
         return unit_data.Items;
@@ -81,7 +81,7 @@ exports.fetchUnitData2 = async (request) => {
             RequestItems: {
                 [TABLE_NAMES.upschool_unit_table]: {
                     Keys: keys,
-                    ProjectionExpression: "unit_id, unit_chapter_id, unit_status, unit_title, unit_updated_ts",
+                    ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
                 },
             },
         };

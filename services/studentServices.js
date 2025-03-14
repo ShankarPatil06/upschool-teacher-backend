@@ -245,7 +245,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0].concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -253,7 +253,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: conceptDetails[0].concept_id,
-                                            concept_title: conceptDetails[0].concept_title,
+                                            concept_title: conceptDetails[0].display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -273,8 +273,8 @@ exports.needAttention = async (request) => {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -282,7 +282,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'postQuiz',
                                         });
                                         break;
@@ -310,7 +310,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0]?.concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                                     console.log({ conceptDetails });
 
                                     if (existingConcept) {
@@ -319,7 +319,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: conceptDetails[0]?.concept_id,
-                                            concept_title: conceptDetails[0]?.concept_title,
+                                            concept_title: conceptDetails[0]?.display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -340,8 +340,8 @@ exports.needAttention = async (request) => {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -349,7 +349,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'preQuiz',
                                         });
                                         break;
@@ -400,7 +400,7 @@ exports.needAttention = async (request) => {
                                 if (concept.concept_question_id.includes(mark.question_id)) {
                                     const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                                    const markValue = mark.modified_marks !== 'N.A.' ? parseInt(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseInt(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== 'N.A.' ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -408,7 +408,7 @@ exports.needAttention = async (request) => {
                                     } else {
                                         matchedConcepts.push({
                                             concept_id: concept.concept_id,
-                                            concept_title: concept.concept_title,
+                                            concept_title: concept.display_name,
                                             question_id: [mark.question_id],
                                             marks: [markValue],
                                         });
@@ -422,15 +422,15 @@ exports.needAttention = async (request) => {
                                 const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
                                 const totalConceptMarks = matchConcept.marks.reduce((total, mark) => total + mark, 0);
 
-                                if (((totalConceptMarks / totalQuestionMarks) * 100) < test_config.pct_of_student_for_reteach) {
+                                if (((totalConceptMarks / totalQuestionMarks) * 100) < test_config?.pct_of_student_for_reteach) {
                                     const existingStudent = needAttention.find(attention => attention.student_id === singleStudentDetails[0].student_id);
 
                                     if (existingStudent) {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -438,7 +438,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             class_test_id: testResult.class_test_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'Test'
                                         });
                                     }
@@ -563,7 +563,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (concept.concept_question_id.includes(mark.question_id)) {
                             const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
 
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
@@ -571,7 +571,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 matchedConcepts.push({
                                     concept_id: concept.concept_id,
-                                    concept_title: concept.concept_title,
+                                    concept_title: concept.display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -592,7 +592,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of allTopics) {
@@ -610,7 +610,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < test_config.pct_of_student_for_reteach) ? [matchConcept] : [],
@@ -626,7 +626,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -634,7 +634,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
@@ -685,14 +685,14 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = preConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
                             } else {
                                 matchedConcepts.push({
                                     concept_id: conceptDetails[0]?.concept_id,
-                                    concept_title: conceptDetails[0]?.concept_title,
+                                    concept_title: conceptDetails[0]?.display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -714,7 +714,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of topicDetailsPre) {
@@ -729,7 +729,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < pre_quiz_config.pct_of_student_for_reteach) ? [matchConcept] : [],
@@ -744,7 +744,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -752,7 +752,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
@@ -767,14 +767,14 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = postConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseInt(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseInt(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
                             } else {
                                 matchedConcepts.push({
                                     concept_id: conceptDetails[0].concept_id,
-                                    concept_title: conceptDetails[0].concept_title,
+                                    concept_title: conceptDetails[0].display_name,
                                     question_id: [mark.question_id],
                                     marks: [markValue],
                                 });
@@ -796,7 +796,7 @@ exports.studentChaptersPerformance = async (request) => {
                         matchConcept.totalQuestionMarks = totalQuestionMarks;
                         matchConcept.totalConceptMarks = totalConceptMarks;
                         matchConcept.scoredPercentage = (scoredPercentage % 1 === 0)
-                            ? parseInt(scoredPercentage)
+                            ? parseFloat(scoredPercentage)
                             : parseFloat(scoredPercentage.toFixed(2));
 
                         for (const topic of topicDetailsPost) {
@@ -811,7 +811,7 @@ exports.studentChaptersPerformance = async (request) => {
                                 } else {
                                     matchedTopics.push({
                                         topic_id: topic.topic_id,
-                                        topic_title: topic.topic_title,
+                                        topic_title: topic.display_name,
                                         totalStudentMarks: totalConceptMarks,
                                         AllConceptQuestionMarks: totalQuestionMarks,
                                         concepts: (matchConcept.scoredPercentage < post_quiz_config.pct_of_student_for_reteach) ? [matchConcept] : [],
@@ -827,7 +827,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (topic.concepts.length > 0) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
-                                ? parseInt(scoredPercentage)
+                                ? parseFloat(scoredPercentage)
                                 : parseFloat(scoredPercentage.toFixed(2));
                             let expectedPerformances = studentChaptersPerformance.find(s => s.chapter_id === chapterDetails.chapter_id);
                             if (expectedPerformances) {
@@ -835,7 +835,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
@@ -1195,25 +1195,25 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                                 let total_student_marks = quest?.marks || 0;
                                 let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                                total_marks += parseInt(total_student_marks);
-                                total_obtained_marks += parseInt(total_student_obtained_marks);
+                                total_marks += parseFloat(total_student_marks);
+                                total_obtained_marks += parseFloat(total_student_obtained_marks);
                                 let student = studentData.Items.find(s => s.student_id === test.student_id);
                                 if (!student) continue;
 
                                 const studentEntry = {
                                     student_id: student.student_id,
                                     student_name: `${student?.user_firstname} ${student?.user_lastname}`,
-                                    studentMark: parseInt(total_student_obtained_marks),
-                                    totalMarks: parseInt(total_student_marks) || 0,
-                                    percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                                    studentMark: parseFloat(total_student_obtained_marks),
+                                    totalMarks: parseFloat(total_student_marks) || 0,
+                                    percentage: (((parseFloat(total_student_obtained_marks) / (parseFloat(total_student_marks) || 1)) * 100).toFixed(2))
                                 };
 
                                 if (!studentMap.has(student.student_id)) {
                                     studentMap.set(student.student_id, studentEntry);
                                 } else {
                                     let existing = studentMap.get(student.student_id);
-                                    existing.studentMark += parseInt(studentEntry.studentMark);
-                                    existing.totalMarks += parseInt(studentEntry.totalMarks);
+                                    existing.studentMark += parseFloat(studentEntry.studentMark);
+                                    existing.totalMarks += parseFloat(studentEntry.totalMarks);
                                     existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
                                     studentMap.set(student.student_id, existing);
                                 }
@@ -1356,7 +1356,7 @@ exports.customWorksheetGenerated = async (request) => {
             const existingName = studentWorksheet.Items[0]?.question_paper_name || `${studentFirstName}_worksheet_0`;
             const nameParts = existingName.match(/^(.*?)(_(\d+))?$/);
             const baseName = nameParts[1];
-            const currentNumber = nameParts[3] ? parseInt(nameParts[3], 10) : 0;
+            const currentNumber = nameParts[3] ? parseFloat(nameParts[3], 10) : 0;
             const question_paper_name = `${baseName}_${currentNumber + 1}`;
 
 
