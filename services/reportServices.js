@@ -278,7 +278,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   groupedData.forEach((chapter) => {
     const chapterData = chapterDataRes.find((c) => c.chapter_id === chapter.id);
     if (chapterData) {
-      chapter.chapterName = chapterData.chapter_title;
+      chapter.chapterName = chapterData.display_name;
     }
     chapter.data.forEach((quiz) => {
       quiz.selectedTopics.forEach((topic) => {
@@ -1629,7 +1629,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
     Object.keys(student.performance).forEach((chapterId) => {
       const chapter = chapterData.find((c) => c.chapter_id === chapterId);
       if (chapter) {
-        student.performance[chapterId].title = chapter.chapter_title;
+        student.performance[chapterId].title = chapter.display_name;
       }
     });
   });
@@ -2753,7 +2753,7 @@ exports.getActionsAndRecommendations = async (request) => {
     );
 
     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
-    item.chapter_name = relatedChapter?.chapter_title || "Unknown Chapter";
+    item.chapter_name = relatedChapter?.display_name || "Unknown Chapter";
 
     const relatedQuiz = quizDataRes.Items.find((quiz) =>
       Object.values(quiz.question_track_details.qp_set_a || {}).flat().some((q) => q.concept_id === item.concept)
@@ -2942,7 +2942,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
   let conceptsToFocus = [];
 
-  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.chapter_title || "Unknown Chapter";
+  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.display_name || "Unknown Chapter";
   console.log({ questions123: questions, conceptAndQuestions, });
   conceptAndQuestions.forEach((item) => {
     let studentsData = [];
