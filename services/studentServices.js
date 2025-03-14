@@ -273,8 +273,8 @@ exports.needAttention = async (request) => {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -282,7 +282,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'postQuiz',
                                         });
                                         break;
@@ -340,8 +340,8 @@ exports.needAttention = async (request) => {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -349,7 +349,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'preQuiz',
                                         });
                                         break;
@@ -422,15 +422,15 @@ exports.needAttention = async (request) => {
                                 const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
                                 const totalConceptMarks = matchConcept.marks.reduce((total, mark) => total + mark, 0);
 
-                                if (((totalConceptMarks / totalQuestionMarks) * 100) < test_config.pct_of_student_for_reteach) {
+                                if (((totalConceptMarks / totalQuestionMarks) * 100) < test_config?.pct_of_student_for_reteach) {
                                     const existingStudent = needAttention.find(attention => attention.student_id === singleStudentDetails[0].student_id);
 
                                     if (existingStudent) {
                                         if (!existingStudent.chapter_id.includes(chapterDetails.chapter_id)) {
                                             existingStudent.chapter_id.push(chapterDetails.chapter_id);
                                         }
-                                        if (!existingStudent.chapter_name.includes(chapterDetails.chapter_title)) {
-                                            existingStudent.chapter_name.push(chapterDetails.chapter_title);
+                                        if (!existingStudent.chapter_name.includes(chapterDetails.display_name)) {
+                                            existingStudent.chapter_name.push(chapterDetails.display_name);
                                         }
                                     } else {
                                         needAttention.push({
@@ -438,7 +438,7 @@ exports.needAttention = async (request) => {
                                             student_name: `${singleStudentDetails[0]?.user_firstname} ${singleStudentDetails[0]?.user_lastname}`,
                                             class_test_id: testResult.class_test_id,
                                             chapter_id: [chapterDetails.chapter_id],
-                                            chapter_name: [chapterDetails.chapter_title],
+                                            chapter_name: [chapterDetails.display_name],
                                             recentExam: 'Test'
                                         });
                                     }
@@ -634,7 +634,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
@@ -752,7 +752,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
@@ -835,7 +835,7 @@ exports.studentChaptersPerformance = async (request) => {
                             } else {
                                 studentChaptersPerformance.push({
                                     chapter_id: chapterDetails.chapter_id,
-                                    chapter_title: chapterDetails.chapter_title,
+                                    chapter_title: chapterDetails.display_name,
                                     Topics: [topic],
                                     student_id: request.data.student_id
                                 });
