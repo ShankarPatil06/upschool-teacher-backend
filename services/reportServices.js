@@ -278,7 +278,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   groupedData.forEach((chapter) => {
     const chapterData = chapterDataRes.find((c) => c.chapter_id === chapter.id);
     if (chapterData) {
-      chapter.chapterName = chapterData.chapter_title;
+      chapter.chapterName = chapterData.display_name;
     }
     chapter.data.forEach((quiz) => {
       quiz.selectedTopics.forEach((topic) => {
@@ -776,7 +776,7 @@ exports.viewClassReportQuestions = async (request) => {
     question.set = questionSet.find((q) => q.question_id == question.question_id).sets
 
     const allAnswers = quizResultMarksData.flat().filter(ans => ans.question_id === question.question_id)
-    question.cognitive_skill = cognitiveSkillNames.Items.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;
+    question.cognitive_skill = cognitiveSkillNames.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;
     //% of most common answer for objective (descriptive we wont show anything)
     question.answers_of_question.map(async (answer, i) => {
       let count = 0;
@@ -1629,7 +1629,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
     Object.keys(student.performance).forEach((chapterId) => {
       const chapter = chapterData.find((c) => c.chapter_id === chapterId);
       if (chapter) {
-        student.performance[chapterId].title = chapter.chapter_title;
+        student.performance[chapterId].title = chapter.display_name;
       }
     });
   });
@@ -1764,25 +1764,25 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
                 let total_student_marks = quest?.marks || 0;
                 let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                total_marks += parseInt(total_student_marks);
-                total_obtained_marks += parseInt(total_student_obtained_marks);
+                total_marks += parseFloat(total_student_marks);
+                total_obtained_marks += parseFloat(total_student_obtained_marks);
                 let student = studentData.Items.find(s => s.student_id === test.student_id);
                 if (!student) continue;
 
                 const studentEntry = {
                   student_id: student.student_id,
                   student_name: `${student.user_firstname} ${student.user_lastname}`,
-                  studentMark: parseInt(total_student_obtained_marks),
-                  totalMarks: parseInt(total_student_marks) || 0,
-                  percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                  studentMark: parseFloat(total_student_obtained_marks),
+                  totalMarks: parseFloat(total_student_marks) || 0,
+                  percentage: (((parseFloat(total_student_obtained_marks) / (parseFloat(total_student_marks) || 1)) * 100).toFixed(2))
                 };
 
                 if (!studentMap.has(student.student_id)) {
                   studentMap.set(student.student_id, studentEntry);
                 } else {
                   let existing = studentMap.get(student.student_id);
-                  existing.studentMark += parseInt(studentEntry.studentMark);
-                  existing.totalMarks += parseInt(studentEntry.totalMarks);
+                  existing.studentMark += parseFloat(studentEntry.studentMark);
+                  existing.totalMarks += parseFloat(studentEntry.totalMarks);
                   existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
                   studentMap.set(student.student_id, existing);
                 }
@@ -2069,25 +2069,25 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
                     let total_student_marks = quest?.marks || 0;
                     let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                    total_marks += parseInt(total_student_marks);
-                    total_obtained_marks += parseInt(total_student_obtained_marks);
+                    total_marks += parseFloat(total_student_marks);
+                    total_obtained_marks += parseFloat(total_student_obtained_marks);
                     let student = studentData.Items.find(s => s.student_id === test.student_id);
                     if (!student) continue;
 
                     const studentEntry = {
                       student_id: student.student_id,
                       student_name: `${student.user_firstname} ${student.user_lastname}`,
-                      studentMark: parseInt(total_student_obtained_marks),
-                      totalMarks: parseInt(total_student_marks) || 0,
-                      percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                      studentMark: parseFloat(total_student_obtained_marks),
+                      totalMarks: parseFloat(total_student_marks) || 0,
+                      percentage: (((parseFloat(total_student_obtained_marks) / (parseFloat(total_student_marks) || 1)) * 100).toFixed(2))
                     };
 
                     if (!studentMap.has(student.student_id)) {
                       studentMap.set(student.student_id, studentEntry);
                     } else {
                       let existing = studentMap.get(student.student_id);
-                      existing.studentMark += parseInt(studentEntry.studentMark);
-                      existing.totalMarks += parseInt(studentEntry.totalMarks);
+                      existing.studentMark += parseFloat(studentEntry.studentMark);
+                      existing.totalMarks += parseFloat(studentEntry.totalMarks);
                       existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
                       studentMap.set(student.student_id, existing);
                     }
@@ -2380,25 +2380,25 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
                         let total_student_marks = quest?.marks || 0;
                         let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
 
-                        total_marks += parseInt(total_student_marks);
-                        total_obtained_marks += parseInt(total_student_obtained_marks);
+                        total_marks += parseFloat(total_student_marks);
+                        total_obtained_marks += parseFloat(total_student_obtained_marks);
                         let student = studentData.Items.find(s => s.student_id === test.student_id);
                         if (!student) continue;
 
                         const studentEntry = {
                           student_id: student.student_id,
                           student_name: `${student.user_firstname} ${student.user_lastname}`,
-                          studentMark: parseInt(total_student_obtained_marks),
-                          totalMarks: parseInt(total_student_marks) || 0,
-                          percentage: (((parseInt(total_student_obtained_marks) / (parseInt(total_student_marks) || 1)) * 100).toFixed(2))
+                          studentMark: parseFloat(total_student_obtained_marks),
+                          totalMarks: parseFloat(total_student_marks) || 0,
+                          percentage: (((parseFloat(total_student_obtained_marks) / (parseFloat(total_student_marks) || 1)) * 100).toFixed(2))
                         };
 
                         if (!studentMap.has(student.student_id)) {
                           studentMap.set(student.student_id, studentEntry);
                         } else {
                           let existing = studentMap.get(student.student_id);
-                          existing.studentMark += parseInt(studentEntry.studentMark);
-                          existing.totalMarks += parseInt(studentEntry.totalMarks);
+                          existing.studentMark += parseFloat(studentEntry.studentMark);
+                          existing.totalMarks += parseFloat(studentEntry.totalMarks);
                           existing.percentage = (((existing.studentMark / existing.totalMarks) * 100).toFixed(2));
                           studentMap.set(student.student_id, existing);
                         }
@@ -2753,7 +2753,7 @@ exports.getActionsAndRecommendations = async (request) => {
     );
 
     item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
-    item.chapter_name = relatedChapter?.chapter_title || "Unknown Chapter";
+    item.chapter_name = relatedChapter?.display_name || "Unknown Chapter";
 
     const relatedQuiz = quizDataRes.Items.find((quiz) =>
       Object.values(quiz.question_track_details.qp_set_a || {}).flat().some((q) => q.concept_id === item.concept)
@@ -2908,22 +2908,20 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   const marksOfEachStudent = [];
   quizResultMarksData.forEach((qdata) => {
     qdata.marks.forEach((marks) => {
-      allQuestionIdSet.forEach((question) => {
-        if (question === marks.question_id) {
-          let marksValue = marks.modified_marks === "N.A."
-            ? marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks
-            : marks.modified_marks;
+      if (allQuestionIdSet.includes(marks.question_id)) {
+        let marksValue = marks.modified_marks === "N.A."
+          ? marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks
+          : marks.modified_marks;
 
-          const student = studentDataRes.Items.find((student) => student.student_id === qdata.studentId);
-          const studentFullName = student ? `${student.user_firstname} ${student.user_lastname}` : "Unknown Student";
+        const student = studentDataRes.Items.find((student) => student.student_id === qdata.studentId);
+        const studentFullName = student ? `${student.user_firstname} ${student.user_lastname}` : "Unknown Student";
 
-          marksOfEachStudent.push({
-            studentName: studentFullName,
-            marks: marksValue,
-            questionId: question,
-          });
-        }
-      });
+        marksOfEachStudent.push({
+          studentName: studentFullName,
+          marks: marksValue,
+          questionId: marks.question_id,
+        });
+      }
     });
   });
 
@@ -2944,7 +2942,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
   let conceptsToFocus = [];
 
-  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.chapter_title || "Unknown Chapter";
+  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.display_name || "Unknown Chapter";
   console.log({ questions123: questions, conceptAndQuestions, });
   conceptAndQuestions.forEach((item) => {
     let studentsData = [];
