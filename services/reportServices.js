@@ -124,52 +124,105 @@ exports.getTargetedLearningExpectation = async (request) => {
     return {};
   const classPercentagePre =
     schoolDataRes.Items[0].pre_quiz_config.class_percentage;
+  const passPercentagePre =
+    schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
   const classPercentagePost =
     schoolDataRes.Items[0].post_quiz_config.class_percentage;
-
+  const passPercentagePost =
+    schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
+  console.log({classPercentagePre});
   if (!classPercentagePre || !classPercentagePost) return;
   const studentDataRes = await studentRepository.getStudentsData2(request);
   console.log("studentDataRes - ", studentDataRes);
-  let classStrength = studentDataRes?.Items?.length;
-  console.log("request - ", request);
+  const classStrength = studentDataRes?.Items?.length;
+
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
   console.log("quizDataRes - ", quizDataRes);
-  const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
 
-  console.log("quizIds - ", quizIds);
+  if(quizDataRes.Items.length === 0) return {totalTopics, reached: reachedTopics, classPercentagePre, classPercentagePost, totalStrength: classStrength};
+  const TargetedLearningExpectationData = await this.getTargetedLearningExpectationDetails(request);
+ 
+  const passedTopics = TargetedLearningExpectationData.flatMap(item =>
+    item.data.flatMap(dataItem =>
+      dataItem.selectedTopics.filter(topic => {
+        const passedStudents = parseInt(topic.passedStudentsCount, 10);
+        const totalStrength = parseInt(item.totalStrength, 10);
+        const passPercentage =
+          dataItem.learningType === "preLearning"
+            ? item.classPercentagePre
+            : item.classPercentagePost;
+  
+        return (
+          passPercentage &&
+          passedStudents >= totalStrength * passPercentage * 0.01 &&
+          totalStrength
+        );
+      })
+    )
+  ).length; // Counting passed topics
+  
+  const failedTopics = TargetedLearningExpectationData.flatMap(item =>
+    item.data.flatMap(dataItem =>
+      dataItem.selectedTopics.filter(topic => {
+        const passedStudents = parseInt(topic.passedStudentsCount, 10);
+        const totalStrength = parseInt(item.totalStrength, 10);
+        const passPercentage =
+          dataItem.learningType === "preLearning"
+            ? item.classPercentagePre
+            : item.classPercentagePost;
+  
+        return !(
+          passPercentage &&
+          passedStudents >= totalStrength * passPercentage * 0.01 &&
+          totalStrength
+        );
+      })
+    )
+  ).length;
+
+  console.log({passedTopics});
+  console.log({failedTopics});
+  
+  reachedTopics = passedTopics;
+  totalTopics = passedTopics + failedTopics;
+
+  // console.log("request - ", request);
+  // const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
+
+  // console.log("quizIds - ", quizIds);
 
 
-  const quizResultDataRes =
-    quizIds.length &&
-    (await quizResultRepository.fetchBulkQuizResultsByID2({
-      unit_Quiz_id: quizIds,
-    }));
+  // const quizResultDataRes =
+  //   quizIds.length &&
+  //   (await quizResultRepository.fetchBulkQuizResultsByID2({
+  //     unit_Quiz_id: quizIds,
+  //   }));
 
-  console.log("quizResultDataRes123 - ", quizResultDataRes);
+  // console.log("quizResultDataRes123 - ", quizResultDataRes);
 
-  totalTopics =
-    quizDataRes &&
-    quizDataRes.Items.reduce((acc, val) => acc + val.selectedTopics?.length, 0);
+  // totalTopics =
+  //   quizDataRes &&
+  //   quizDataRes.Items.reduce((acc, val) => acc + val.selectedTopics?.length, 0);
 
-  quizDataRes.Items.forEach((quiz) => {
-    const passedStudentsOfParticularQuiz = quizResultDataRes.filter(
-      (val) => val.isPassed && val.evaluated == "Yes" && quiz.quiz_id == val.quiz_id
-    ).length;
+  // quizDataRes.Items.forEach((quiz) => {
+  //   const passedStudentsOfParticularQuiz = quizResultDataRes.filter(
+  //     (val) => val.isPassed && val.evaluated == "Yes" && quiz.quiz_id == val.quiz_id
+  //   ).length;
 
-    const classPercentage =
-      quiz.learningType === "preLearning"
-        ? classPercentagePre
-        : classPercentagePost;
-    const passedThreshold = classPercentage
-      ? classStrength * classPercentage * 0.01
-      : 0;
+  //   const classPercentage =
+  //     quiz.learningType === "preLearning"
+  //       ? classPercentagePre
+  //       : classPercentagePost;
+  //   const passedThreshold = classPercentage
+  //     ? classStrength * classPercentage * 0.01
+  //     : 0;
 
-    console.log("passedStudentsOfParticularQuiz - ", passedStudentsOfParticularQuiz);
+  //   console.log("passedStudentsOfParticularQuiz - ", passedStudentsOfParticularQuiz);
 
-    if (passedStudentsOfParticularQuiz >= passedThreshold) {
-      reachedTopics += quiz.selectedTopics.length;
-    }
-  });
+  //   if (passedStudentsOfParticularQuiz >= passedThreshold) {
+  //     reachedTopics += quiz.selectedTopics.length;
+  //   }
+  // });
   return {
     totalTopics,
     reached: reachedTopics,
