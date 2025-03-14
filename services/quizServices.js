@@ -1052,14 +1052,12 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
         }
-    // )
 
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
         qa_detailsCopyArray.forEach((marksDataArray, i) => {
-            if (!studentMetaRes.Items[i] || !totalMarkCopyArray[i]) return; // Prevent undefined access
+            if (!studentMetaRes.Items[i] || !totalMarkCopyArray[i]) return;
 
-            // Directly mutate the object inside `studentMetaRes.Items`
             studentMetaRes.Items[i] = {
                 ...studentMetaRes.Items[i],
                 marks_details: [
