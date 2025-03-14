@@ -214,7 +214,7 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                             }else{
                                 e.isArchived === "No" && topicData.push( 
                                     {
-                                        topic_name: e.topic_title,
+                                        topic_name: e.display_name,
                                         topic_id: e.topic_id,
                                         totalNumOfQuestions: matrix_response
                                     }
@@ -252,7 +252,7 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                                             conceptData.push(
                                                 {
                                                     concept_id:  a.concept_id, 
-                                                    concept_name:  a.concept_title, 
+                                                    concept_name:  a.display_name, 
                                                     totalNumOfQuestions:  matrix_response 
                                                 }
                                             ) 
@@ -263,7 +263,7 @@ exports.fetchCountofQuestions = (request, finalPreTopicData, pre_post_quiz_confi
                         )
                         e.isArchived === "No" && topicArray.push(
                             {
-                                topic_name: e.topic_title,
+                                topic_name: e.display_name,
                                 topic_id: e.topic_id,
                                 conceptData: conceptData
                             })
