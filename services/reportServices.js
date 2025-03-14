@@ -304,7 +304,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   const topicDataRes = await topicRepository.fetchBulkTopicsIDName2({
     unit_Topic_id: allTopicIds,
   });
- 
+
   groupedData.forEach((chapter) => {
     chapter.data.forEach((quiz) => {
       const results = quizResultDataRes.filter(
@@ -771,7 +771,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
           (val) => val.question_id == que.question_id
         );
         que.topic_title =
-          topicNames.find((val) => val.topic_id == ans.topic_id)?.topic_title ||
+          topicNames.find((val) => val.topic_id == ans.topic_id)?.display_name ||
           "";
 
         const cognitive_skill = cognitiveSkillNames.find(
@@ -1544,10 +1544,10 @@ exports.preLearningBlueprintDetails = async (request) => {
   averages.map((item) => {
     item.topic_title = topicNames.find(
       (val) => val.topic_id == item.topic_id
-    ).topic_title;
+    ).display_name;
     item.concept_title = conceptNames.find(
       (val) => val.concept_id == item.concept_id
-    ).concept_title;
+    ).display_name;
   });
 
   const conceptMap = new Map();
@@ -2038,7 +2038,7 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
     Object.keys(student.performance).forEach((topicId) => {
       const topic = topicData.find((t) => t.topic_id === topicId);
       if (topic) {
-        student.performance[topicId].title = topic.topic_title;
+        student.performance[topicId].title = topic.display_name;
       }
     });
   });
@@ -2345,7 +2345,7 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
     Object.keys(student.performance).forEach((conceptId) => {
       const concept = conceptData.find((c) => c.concept_id === conceptId);
       if (concept) {
-        student.performance[conceptId].title = concept.concept_title;
+        student.performance[conceptId].title = concept.display_name;
       }
     });
   });
@@ -2875,7 +2875,7 @@ exports.getActionsAndRecommendations = async (request) => {
         chapter.prelearning_topic_id.includes(item.topic_id) || chapter.postlearning_topic_id.includes(item.topic_id)
     );
 
-    item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
+    item.topic_name = relatedTopic?.display_name || "Unknown Topic";
     item.chapter_name = relatedChapter?.display_name || "Unknown Chapter";
 
     const relatedQuiz = quizDataRes.Items.find((quiz) =>
@@ -3073,7 +3073,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
     item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
 
     const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
-    item.topic_name = relatedTopic?.topic_title || "Unknown Topic";
+    item.topic_name = relatedTopic?.display_name || "Unknown Topic";
 
     const conceptQuestionDetails = questions.filter((question) => item?.questions?.find((q) => q === question.question_id));
 

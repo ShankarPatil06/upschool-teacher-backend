@@ -9,3 +9,5 @@ jspm_packages
 #Sonar
 .scannerwork
 trash
+
+dataSeeder/dynamodb_exports
