@@ -2859,7 +2859,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   ];
 
 
-  const conceptAndQuestions = questionSetA.reduce((acc, item) => {
+  const conceptAndQuestions = allAuestionSet.reduce((acc, item) => {
     const existingConcept = acc?.find((concept) => concept.concept === item.concept_id);
     if (existingConcept) {
       existingConcept.questions.push(item.question_id);
