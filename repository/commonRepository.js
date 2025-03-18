@@ -379,6 +379,40 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
     }
   });
 };
+exports.fetchBulkDataWithProjection5 = async ({ IdArray, fetchIdName, TableName, projectionExp }) => {
+  if (!Array.isArray(IdArray) || IdArray.length === 0) {
+      throw new Error("IdArray must be a non-empty array.");
+  }
+
+  const queryResults = await Promise.all(
+      IdArray.map(async (id) => {
+          const params = {
+              TableName,
+              KeyConditionExpression: `${fetchIdName} = :idVal`,
+              ExpressionAttributeValues: {
+                  ":idVal": id,
+              },
+              ProjectionExpression: projectionExp.join(", "),
+          };
+
+          console.log("DynamoDB Query Params:", JSON.stringify(params, null, 2));
+
+          try {
+              const result = await DATABASE_TABLE2.query(params);
+              return result.Items;
+          } catch (error) {
+              console.error("DynamoDB Query Error:", error);
+              throw error;
+          }
+      })
+  );
+
+  return queryResults.flat(); // Flatten results if multiple queries
+}
+
+
+
+
 
 // exports.fetchBulkDataWithProjection2 = async (request) => {
 //   // const fromatedRequest = await helper.getDataByFilterKey(request);
