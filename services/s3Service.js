@@ -1,6 +1,4 @@
-
 const { dynamoDbCon, s3 } = require('../awsConfig');
-
 
 const deleteFile = async (fileName) => {
     const params = {
@@ -39,7 +37,6 @@ const getFile = async (Key) => await s3.getObject({ Bucket: process.env.BUCKET_N
 
 const getS3SignedUrl = async (fileKey) => 
 {
-    console.log("fileKey ------------------",fileKey);
     let Key = fileKey;
     let URL_EXPIRATION_SECONDS = 600;
 
@@ -60,15 +57,11 @@ const upload = async (files) => {
             Bucket: awsConfig.BucketName,
             Key: file.name,
             Body: file.data,
-
-            // Key: uploadPath,
-            // Body: buff,
             ACL: "public-read",
             ContentType: ".png"
         };
         try {
             const stored = await awsConfig.s3.upload(params).promise()
-            console.log(stored);
         } catch (err) {
             console.log(err)
         }
@@ -86,17 +79,6 @@ const getFileByPartialKey = async(key) => {
     }
 }
 const getFileBufferFromS3 = async (fileKey) => {
-    // const downloadParams = { Bucket: process.env.BUCKET_NAME, Key: fileKey };
-
-    // try {
-    //     const { Body } = await s3.getObject(downloadParams).promise();
-    //     console.log({ Body});
-    //     return Body;
-    // } catch (error) {
-    //     console.error('Error fetching file from S3:', error);
-    //     throw error;
-    // }
-
     try {
         let Key = fileKey;
         let URL_EXPIRATION_SECONDS = 604800;

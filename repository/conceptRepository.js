@@ -55,6 +55,33 @@ exports.fetchConceptData = function (request, callback) {
         }
     });
 }
+
+exports.fetchConceptData3 = async function (request) {
+    try {
+        let topic_concept_id = request.topic_concept_id;
+
+        if (!Array.isArray(topic_concept_id) || topic_concept_id.length === 0) {
+            throw new Error("Invalid input: topic_concept_id must be a non-empty array.");
+        }
+
+        let params = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_concept_blocks_table]: {
+                    Keys: topic_concept_id.map(id => ({ concept_id: id }))
+                }
+            }
+        };
+
+        let result = await DATABASE_TABLE2.getByObjects(params);
+        return result.Responses[TABLE_NAMES.upschool_concept_blocks_table];
+    } catch (error) {
+        console.error("Database Error:", error);
+        throw new Error(constant.messages.DATABASE_ERROR);
+    }
+};
+
+
+
 exports.fetchConceptData2 = async (request) => {
     const fromatedRequest = await helper.getDataByFilterKey(request);
     const params = {
