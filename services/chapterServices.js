@@ -118,6 +118,40 @@ exports.appendPreTopicsArchivedStatus = async function (request, teacherActivity
   }
 }
 
+exports.appendPreTopicsArchivedStatus4 = async (request, teacherActivityData, preTopicData, prePostType) => {
+  // console.log({request:"xccxxcxxc"});
+  console.log({firsttttt:"workingggggg"});
+  console.log({request, teacherActivityData, preTopicData, prePostType});
+  let newPreTopic = [];
+  if (teacherActivityData.Items.length > 0) {
+      let chapterActivity = teacherActivityData.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id);
+
+      if (chapterActivity.length > 0) {
+          let preArchivedTopics = chapterActivity[0][prePostType]?.archivedTopics || [];
+
+          newPreTopic = preTopicData.Items.map(preTop => {
+              preTop.isArchived = preArchivedTopics.includes(preTop.topic_id) 
+                  ? constant.common.Yes 
+                  : constant.common.No;
+              return preTop;
+          });
+      } else {
+          newPreTopic = preTopicData.Items.map(preTop => {
+              preTop.isArchived = constant.common.No;
+              return preTop;
+          });
+      }
+  } else {
+      newPreTopic = preTopicData.Items.map(preTop => {
+          preTop.isArchived = constant.common.No;
+          return preTop;
+      });
+  }
+
+  return newPreTopic;
+};
+
+
 exports.appendPostTopicsArchivedStatus = async function (request, teacherActivityData, postTopicData, prePostType, callback) {
   let newPostTopic = [];
   let activeOrNot = "";
@@ -166,6 +200,43 @@ exports.appendPostTopicsArchivedStatus = async function (request, teacherActivit
     callback(0, newPostTopic);
   }
 }
+exports.appendPostTopicsArchivedStatus3 = async function (request, teacherActivityData, postTopicData, prePostType) {
+  let newPostTopic = [];
+
+  if (teacherActivityData.Items.length > 0) {
+      let chapterActivity = teacherActivityData.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id);
+
+      if (chapterActivity.length > 0) {
+          let preArchivedTopics = chapterActivity[0][prePostType]?.archivedTopics || [];
+
+          if (preArchivedTopics.length > 0) {
+              newPostTopic = postTopicData.Items.map(postTop => {
+                  postTop.isArchived = preArchivedTopics.includes(postTop.topic_id) 
+                      ? constant.common.Yes 
+                      : constant.common.No;
+                  return postTop;
+              });
+          } else {
+              newPostTopic = postTopicData.Items.map(postTop => {
+                  postTop.isArchived = constant.common.No;
+                  return postTop;
+              });
+          }
+      } else {
+          newPostTopic = postTopicData.Items.map(postTop => {
+              postTop.isArchived = constant.common.No;
+              return postTop;
+          });
+      }
+  } else {
+      newPostTopic = postTopicData.Items.map(postTop => {
+          postTop.isArchived = constant.common.No;
+          return postTop;
+      });
+  }
+
+  return newPostTopic;
+};
 
 exports.appendPostTopicsArchivedStatus2 = async (request, teacherActivityData, postTopicData, prePostType) => {
   const chapterId = request.data.chapter_id;

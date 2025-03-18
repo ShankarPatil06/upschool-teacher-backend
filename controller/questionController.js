@@ -1,14 +1,11 @@
 const {questionServices} = require("../services");
+exports.fetchAvailableNumOfQuestions = async (req, res, next) => {
+    try {
+        let request = req.body;
+        const availableQuestionResponse = await questionServices.fetchAvailableQuestions(request);
 
-exports.fetchAvailableNumOfQuestions = (req, res, next) => {
-    let request = req.body;
-    questionServices.fetchAvailabeQuestions(request, function (addQuestion_err, addQuestion_response) {
-        if (addQuestion_err) {
-            res.status(addQuestion_err).json(addQuestion_response);
-        } else {
-            console.log("Question Added Successfully");
-            res.json(addQuestion_response);
-        }
-    });
+        res.json(availableQuestionResponse);
+    } catch (error) {
+        res.status(error.status || 500).json(error.response || { message: "Internal Server Error" });
+    }
 };
-
