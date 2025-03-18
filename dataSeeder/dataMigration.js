@@ -9,7 +9,7 @@ AWS.config.update({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
-let DBEnvPrefix = 'prod_';
+let DBEnvPrefix = 'testing_';
 let DBNamePrefix = `${DBEnvPrefix}upschool_`;
 
 const TABLE_NAMES = {
@@ -72,33 +72,81 @@ async function scanTable(tableName) {
     return items;
 }
 
-async function exportAllTables() {
-    const outputDir = path.join(__dirname, 'dynamodb_exports');
+// async function exportAllTables() {
+//     const outputDir = path.join(__dirname, 'dynamodb_exports');
 
-    // Create the output directory if it doesn't exist
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir);
-    }
-
-    for (let [key, tableName] of Object.entries(TABLE_NAMES)) {
-        console.log(`Fetching data from ${tableName}...`);
-        const tableData = await scanTable(tableName);
-
-        // Define the file path for each table
-        const outputFile = path.join(outputDir, `${tableName}.json`);
-
-        // Write data to the respective file
-        fs.writeFileSync(outputFile, JSON.stringify(tableData, null, 2));
-
-        console.log(`Data export completed for ${tableName}! File saved: ${outputFile}`);
-    }
-}
-
-// Execute the script
-exportAllTables().catch(console.error);
-
-// (async () => {
-//     for (let [key, tableName] of Object.entries(TABLE_NAMES)) {
-//         console.log({ firstttttt: tableName })
+//     // Create the output directory if it doesn't exist
+//     if (!fs.existsSync(outputDir)) {
+//         fs.mkdirSync(outputDir);
 //     }
-// })()
+
+//     for (let [key, tableName] of Object.entries(TABLE_NAMES)) {
+//         console.log(`Fetching data from ${tableName}...`);
+//         const tableData = await scanTable(tableName);
+
+//         // Define the file path for each table
+//         const outputFile = path.join(outputDir, `${tableName}.json`);
+
+//         // Write data to the respective file
+//         fs.writeFileSync(outputFile, JSON.stringify(tableData, null, 2));
+
+//         console.log(`Data export completed for ${tableName}! File saved: ${outputFile}`);
+//     }
+// }
+
+// // Execute the script
+// exportAllTables().catch(console.error);
+
+(async () => {
+    for (let [key, tableName] of Object.entries(TABLE_NAMES)) {
+        console.log({ firstttttt: tableName })
+    }
+})()
+
+
+// async function updatePublishedQuestions() {
+//     const tableName = TABLE_NAMES.upschool_question_table;
+
+//     console.log({ firstttt: "workinggggg" })
+//     try {
+//         // Fetch all questions with status "published"
+//         const allQuestions = await scanTable(tableName);
+//         const publishedQuestions = allQuestions.filter(q => q.question_status === "Publish");
+
+//         if (publishedQuestions.length === 0) {
+//             console.log("No published questions found.");
+//             return;
+//         }
+
+//         console.log({ firsttttt: publishedQuestions })
+
+//         for (const question of publishedQuestions) {
+//             // if (question.question_id === "662efcb4-3432-5b5e-a68f-9a9cb1a69cef") {
+//                 console.log({ firstttt: question })
+//                 const params = {
+//                     TableName: tableName,
+//                     Key: { question_id: question.question_id }, // Ensure this matches the primary key schema
+//                     UpdateExpression: "SET #question_status = :newStatus",
+//                     ExpressionAttributeNames: {
+//                         "#question_status": "question_status" // Use correct field name
+//                     },
+//                     ExpressionAttributeValues: {
+//                         ":newStatus": "Accept"
+//                     }
+//                 };
+
+//                 try {
+//                     await dynamoDB.update(params).promise();
+//                     console.log(`Updated question ID: ${question.id} to accepted`);
+//                 } catch (updateError) {
+//                     console.error(`Error updating question ID: ${question.id}`, updateError);
+//                 }
+//             // }
+//         }
+//     } catch (error) {
+//         console.error("Error fetching questions:", error);
+//     }
+// }
+
+// Call the function
+updatePublishedQuestions();
