@@ -1,5 +1,5 @@
 const { formatResponse } = require("../helper/helper");
-const {quizServices} = require("../services");
+const { quizServices } = require("../services");
 
 exports.checkDuplicateQuizName = async (req, res, next) => {
     try {
@@ -86,20 +86,12 @@ exports.startQuizEvaluation = async (req, res, next) => {
     }
 };
 
-exports.fetchAllQuizDetails = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    quizServices.fetchAllQuizDetails(request, function (fetch_all_quiz_err, fetch_all_quiz_response) {
-        if (fetch_all_quiz_err) {
-            res.status(fetch_all_quiz_err).json(fetch_all_quiz_response);
-        } else {
-            console.log("Fetch All Quiz Successfully");
-            res.json(fetch_all_quiz_response);
-        }
-    });
+exports.fetchAllQuizDetails = async (req, res, next) => {
+    try {
+        const request = { ...req.body, token: req.header('Authorization') };
+        const fetchAllQuizResponse = await quizServices.fetchAllQuizDetails(request);
+        return formatResponse(res, fetchAllQuizResponse);
+    } catch (error) {
+        next(error);
+    }
 };
-
-
-
-

@@ -684,6 +684,21 @@ exports.getAllQuizData = function (request, callback) {
     });
 }
 
+exports.getAllQuizData2 = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_quiz_result,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":quiz_id": request.data.quiz_id,
+        },
+    };
+    const data = await DATABASE_TABLE2.query(params);
+    return data;
+};
+
 // exports.fetchAllQuizBasedonChapter = async (request) => {
 //     let filterExpression = "chapter_id = :chapter_id AND quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id AND learningType = :learningType";
 //     let expressionAttributeValues = {
