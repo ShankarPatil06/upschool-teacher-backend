@@ -215,6 +215,59 @@ exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (reque
         callback(500, error.message || "Error fetching questions.");
     }
 };
+exports.fetchBulkQuestionsWithPublishStatusAndProjection2 = async function (request) {
+    try {
+        const { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
+        const uniqueIds = [...new Set(IdArray)];
+
+        if (uniqueIds.length === 0) {
+            console.log("EMPTY BULK ID");
+            return { Items: [] };
+        }
+
+        if (uniqueIds.length === 1) {
+            const getParams = {
+                TableName,
+                Key: { [fetchIdName]: uniqueIds[0] },
+                ProjectionExpression: projectionExp.join(', '),
+            };
+
+            const response = await DATABASE_TABLE2.getItem(getParams);
+            if (response.Item && response.Item.question_status === questionStatus) {
+                return { Items: [response.Item] };
+            }
+            return { Items: [] };
+        }
+
+        // ** Split into batches of 100 to avoid AWS limit **
+        const idChunks = chunkArray(uniqueIds, 100);
+        let allItems = [];
+
+        for (const chunk of idChunks) {
+            const keys = chunk.map((id) => ({ [fetchIdName]: id }));
+            const batchParams = {
+                RequestItems: {
+                    [TableName]: {
+                        Keys: keys,
+                        ProjectionExpression: projectionExp.join(', '),
+                    },
+                },
+            };
+
+            const batchResponse = await DATABASE_TABLE2.getByObjects(batchParams);
+            const items = batchResponse.Responses?.[TableName] || [];
+
+            // **Filter only items that match the question_status**
+            const filteredItems = items.filter((item) => item.question_status === questionStatus);
+            allItems = allItems.concat(filteredItems);
+        }
+
+        return { Items: allItems };
+    } catch (error) {
+        console.error("Error fetching questions:", error);
+        throw new Error(error.message || "Error fetching questions.");
+    }
+};
 
 
 

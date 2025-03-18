@@ -86,7 +86,6 @@ exports.fetchUserDataByPhoneNo = function (request, callback) {
 
 exports.fetchUserDataByPhoneNo2 = async (request) => {
 
-    console.log("request - ",request);
         const queryParams = {
             TableName: TABLE_NAMES.upschool_teacher_info,
             IndexName: Indexes.common_id_index,
