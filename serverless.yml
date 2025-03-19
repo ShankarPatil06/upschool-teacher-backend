@@ -55,71 +55,71 @@ functions:
       - http:
           path: /v1/validateOTP
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/changePassword
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/resetOrCreatePassword
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchUnitsandChaptersBasedonSubjects
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchTopicsBasedonChapter
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchDigicardsBasedonTopic
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchIndividualDigiCard
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchRelatedDigiCards
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchAllStudents
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchAllQuizDetails
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/getIndividualReport
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/chapterUnlock
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/topicUnlock
           method: POST
-          cors: true
+          cors: true   
       - http:
           path: /v1/fetchTeacherClasses
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchTeacherSectionsBasedonClass
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchTeacherSubjectsBasedonSection
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchTopicAndNoOfQuestions
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/unlockChapterPreLearning
           method: POST
@@ -127,89 +127,93 @@ functions:
       - http:
           path: /v1/addDigicardExtension
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/digicardUnlock
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchAvailableNumOfQuestions
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/archivedActiveTopicsInChapter
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/getPreGrantedTeacherPermissions
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchAllPreTopicDigicards
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/generatePrePostQuiz
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchAllPostTopicDigicards
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/getPostGrantedTeacherPermissions
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchDigicardExtension
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/reArrangeDigiCardOrder
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/toggleDigicardsInTopic
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchDigiCardstoReorder
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchQuestionSourceandChapters
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchAllBluePrints
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchTopicsBasedonChapters
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchConceptsBasedonTopics
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchBlueprintById
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchQuestionBasedOnBlueprint
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/addTestQuestionPaper
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchTestQuestionPapersBasedonStatus
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchQuestionBasedOnConcept
+          method: POST
+          cors: true
+      - http:
+          path: /v1/addClassTest
           method: POST
           cors: true
       - http:
@@ -283,15 +287,15 @@ functions:
       - http:
           path: /v1/checkDuplicateQuizName
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/toggleQuizStatus
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchQuizBasedonStatus
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/fetchSignedURLForQuizAnswers
           method: POST
@@ -339,71 +343,71 @@ functions:
       - http:
           path: /v1/toggleSchoolAdminStatus
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/getTargetedLearningExpectation
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/getTargetedLearningExpectationDetails
           method: POST
-          cors: true
+          cors: true   
       - http:
           path: /v1/getAssesmentSummaryDetails
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/preLearningSummaryDetails
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/postLearningSummaryDetails
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/viewAnalysisIndividualReport
           method: POST
-          cors: true
+          cors: true         
       - http:
           path: /v1/preLearningBlueprintDetails
           method: POST
-          cors: true
+          cors: true   
       - http:
           path: /v1/getIndividualQuizReport
           method: POST
-          cors: true
+          cors: true   
       - http:
           path: /v1/comprehensivePerformanceChapterWise
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/comprehensivePerformanceTopicWise
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/viewClassReportQuestions
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/viewClassReportFocusArea
           method: POST
-          cors: true
+          cors: true 
       - http:
           path: /v1/comprehensivePerformanceConceptWise
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/viewChapterwisePerformanceTracking
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/getActionsAndRecommendations
           method: POST
-          cors: true
+          cors: true   
       - http:
           path: /v1/getActionsAndRecommendationDetail
           method: POST
-          cors: true
+          cors: true  
       - http:
           path: /v1/fetchSchoolDetails
           method: POST
@@ -411,19 +415,19 @@ functions:
       - http:
           path: /v1/fetchBlueprintDetailsBasedonId
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/topAndBottomPerformers
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/needAttention
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/studentChaptersPerformance
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/customWorksheetGenerated
           method: POST
@@ -431,36 +435,32 @@ functions:
       - http:
           path: /v1/fetchCustomWorksheet
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/sendEmailToParent
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/studentAvgVsClassAvgChapterWise
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/comprehensivePerformanceChapterWiseForTest
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/comprehensivePerformanceTopicWiseForTest
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/comprehensivePerformanceConceptWiseForTest
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/updateActionAndRecommendations
           method: POST
-          cors: true
+          cors: true    
       - http:
           path: /v1/removeUploadedAnswerData
-          method: POST
-          cors: true
-      - http:
-          path: /v1/addClassTest
           method: POST
           cors: true
