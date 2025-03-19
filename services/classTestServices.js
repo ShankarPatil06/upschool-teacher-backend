@@ -28,6 +28,7 @@ exports.addClassTest = async (request) => {
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
             data: qs.stringify(request),
             url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
+            timeout: 15000
             // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
         };
         // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
