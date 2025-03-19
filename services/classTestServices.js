@@ -31,8 +31,10 @@ exports.addClassTest = async (request) => {
             // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
         };
         // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+        console.log({ firsttttt: options })
         console.log("qs.stringify(request) - ", qs.stringify(request));
         const pdfData = await axios(options);
+        console.log({ firsttttt: pdfData })
         // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
         request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
