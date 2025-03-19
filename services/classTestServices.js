@@ -33,15 +33,21 @@ exports.addClassTest = async (request) => {
         // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
         console.log({ firsttttt: options })
         console.log("qs.stringify(request) - ", qs.stringify(request));
-        const pdfData = await axios(options);
-        console.log({ firsttttt: pdfData })
-        // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
-        request.data.question_paper_template = pdfData.data.question_paper_template;
-        request.data.key_answer_template = pdfData.data.key_answer_template;
+        try {
+            // Await the axios response
+            const pdfData = await axios(options);
+            console.log("PDF Data Received: ", pdfData.data);
 
-        return await classTestRepository.insertClassTest2(request);
+            request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
+            request.data.question_paper_template = pdfData.data.question_paper_template || " ";
+            request.data.key_answer_template = pdfData.data.key_answer_template || " ";
+
+            await classTestRepository.insertClassTest2(request);
+            return 200;
+        } catch (error) {
+            console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
+            return { status: 500, message: "PDF Generation Failed" };
+        }
     }
 };
 
