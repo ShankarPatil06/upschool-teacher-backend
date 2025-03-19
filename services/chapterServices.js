@@ -119,9 +119,6 @@ exports.appendPreTopicsArchivedStatus = async function (request, teacherActivity
 }
 
 exports.appendPreTopicsArchivedStatus4 = async (request, teacherActivityData, preTopicData, prePostType) => {
-  // console.log({request:"xccxxcxxc"});
-  console.log({firsttttt:"workingggggg"});
-  console.log({request, teacherActivityData, preTopicData, prePostType});
   let newPreTopic = [];
   if (teacherActivityData.Items.length > 0) {
       let chapterActivity = teacherActivityData.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id);
