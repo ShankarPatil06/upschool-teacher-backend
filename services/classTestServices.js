@@ -12,6 +12,9 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
 
+const http = require('http');
+const agent = new http.Agent({ keepAlive: true });
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
 });
@@ -28,7 +31,8 @@ exports.addClassTest = async (request) => {
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
             data: qs.stringify(request),
             url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-            timeout: 15000
+            timeout: 30000,
+            httpAgent: agent  // Allow HTTP
             // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
         };
         // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
