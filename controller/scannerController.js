@@ -141,7 +141,6 @@ exports.uploadAnswerSheets = (req, res, next) => {
 };
 
 exports.uploadAnswerSheets2 = async (req, res, next) => {
-  console.log("uploadAnswerSheets2222 Controller!!!!", req.body);
   let request = req.body;
   try {
     const uploadAnswerSheetsRes = await scannerServices.uploadAnswerSheets2New(request);

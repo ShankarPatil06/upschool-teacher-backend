@@ -5,66 +5,12 @@ const helper = require('../helper/helper');
 const ocrServices = require('./ocrServices');
 let sendMail = require("./emailService");
 
-// exports.sendScannerLink = function (request, callback) {
-//     console.log("sendScannerLink Services : ", request);
-//     request["teacher_id"] = request.data.teacher_id;
-//     userRepository.fetchUserDataByUserId(request, function (fetch_user_data_err, fetch_user_data_response) {
-//         if (fetch_user_data_err) {
-//             console.log(fetch_user_data_err);
-//             callback(fetch_user_data_err, fetch_user_data_response);
-//         } else {
-//             if (fetch_user_data_response.Items.length > 0 && fetch_user_data_response.Items[0].user_status == "Active") {
-
-//                 /** CHECK SCHOOL STATUS **/
-//                 request.data.school_id = fetch_user_data_response.Items[0].school_id;
-//                 schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
-//                     if (schoolDataErr) {
-//                         console.log(schoolDataErr);
-//                         callback(schoolDataErr, schoolDataRes);
-//                     }
-//                     else {
-//                         console.log("SCHOOL DATA : ", request.data.upload_url);
-//                         if (schoolDataRes.Items.length > 0 && schoolDataRes.Items[0].school_status == "Active" && schoolDataRes.Items[0].subscription_active == "Yes") {
-
-//                             var mailPayload = {
-//                                 "upload_url": request.data.upload_url,
-//                                 "toMail": fetch_user_data_response.Items[0].user_email,
-//                                 "subject": constant.mailSubject.urlToScanAnswerSheets,
-//                                 "mailFor": "urlToUploadAnswerSheets",
-//                             };
-
-//                             console.log("MAIL PAYLAOD : ", mailPayload);
-//                             let dataEmail = await sendMail.process(mailPayload)
-//                             if (dataEmail.httpStatusCode == 200) {
-//                                 callback(200, constant.messages.UPLOAD_URL_Sent);
-//                             }
-//                             else {
-//                                 console.log(dataEmail)
-//                                 callback(400, "SNS ERROR");
-//                             }
-//                         }
-//                         else {
-//                             console.log(constant.messages.SCHOOL_IS_INACTIVE);
-//                             callback(400, constant.messages.SCHOOL_IS_INACTIVE);
-//                         }
-//                     }
-//                 })
-//                 /** END CHECK SCHOOL STATUS **/
-
-//             } else {
-//                 callback(400, constant.messages.TEACHER_DOESNOT_EXISTS);
-//             }
-//         }
-//     });
-// }
-
-exports.sendScannerLink = async function (request) {
-    console.log("sendScannerLink Services:", request);
+exports.sendScannerLink = async (request) => {
     request.teacher_id = request.data.teacher_id;
 
     const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-    if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== "Active") {
+    if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== constant.common.Active) {
         return { statusCode: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
     }
 
@@ -73,8 +19,8 @@ exports.sendScannerLink = async function (request) {
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
     if (schoolDataRes.Items.length === 0 ||
-        schoolDataRes.Items[0].school_status !== "Active" ||
-        schoolDataRes.Items[0].subscription_active !== "Yes") {
+        schoolDataRes.Items[0].school_status !== constant.common.Active ||
+        schoolDataRes.Items[0].subscription_active !== constant.common.Yes) {
         console.log(constant.messages.SCHOOL_IS_INACTIVE);
         return { statusCode: 400, message: constant.messages.SCHOOL_IS_INACTIVE };
     }
@@ -83,111 +29,25 @@ exports.sendScannerLink = async function (request) {
         upload_url: request.data.upload_url,
         toMail: userDataResponse.Items[0].user_email,
         subject: constant.mailSubject.urlToScanAnswerSheets,
-        mailFor: "urlToUploadAnswerSheets",
+        mailFor: constant.mailFor.urlToUploadAnswerSheets,
     };
 
-    console.log("MAIL PAYLOAD:", mailPayload);
     const emailResponse = await sendMail.process(mailPayload);
 
     if (emailResponse.httpStatusCode === 200) {
         return { statusCode: 200, message: constant.messages.UPLOAD_URL_Sent };
     } else {
-        console.log("Email sending error:", emailResponse);
-        return { statusCode: 400, message: "SNS ERROR" };
+        return { statusCode: 400, message: constant.messages.SNS_ERROR };
     }
 
 };
 
-
-// exports.sendOTPForScanning = function (request, callback) {
-//     console.log("sendOTPForScanning Services : ", request);
-//     request["teacher_id"] = request.data.teacher_id;
-//     userRepository.fetchUserDataByUserId(request, async function (fetch_user_data_err, fetch_user_data_response) {
-//         if (fetch_user_data_err) {
-//             console.log(fetch_user_data_err);
-//             callback(fetch_user_data_err, fetch_user_data_response);
-//         } else {
-//             if (fetch_user_data_response.Items.length > 0 && fetch_user_data_response.Items[0].user_status == "Active") {
-
-//                 let user_otp = helper.getRandomOtp().toString();
-
-//                 var mailPayload = {
-//                     "user_otp": user_otp,
-//                     "toMail": fetch_user_data_response.Items[0].user_email,
-//                     "subject": constant.mailSubject.otpToScanAnswerSheets,
-//                     "mailFor": "otpToScanAnswerSheets",
-//                 };
-
-//                 console.log("MAIL PAYLAOD : ", mailPayload);
-//                 let dataEmail = await sendMail.process(mailPayload)
-//                 if (dataEmail.httpStatusCode == 200) {
-//                     {
-//                         console.log("SNS PUBLISH SUCCESS");
-
-//                         // Fetch upschool_scanner_session_info data to either insert or update the OTP
-
-//                         scannerRepository.fetchScannerSessionData(request, function (fetch_scanner_session_data_err, fetch_scanner_session_data_response) {
-//                             if (fetch_scanner_session_data_err) {
-//                                 console.log(fetch_scanner_session_data_err);
-//                                 callback(fetch_scanner_session_data_err, fetch_scanner_session_data_response);
-//                             } else {
-//                                 console.log(fetch_scanner_session_data_response);
-//                                 if (fetch_scanner_session_data_response.Items?.length >= 1) {
-
-//                                     // Update user_otp and ts to the existing record
-
-//                                     let scanner_session_id = fetch_scanner_session_data_response.Items[0].scanner_session_id;
-//                                     request.data["user_otp"] = user_otp;
-//                                     request.data["scanner_session_id"] = scanner_session_id;
-
-//                                     scannerRepository.updateUserOtpScannerData(request, function (update_user_otp_scanner_table_err, update_user_otp_scanner_table_response) {
-//                                         if (update_user_otp_scanner_table_err) {
-//                                             console.log(update_user_otp_scanner_table_err);
-//                                             callback(update_user_otp_scanner_table_err, update_user_otp_scanner_table_response);
-//                                         } else {
-//                                             callback(update_user_otp_scanner_table_err, update_user_otp_scanner_table_response);
-//                                         }
-//                                     })
-//                                 } else {
-
-//                                     // Insert new record
-
-//                                     request.data["user_otp"] = user_otp;
-
-//                                     scannerRepository.insertUserOtpScannerData(request, function (insert_user_otp_scanner_table_err, insert_user_otp_scanner_table_response) {
-//                                         if (insert_user_otp_scanner_table_err) {
-//                                             console.log(insert_user_otp_scanner_table_err);
-//                                             callback(insert_user_otp_scanner_table_err, insert_user_otp_scanner_table_response);
-//                                         } else {
-//                                             callback(insert_user_otp_scanner_table_err, insert_user_otp_scanner_table_response);
-//                                         }
-//                                     })
-
-//                                 }
-//                             }
-//                         });
-
-//                     }
-//                 }
-//                 else {
-//                     console.log(dataEmail)
-//                     callback(400, "SNS ERROR");
-//                 }
-
-//             } else {
-//                 callback(400, constant.messages.TEACHER_DOESNOT_EXISTS);
-//             }
-//         }
-//     });
-// }
-
-exports.sendOTPForScanning = async function (request) {
-    console.log("sendOTPForScanning Services:", request);
+exports.sendOTPForScanning = async (request) => {
     request.teacher_id = request.data.teacher_id;
 
     const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-    if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== "Active") {
+    if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== constant.common.Active) {
         return { statusCode: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
     }
 
@@ -196,24 +56,19 @@ exports.sendOTPForScanning = async function (request) {
         user_otp,
         toMail: userDataResponse.Items[0].user_email,
         subject: constant.mailSubject.otpToScanAnswerSheets,
-        mailFor: "otpToScanAnswerSheets",
+        mailFor: constant.mailFor.otpToScanAnswerSheets,
     };
-
-    console.log("MAIL PAYLOAD:", mailPayload);
 
     const emailResponse = await sendMail.process(mailPayload);
     if (emailResponse.httpStatusCode !== 200) {
-        console.log("Email sending error:", emailResponse);
-        return { statusCode: 400, message: "SNS ERROR" };
+        return { statusCode: 400, message: constant.messages.SNS_ERROR };
     }
-
-    console.log("SNS PUBLISH SUCCESS");
 
     const scannerSessionResponse = await scannerRepository.fetchScannerSessionData2(request);
 
     request.data.user_otp = user_otp;
 
-    if (scannerSessionResponse.Items?.length >= 1) {
+    if (helper.isEmptyArray(scannerSessionResponse.Items)) {
         request.data.scanner_session_id = scannerSessionResponse.Items[0].scanner_session_id;
         const updateResponse = await scannerRepository.updateUserOtpScannerData2(request);
         return { statusCode: updateResponse ? 200 : 500, response: updateResponse };
@@ -225,70 +80,16 @@ exports.sendOTPForScanning = async function (request) {
 
 };
 
-
-// exports.validateOTPForScanning = function (request, callback) {
-//     console.log("validateOTPForScanning Services : ", request);
-//     scannerRepository.fetchScannerSessionData(request, function (fetch_scanner_session_data_err, fetch_scanner_session_data_response) {
-//         if (fetch_scanner_session_data_err) {
-//             console.log(fetch_scanner_session_data_err);
-//             callback(fetch_scanner_session_data_err, fetch_scanner_session_data_response);
-//         } else {
-//             console.log(fetch_scanner_session_data_response);
-
-//             if (fetch_scanner_session_data_response.Items[0].user_otp === request.data.entered_otp) {
-
-//                 let currentTime = new Date(helper.getCurrentTimestamp());
-//                 let otpGeneratedTime = new Date(fetch_scanner_session_data_response.Items[0].otp_ts);
-
-//                 let calculateTime = (currentTime - otpGeneratedTime) / (1000 * 60);
-
-//                 if (calculateTime <= 10) {
-//                     let user_reset_otp = helper.getRandomOtp().toString();
-//                     request.data["scanner_session_id"] = fetch_scanner_session_data_response.Items[0].scanner_session_id
-//                     request.data["user_reset_otp"] = user_reset_otp;
-//                     scannerRepository.resetUserOtpScannerData(request, function (reset_user_otp_err, reset_user_otp_response) {
-//                         if (reset_user_otp_err) {
-//                             console.log(reset_user_otp_err);
-//                             callback(reset_user_otp_err, reset_user_otp_response);
-//                         } else {
-//                             let jwtToken = helper.getJwtTokenForScanner(fetch_scanner_session_data_response.Items[0]);
-
-//                             request["user_jwt"] = jwtToken;
-//                             request["scanner_session_id"] = fetch_scanner_session_data_response.Items[0].scanner_session_id;
-
-//                             scannerRepository.updateScannerJwtToken(request, function (update_jwt_err, update_jwt_response) {
-//                                 if (update_jwt_err) {
-//                                     console.log(update_jwt_err);
-//                                     callback(update_jwt_err, update_jwt_response);
-//                                 } else {
-//                                     console.log("Jwt Token Updated Successfully");
-//                                     callback(0, [{ jwt: jwtToken }]);
-//                                 }
-//                             })
-//                         }
-//                     })
-//                 } else {
-//                     callback(400, constant.messages.OTP_EXPIRED);
-//                 }
-//             } else {
-//                 callback(400, constant.messages.INVALID_OTP);
-//             }
-//         }
-//     });
-// }
-
 exports.validateOTPForScanning = async (request) => {
 
     const fetchScannerSessionDataResponse = await scannerRepository.fetchScannerSessionData2(request);
 
-    console.log("fetchScannerSessionDataResponse - ", fetchScannerSessionDataResponse.Items[0]);
-
-    if (!fetchScannerSessionDataResponse.Items.length) {
+    if (!helper.isEmptyArray(fetchScannerSessionDataResponse.Items)) {
         throw new Error(constant.messages.SESSION_NOT_FOUND);
     }
 
     const { user_otp, otp_ts, scanner_session_id } = fetchScannerSessionDataResponse.Items[0];
-    console.log(user_otp, " - ", request.data.entered_otp);
+
     if (user_otp === request.data.entered_otp) {
         const currentTime = new Date(helper.getCurrentTimestamp());
         const otpGeneratedTime = new Date(otp_ts);
@@ -307,7 +108,6 @@ exports.validateOTPForScanning = async (request) => {
             request["scanner_session_id"] = scanner_session_id;
 
             await scannerRepository.updateScannerJwtToken2(request);
-            console.log("Jwt Token Updated Successfully");
             return [{ jwt: jwtToken }];
         } else {
             throw new Error(constant.messages.OTP_EXPIRED);
@@ -321,7 +121,6 @@ exports.fetchSignedURLForAnswers = async (request) => {
     const folderPath = constant.testFolder.studAnswerSheets.replace("**REPLACE**", request.data.test_id);
 
     const extFilesS3 = await helper.PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
-    console.log({ extFilesS3 });
 
     return [{
         file_name: request.data.ext_file,
@@ -339,7 +138,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
             console.log(scannedErr);
             callback(scannedErr, scannedRes);
         } else {
-            console.log("BEFORE FORMATTING : ", scannedRes.data.text);
             if (scannedRes.data.text) {
                 let words = await helper.formattingAnswer(scannedRes.data.text);
 
@@ -349,7 +147,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                         callback(pageDetailsErr, pageDetailsRes);
                     }
                     else {
-                        console.log("PAGE DETAILS", pageDetailsRes);
 
                         if (pageDetailsRes.page_no && pageDetailsRes.test_id && pageDetailsRes.roll_no && Number(pageDetailsRes.page_no)) {
 
@@ -372,7 +169,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                     callback(fetch_class_test_data_err, fetch_class_test_data_response);
                                 } else {
 
-                                    console.log("Test object", fetch_class_test_data_response);
                                     if (helper.isEmptyObject(fetch_class_test_data_response.Item)) {
                                         callback(constant.messages.COULDNT_READ_TEST_ID, 0);
                                     } else {
@@ -382,7 +178,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                                 callback(fetch_student_data_err, fetch_student_data_response);
                                             } else {
 
-                                                console.log("Student data based on ", fetch_student_data_response);
 
                                                 if (fetch_student_data_response.Items.length > 0) {
                                                     request.data.student_id = fetch_student_data_response.Items[0].student_id;
@@ -394,7 +189,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                                             console.log(fetch_test_result_response);
 
                                                             if (fetch_test_result_response.Items.length === 0) {
-                                                                console.log("New Student Record for this test!");
                                                                 testResultRepository.insertTestDataOfStudent(request, function (insert_test_data_of_student_err, insert_test_data_of_student_response) {
                                                                     if (insert_test_data_of_student_err) {
                                                                         console.log(insert_test_data_of_student_err);
@@ -408,12 +202,8 @@ exports.uploadAnswerSheets = async function (request, callback) {
 
                                                                 let pageExists = await fetch_test_result_response.Items[0].answer_metadata.filter(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
-                                                                console.log("pageExists", pageExists);
-                                                                console.log("pageExists.length", pageExists.length);
-                                                                console.log("pageMetadata", pageMetadata.answer_metadata[0]);
 
                                                                 if (pageExists.length === 0) {
-                                                                    console.log("New Page!")
                                                                     fetch_test_result_response.Items[0].answer_metadata.push({
                                                                         page_no: pageMetadata.answer_metadata[0].page_no,
                                                                         url: pageMetadata.answer_metadata[0].url,
@@ -422,7 +212,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                                                     });
                                                                 } else {
 
-                                                                    console.log("Page already exists!", fetch_test_result_response.Items[0].answer_metadata);
                                                                     await fetch_test_result_response.Items[0].answer_metadata.forEach((meta, i) => {
                                                                         if (meta.page_no === pageMetadata.answer_metadata[0].page_no) {
                                                                             fetch_test_result_response.Items[0].answer_metadata[i].url = pageMetadata.answer_metadata[0].url;
@@ -430,8 +219,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                                                             fetch_test_result_response.Items[0].answer_metadata[i].studentAnswer = pageMetadata.answer_metadata[0].studentAnswer;
                                                                         }
                                                                     });
-                                                                    console.log("pageMetadata after loop", pageMetadata);
-                                                                    console.log("fetch_test_result_response.Items[0].answer_metadata : ", fetch_test_result_response.Items[0].answer_metadata);
                                                                 }
 
                                                                 /** UPDATE QUERY **/
@@ -441,10 +228,6 @@ exports.uploadAnswerSheets = async function (request, callback) {
                                                                         answer_metadata: fetch_test_result_response.Items[0].answer_metadata,
                                                                     }
                                                                 }
-
-                                                                console.log("UPDATE PAGE!");
-                                                                console.log(fetch_test_result_response.Items[0].answer_metadata);
-
                                                                 testResultRepository.updateTestDataOfStudent(updateRequest, function (update_test_data_of_student_err, update_test_data_of_student_response) {
                                                                     if (update_test_data_of_student_err) {
                                                                         console.log(update_test_data_of_student_err);
@@ -485,24 +268,19 @@ exports.uploadAnswerSheets2 = async (request) => {
     let pageMetadata = {};
 
     const scannedRes = await ocrServices.readOpenAiPage(request);
-    console.log("OPENAI scanned Data:", scannedRes);
+
     if (scannedRes?.content) {
         let pageDetailsRes = await helper.extractValuesFromInput(scannedRes.content);
         const answers = await helper.extractAnswersFromInput(scannedRes.content);
 
-        console.log("PAGE DETAILS in openai: ", pageDetailsRes);
-        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
-        // const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
-        // const pageNo = 1;
-        const testId = pageDetailsRes.find(item => item.label === 'Test ID')?.value;
-        // const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value.replace(/\s+/g, '');
-        const rollNo = pageDetailsRes.find(item => item.label === 'Roll No')?.value;
-        console.log("CHECK THESE VALUES", pageNo, testId, rollNo);
+        const pageNo = pageDetailsRes.find(item => item.label === constant.commonConditionValue.pageNo)?.value;
+        const testId = pageDetailsRes.find(item => item.label === constant.commonConditionValue.testID)?.value;
+        const rollNo = pageDetailsRes.find(item => item.label === constant.commonConditionValue.rollNo)?.value;
 
         if (pageNo && testId && rollNo) {
             pageMetadata = {
                 class_test_id: testId,
-                roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim(),
+                roll_no: request.data.roll_no !== constant.common.NA ? request.data.roll_no.trim() : rollNo.trim(),
                 answer_metadata: [{
                     page_no: pageNo,
                     url: request.data.Key,
@@ -514,38 +292,30 @@ exports.uploadAnswerSheets2 = async (request) => {
             request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: testId, answer_metadata: pageMetadata.answer_metadata };
 
             const classTestData = await classTestRepository.fetchClassTestDataById2(request);
-            console.log("Test object:", classTestData);
 
             if (helper.isEmptyObject(classTestData.Item)) {
                 return (constant.messages.COULDNT_READ_TEST_ID);
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-            console.log("Student data:", studentData);
 
-            if (studentData.Items.length > 0) {
+            if (helper.isEmptyArray(studentData.Items)) {
                 request.data.student_id = studentData.Items[0].student_id;
                 const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
 
-                console.log("Test result data:", testResultData);
-
-                if (testResultData.Items.length === 0) {
-                    console.log("New Student Record for this test!");
+                if (!helper.isEmptyArray(testResultData.Items)) {
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                    console.log("insertResponse - ", insertResponse);
                     if (insertResponse.$metadata.httpStatusCode === 200) {
-                        return ("Image Uploaded successfully")
-                    } else { return ("New Student Record Not Added") }
+                        return (constant.messages.IMAGE_UPLOADED_SUCCESSFULLY)
+                    } else {
+                        return (constant.messages.NEW_STUDENT_RECORD_NOT_ADDED)
+                    }
                 } else {
-                    console.log("Existing Student Record - Updating metadata");
-
                     let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
                     if (!pageExists) {
-                        console.log("New Page!");
                         testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
                     } else {
-                        console.log("Page already exists!", testResultData.Items[0].answer_metadata);
                         testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
                             meta.page_no === pageMetadata.answer_metadata[0].page_no
                                 ? { ...meta, ...pageMetadata.answer_metadata[0] }
@@ -562,17 +332,12 @@ exports.uploadAnswerSheets2 = async (request) => {
                         }
                     };
 
-                    console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
-
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    console.log("updateResponse - ", updateResponse);
 
                     if (updateResponse) {
-                        console.log("Image Successfully updated");
-                        return ("Image Successfully updated")
+                        return (constant.messages.IMAGE_SUCCESSFULLY_UPDATED)
                     } else {
-                        console.log("Image Update Issue");
-                        return ("Image Update Issue")
+                        return (constant.messages.IMAGE_UPDATED_ISSUE)
                     }
                 }
             } else {
@@ -588,63 +353,23 @@ exports.uploadAnswerSheets2 = async (request) => {
 
 };
 
-// exports.uploadAnswerSheets2 = async (request) => {
-//     let pageMetadata = {};
-
-//     try {
-//         const scannedRes = await ocrServices.readOpenAiPage(request);
-//         console.log("OPENAI scanned Data:", scannedRes);
-//     } catch (error) {
-//         console.error("Error in uploadAnswerSheets:", error.message || error);
-//         throw error; // or return specific error handling if needed
-//     }
-// };
-
-
 exports.uploadQuizAnswerSheetsNew = async function (request) {
     let quizPageMetadata = {};
     const scannedRes = await ocrServices.readOpenAiPage(request);
 
-    // const scannedRes = {
-    //     role: 'assistant',
-    //     content: 'Set: \n' +
-    //         'Quiz ID: \n' +
-    //         'Quiz Name: \n' +
-    //         'Class: \n' +
-    //         'Section: \n' +
-    //         'Subject Name: \n' +
-    //         'Test ID: \n' +
-    //         'Roll No: \n' +
-    //         'Page No: 1\n' +
-    //         '\n' +
-    //         '1 Ans: <span style="color:red;">Rhinoceros</span>\n' +
-    //         '2 Ans: <span style="color:red;">Upschool</span>\n' +
-    //         '3 Ans: <span style="color:red;">Factor</span>\n' +
-    //         '4 Ans: <span style="color:red;">Rafflesia</span>\n' +
-    //         '5 Ans: <span style="color:red;">Avocado</span>',
-    //     refusal: null
-    // }
-
-    console.log("OPENAI scanned Data:", scannedRes);
     if (scannedRes?.content) {
         let pageDetailsRes = await helper.extractValuesFromInputNew(scannedRes.content);
         const answers = await helper.extractAnswersFromInputNew(scannedRes.content);
 
-        console.log("Extracted answers:", answers)
-
-        console.log("PAGE DETAILS in openai: ", pageDetailsRes);
-        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
-        // const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
-        // const pageNo = 1;
+        const pageNo = pageDetailsRes.find(item => item.label === constant.commonConditionValue.pageNo)?.value;
         const quizId = request.data?.exam_id;
         const rollNo = request.data?.roll_no || "";
         const set = request.data?.set || "A";
-        console.log("CHECK THESE VALUES", pageNo, quizId, rollNo, set);
 
         if (pageNo && quizId && rollNo) {
             quizPageMetadata.quiz_id = quizId;
             quizPageMetadata.quiz_set = set;
-            quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim();
+            quizPageMetadata.roll_no = request.data.roll_no !== constant.common.NA ? request.data.roll_no.trim() : rollNo.trim();
             quizPageMetadata.answer_metadata = [{
                 page_no: pageNo,
                 url: request.data.Key,
@@ -659,28 +384,24 @@ exports.uploadQuizAnswerSheetsNew = async function (request) {
             request.data.answer_metadata = quizPageMetadata.answer_metadata;
             console.log(request.data.answer_metadata)
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-            console.log("quiz?", fetchQuizDataResponse)
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
                 return (constant.messages.COULDNOT_READ_QUIZ_ID);
             }
-            console.log(request.data.roll_no)
             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-            console.log("fetchStudentDataResponse - ", fetchStudentDataResponse);
+            
             if (fetchStudentDataResponse.Items.length > 0) {
                 request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
 
                 const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-                console.log({ firsttttt: fetchQuizResultResponse });
-
                 if (fetchQuizResultResponse.Items.length === 0) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-                    console.log({ firstttttt: insertQuizDataResponse })
+
                     if (insertQuizDataResponse === 200) {
-                        return ("Image Uploaded successfully");
+                        return (constant.messages.IMAGE_UPLOADED_SUCCESSFULLY);
                     } else {
-                        return ("New Student Insert issue in quiz");
+                        return (constant.messages.NEW_STUDENT_RECORD_NOT_ADDED);
                     }
 
                 } else {
@@ -718,15 +439,12 @@ exports.uploadQuizAnswerSheetsNew = async function (request) {
                         }
                     };
 
-                    console.log("UPDATE PAGE!");
-                    console.log(fetchQuizResultResponse.Items[0].answer_metadata);
-
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
                     console.log({ firsttttt: updateQuizDataResponse })
                     if (updateQuizDataResponse === 200) {
-                        return ("Image Successfully uploaded")
+                        return (constant.messages.IMAGE_SUCCESSFULLY_UPDATED)
                     }
-                    else { return ("error in updating image") }
+                    else { return (constant.messages.IMAGE_UPDATED_ISSUE) }
 
                 }
             } else {
@@ -744,23 +462,18 @@ exports.uploadAnswerSheets2New = async (request) => {
     let pageMetadata = {};
 
     const scannedRes = await ocrServices.readOpenAiPage(request);
-    console.log("OPENAI scanned Data:", scannedRes);
     if (scannedRes?.content) {
         let pageDetailsRes = await helper.extractValuesFromInputNew(scannedRes.content);
         const answers = await helper.extractAnswersFromInputNew(scannedRes.content);
 
-        console.log("PAGE DETAILS in openai: ", pageDetailsRes);
-        const pageNo = pageDetailsRes.find(item => item.label === 'pageNo')?.value;
-        // const pageNo = pageDetailsRes.find(item => item.label === 'Page No' || item.label === 'pageNo')?.value;
-        // const pageNo = 1;
+        const pageNo = pageDetailsRes.find(item => item.label === constant.commonConditionValue.pageNo)?.value;
         const testId = request.data?.exam_id;
         const rollNo = request.data?.roll_no || "";
-        console.log("CHECK THESE VALUES", pageNo, testId, rollNo);
 
         if (pageNo && testId && rollNo) {
             pageMetadata = {
                 class_test_id: testId,
-                roll_no: request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : rollNo.trim(),
+                roll_no: request.data.roll_no !== constant.common.NA ? request.data.roll_no.trim() : rollNo.trim(),
                 answer_metadata: [{
                     page_no: pageNo,
                     url: request.data.Key,
@@ -772,38 +485,31 @@ exports.uploadAnswerSheets2New = async (request) => {
             request.data = { ...request.data, roll_no: pageMetadata.roll_no, class_test_id: testId, answer_metadata: pageMetadata.answer_metadata };
 
             const classTestData = await classTestRepository.fetchClassTestDataById2(request);
-            console.log("Test object:", classTestData);
 
             if (helper.isEmptyObject(classTestData.Item)) {
                 return (constant.messages.COULDNT_READ_TEST_ID);
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-            console.log("Student data:", studentData);
-
+            
             if (studentData.Items.length > 0) {
                 request.data.student_id = studentData.Items[0].student_id;
                 const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
 
-                console.log("Test result data:", testResultData);
-
                 if (testResultData.Items.length === 0) {
-                    console.log("New Student Record for this test!");
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
-                    console.log("insertResponse - ", insertResponse);
                     if (insertResponse === 200) {
-                        return ("Image Uploaded successfully")
-                    } else { return ("New Student Record Not Added") }
+                        return (constant.messages.IMAGE_UPLOADED_SUCCESSFULLY)
+                    } else { 
+                        return (constant.messages.NEW_STUDENT_RECORD_NOT_ADDED) 
+                    }
                 } else {
-                    console.log("Existing Student Record - Updating metadata");
 
                     let pageExists = testResultData.Items[0].answer_metadata.find(value => value.page_no === pageMetadata.answer_metadata[0].page_no);
 
                     if (!pageExists) {
-                        console.log("New Page!");
                         testResultData.Items[0].answer_metadata.push(pageMetadata.answer_metadata[0]);
                     } else {
-                        console.log("Page already exists!", testResultData.Items[0].answer_metadata);
                         testResultData.Items[0].answer_metadata = testResultData.Items[0].answer_metadata.map(meta => (
                             meta.page_no === pageMetadata.answer_metadata[0].page_no
                                 ? { ...meta, ...pageMetadata.answer_metadata[0] }
@@ -819,16 +525,13 @@ exports.uploadAnswerSheets2New = async (request) => {
                             answer_metadata: testResultData.Items[0].answer_metadata,
                         }
                     };
-                    console.log("Updating Page Metadata:", updateRequest.data.answer_metadata);
+                    
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    console.log("updateResponse - ", updateResponse);
-
+                    
                     if (updateResponse) {
-                        console.log("Image Successfully updated");
-                        return ("Image Successfully updated")
+                        return constant.messages.IMAGE_SUCCESSFULLY_UPDATED
                     } else {
-                        console.log("Image Update Issue");
-                        return ("Image Update Issue")
+                        return (constant.messages.IMAGE_UPDATED_ISSUE)
                     }
                 }
             } else {
@@ -848,21 +551,21 @@ exports.setValues = async function (words, callback) {
     let pageNo, testID, rollNo, quizID, quiz_set;
     await words.forEach((word, index) => {
         if (index <= 7) {
-            if (word.startsWith("pageno") && word.split(":")[1]) {
+            if (word.startsWith(constant.commonConditionValue.page_no) && word.split(":")[1]) {
                 pageNo = word.split(":")[1].split("/")[0];
-            } else if (word.startsWith("testid") && word.split(":")[1]) {
+            } else if (word.startsWith(constant.commonConditionValue.test_id) && word.split(":")[1]) {
                 testID = word.split(":")[1]
-            } else if (word.startsWith("rollno") && word.split(":")[1]) {
+            } else if (word.startsWith(constant.commonConditionValue.roll_no) && word.split(":")[1]) {
                 rollNo = word.split(":")[1]
-            } else if (word.startsWith("quizid") && word.split(":")[1]) {
+            } else if (word.startsWith(constant.commonConditionValue.quiz_id) && word.split(":")[1]) {
                 quizID = word.split(":")[1]
-            } else if (word.startsWith("set") && (word.split(":").length === 2 && word.split(":")[1] === ("a" || "b" || "c"))) {
+            } else if (word.startsWith(constant.commonConditionValue.set) && (word.split(":").length === 2 && word.split(":")[1] === (constant.commonConditionValue.a || constant.commonConditionValue.b || constant.commonConditionValue.c))) {
                 quiz_set = word.split(":")[1]
             }
         }
     })
 
-    callback(0, { "page_no": pageNo, "test_id": testID, "roll_no": rollNo, "quiz_id": quizID, "set": quiz_set })
+    callback(0, { page_no: pageNo, test_id: testID, roll_no: rollNo, quiz_id: quizID, set: quiz_set })
 
 }
 
@@ -870,42 +573,25 @@ exports.setValues2 = async function (words) {
     let pageNo, testID, rollNo, quizID, quiz_set;
 
     for (const [index, word] of words.entries()) {
-        console.log(index, word)
-        // if (index <= 7) {
-        if (word.startsWith("pageno")) {
+        if (word.startsWith(constant.commonConditionValue.page_no)) {
             const pagePart = word.slice(6);
             pageNo = pagePart.split("/")[0];
         }
-        else if (word.startsWith("testid")) {
+        else if (word.startsWith(constant.commonConditionValue.test_id)) {
             testID = word.slice(6);
         }
-        else if (word.startsWith("rollno")) {
+        else if (word.startsWith(constant.commonConditionValue.roll_no)) {
             rollNo = word.slice(6);
         }
-        else if (word.startsWith("quizid")) {
+        else if (word.startsWith(constant.commonConditionValue.quiz_id)) {
             quizID = word.slice(6);
-        } else if (word.startsWith("set")) {
+        } else if (word.startsWith(constant.commonConditionValue.set)) {
             quiz_set = word.slice(3);
         }
-        // }
     }
-    console.log(pageNo, testID, rollNo, quizID, quiz_set)
 
-    return { "page_no": pageNo, "test_id": testID, "roll_no": rollNo, "quiz_id": quizID, "set": quiz_set };
+    return { page_no: pageNo, test_id: testID, roll_no: rollNo, quiz_id: quizID, set: quiz_set };
 }
-
-
-
-// exports.fetchSignedURLForQuizAnswers = async function (request, callback) {
-
-//     // const folderPath = `${'quiz_uploads'}/${request.data.quiz_id}/${'student_answer_sheets'}`
-//     const folderPath = constant.quizFolder.studAnswerSheets.replace("**REPLACE**", request.data.quiz_id);
-
-//     const extFilesS3 = await helper.PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
-//     console.log({ extFilesS3 });
-//     const finalResponse = [{ file_name: request.data.ext_file, s3Url: extFilesS3.uploadURL, Key: extFilesS3.Key }];
-//     callback(0, finalResponse);
-// }
 
 exports.fetchSignedURLForQuizAnswers = async (request) => {
     const folderPath = constant.quizFolder.studAnswerSheets.replace("**REPLACE**", request.data.quiz_id);
@@ -919,7 +605,6 @@ exports.fetchSignedURLForQuizAnswers = async (request) => {
         Key: extFilesS3.Key
     }];
 };
-
 
 exports.uploadQuizAnswerSheets = function (request, callback) {
     let quizPageMetadata = {};
@@ -1071,100 +756,6 @@ exports.uploadQuizAnswerSheets = function (request, callback) {
     })
 }
 
-// exports.uploadQuizAnswerSheets2 = async function (request) {
-//     let quizPageMetadata = {};
-
-//     const scannedRes = await ocrServices.readScannedPage2(request);
-//     console.log("BEFORE FORMATTING : ", scannedRes.data.text);
-
-//     if (scannedRes.data.text) {
-//         let words = await helper.formattingAnswer(scannedRes.data.text);
-//         const pageDetailsRes = await exports.setValues2(words);
-
-//         console.log("PAGE DETAILS in quizanswer2: ", pageDetailsRes);
-
-//         if (pageDetailsRes.page_no && pageDetailsRes.quiz_id && pageDetailsRes.roll_no) {
-//             quizPageMetadata.quiz_id = pageDetailsRes.quiz_id;
-//             quizPageMetadata.quiz_set = pageDetailsRes.set;
-//             quizPageMetadata.roll_no = request.data.roll_no !== 'N.A.' ? request.data.roll_no.trim() : pageDetailsRes.roll_no.trim().toLowerCase();
-//             quizPageMetadata.answer_metadata = [{
-//                 page_no: pageDetailsRes.page_no,
-//                 url: request.data.Key,
-//                 confidence_rate: scannedRes.data.confidence_rate,
-//                 studentAnswer: words,
-//             }];
-
-//             request.data.roll_no = quizPageMetadata.roll_no;
-//             request.data.quiz_id = pageDetailsRes.quiz_id;
-//             request.data.quiz_set = pageDetailsRes.set;
-//             request.data.answer_metadata = quizPageMetadata.answer_metadata;
-
-//             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-
-//             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
-//                 throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
-//             }
-
-//             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-
-//             if (fetchStudentDataResponse.Items.length > 0) {
-//                 request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
-
-//                 const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
-
-//                 if (fetchQuizResultResponse.Items.length === 0) {
-//                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
-//                     return insertQuizDataResponse;
-//                 } else {
-//                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
-
-//                     let pageExists = await fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.page_no === quizPageMetadata.answer_metadata[0].page_no);
-
-//                     if (pageExists.length === 0) {
-//                         fetchQuizResultResponse.Items[0].answer_metadata.push({
-//                             page_no: quizPageMetadata.answer_metadata[0].page_no,
-//                             url: quizPageMetadata.answer_metadata[0].url,
-//                             confidence_rate: quizPageMetadata.answer_metadata[0].confidence_rate,
-//                             studentAnswer: quizPageMetadata.answer_metadata[0].studentAnswer
-//                         });
-//                     } else {
-//                         await fetchQuizResultResponse.Items[0].answer_metadata.forEach((meta, i) => {
-//                             if (meta.page_no === quizPageMetadata.answer_metadata[0].page_no) {
-//                                 fetchQuizResultResponse.Items[0].answer_metadata[i].url = quizPageMetadata.answer_metadata[0].url;
-//                                 fetchQuizResultResponse.Items[0].answer_metadata[i].confidence_rate = quizPageMetadata.answer_metadata[0].confidence_rate;
-//                                 fetchQuizResultResponse.Items[0].answer_metadata[i].studentAnswer = quizPageMetadata.answer_metadata[0].studentAnswer;
-//                                 fetchQuizResultResponse.Items[0].quiz_set = quizPageMetadata.quiz_set;
-//                             }
-//                         });
-//                     }
-
-//                     let updateRequest = {
-//                         data: {
-//                             result_id: fetchQuizResultResponse.Items[0].result_id,
-//                             answer_metadata: fetchQuizResultResponse.Items[0].answer_metadata,
-//                             quiz_set: fetchQuizResultResponse.Items[0].quiz_set
-//                         }
-//                     };
-
-//                     console.log("UPDATE PAGE!");
-//                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
-
-//                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-//                     return updateQuizDataResponse;
-
-//                 }
-//             } else {
-//                 throw new Error(constant.messages.COULDNT_READ_ROLL_NUMBER);
-//             }
-//         } else {
-//             throw new Error(constant.messages.UNABLE_TO_READ_PAGE_DETAILS);
-//         }
-//     } else {
-//         console.log(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-//         throw new Error(constant.messages.UNABLE_TO_EXTRACT_TEXT);
-//     }
-// }
-
 exports.uploadQuizAnswerSheets2 = async function (request) {
     let quizPageMetadata = {};
 
@@ -1225,7 +816,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
                     } else {
                         return ("New Student Insert issue in quiz");
                     }
-                    
+
                 } else {
                     console.log(fetchQuizResultResponse.Items[0].answer_metadata);
 
@@ -1338,14 +929,14 @@ exports.removeUploadedAnswerData = async function (request) {
             const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
             if (fetchQuizResultResponse.Items.length > 0) {
-    
+
                 let pageDataExists = fetchQuizResultResponse.Items[0].answer_metadata.find(value => value.url === request.data.Key[0]);
-    
+
                 console.log("pageDataExists --- quiz", pageDataExists);
-    
+
                 if (pageDataExists) {
                     fetchQuizResultResponse.Items[0].answer_metadata = fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.url !== request.data.Key[0]);
-    
+
                     const updateRequest = {
                         data: {
                             result_id: fetchQuizResultResponse.Items[0].result_id,
@@ -1355,9 +946,9 @@ exports.removeUploadedAnswerData = async function (request) {
                     };
                     console.log("Updating Page Metadata: quiz", updateRequest.data.answer_metadata);
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-    
+
                     console.log("updateResponse - quiz", updateQuizDataResponse);
-    
+
                     if (updateQuizDataResponse) {
                         console.log("Uploaded quiz Answer Removed Successfully");
                         return (constant.messages.UPLOADED_ANSWER_REMOVED);
