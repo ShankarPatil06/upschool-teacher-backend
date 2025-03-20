@@ -7,8 +7,6 @@ const qs = require('qs');
 const axios = require('axios');
 let sendMail = require("./emailService");
 
-// const { callbackPromise } = require("nodemailer/lib/shared");
-
 exports.getTeacherClasses = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
   request.data['school_id'] = individual_teacher_response?.Items[0]?.school_id;
@@ -27,49 +25,21 @@ exports.getTeacherClasses = async (request) => {
   const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === 'Upschool' ? false : schoolDetails.Items[0]?.school_logoURL }
   return teacherResponse2;
 };
+
 exports.getTeacherSectionsBasedonClass = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
   let section_ids = (individual_teacher_response.Items[0].teacher_section_allocation.filter((e) => e.client_class_id == request.data.client_class_id)).map(({ section_id }) => ({ section_id }));
 
   return await teacherRepository.fetchTeacherSectionData2({ items: section_ids, condition: "OR" })
 };
+
 exports.getTeacherSubjectsBasedonSection = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
   let subject_ids = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === "Active").map(({ subject_id }) => ({ subject_id }));
 
   return await teacherRepository.fetchTeacherSubjectData2({ items: subject_ids, condition: "OR" })
 };
-exports.teacherSubjectandActivityCheck = function (request, callback) {
-  /** FETCH USER BY EMAIL **/
-  teacherRepository.fetchTeacherByID(request, async function (individual_teacher_err, individual_teacher_response) {
-    if (individual_teacher_err) {
-      console.log(individual_teacher_err);
-      callback(individual_teacher_err, individual_teacher_response);
-    } else {
-      if (individual_teacher_response.Items.length === 0) {
-        callback(400, constant.messages.TEACHER_DOESNOT_EXISTS);
-      } else {
 
-        let allocationCheck = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === "Active");
-        if (allocationCheck.length > 0) {
-
-          teacherRepository.fetchTeacherActivityDetails(request, async function (teacher_activity_details_err, teacher_activity_details_res) {
-            if (teacher_activity_details_err) {
-              console.log(teacher_activity_details_err);
-              callback(teacher_activity_details_err, teacher_activity_details_res);
-            } else {
-              console.log(teacher_activity_details_res.Items);
-              callback(200, teacher_activity_details_res.Items);
-            }
-          })
-        } else {
-          callback(400, constant.messages.SUBJECT_ISNOT_ALLOCATE_TO_TEACHER);
-        }
-      }
-    }
-  }
-  );
-};
 exports.archiveAndActivateTopicInChapter = async (request) => {
   const preOrPost = request.data.learningType === constant.prePostConstans.preLearningVal ? constant.prePostConstans.preLearning : request.data.learningType === constant.prePostConstans.postLearningVal ? constant.prePostConstans.postLearning : "N.A.";
   if (preOrPost === "N.A.") {
@@ -117,9 +87,7 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
       request.data.digicard_activities = [];
       await teachingActivityRepository.addTeachingActivity2(request);
     }
-
     return { status: 200 };
-
   } catch (error) {
     console.error(error);
     throw new Error(`Error processing topic archive/activation: ${error.message}`);
@@ -422,6 +390,7 @@ exports.generateQuizForPreLearning = (request, callback) => {
   })
   /** END CHECK PRE QUIZ EXIST **/
 }
+
 exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
   topicRepository.fetchTopicConceptIDData({ topic_array: request.data.AcitveTopics }, async function (fetch_topics_err, fetch_topics_response) {
@@ -679,6 +648,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
     }
   })
 }
+
 exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_response, callback) => {
 
   let randomOrderQuestions = [];

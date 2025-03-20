@@ -275,7 +275,7 @@ exports.fetchAllPostTopicsAndItsDigicards = async (request) => {
                     const topicDataRes = await commonRepository.fetchBulkData2(fetchBulkTopicReq);
 
                     if (unlockedTopicCards.length > 0) {
-                        let unlockedTopicNames = topicDataRes.Items.map(errTop =>
+                        let unlockedTopicNames = topicDataRes.data.map(errTop =>
                             errTop.display_name || errTop.topic_title
                         ).join(", ");
 
@@ -325,7 +325,7 @@ exports.fetchAllPostTopicsAndItsDigicards = async (request) => {
 
 exports.getPrePostTopicsAndItsDigicards = async (topicData_res) => {
     try {
-        let topicConceptsIds = topicData_res.Items.flatMap(topData => topData.topic_concept_id);
+        let topicConceptsIds = topicData_res.data.flatMap(topData => topData.topic_concept_id);
         topicConceptsIds = [...new Set(topicConceptsIds)];
         let fetchBulkConceptReq = {
             IdArray: topicConceptsIds,
@@ -333,7 +333,7 @@ exports.getPrePostTopicsAndItsDigicards = async (topicData_res) => {
             TableName: TABLE_NAMES.upschool_concept_blocks_table
         };
         const conceptDataRes = await commonRepository.fetchBulkData2(fetchBulkConceptReq);
-        let digicardsIds = conceptDataRes.Items.flatMap(conData => conData.concept_digicard_id);
+        let digicardsIds = conceptDataRes.data.flatMap(conData => conData.concept_digicard_id);
         digicardsIds = [...new Set(digicardsIds)];
 
         let fetchBulkDigiReq = {
@@ -343,7 +343,7 @@ exports.getPrePostTopicsAndItsDigicards = async (topicData_res) => {
             projectionExp: ["digi_card_id", "digi_card_title", "display_name"]
         };
         const digiDataRes = await commonRepository.fetchBulkDataWithProjection5(fetchBulkDigiReq);
-        return await exports.createTopicsAndItsCardsList(topicData_res.Items, conceptDataRes.Items, digiDataRes.Items);
+        return await exports.createTopicsAndItsCardsList(topicData_res.data, conceptDataRes.data, digiDataRes);
     } catch (error) {
         return { status: error.status || 500, message: error.message || "An error occurred" };
     }
