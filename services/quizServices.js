@@ -915,7 +915,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
                         // console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
