@@ -566,9 +566,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Please compare the following answers for similarity. 
-            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
-            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
+            const userPrompt = `Please compare the following answers for similarity. The student's response should be analyzed properly, compare it with the Correct Answers (which is very important) provided in the correct answer to perform a semantic evaluation and provide a similarity score. - Ensure different phrases or concepts are not mistakenly considered similar, don't override the student's response by more than 5%. If the student's answer does not match any of the meanings as per the Correct Answers present in the correct answer, the similarity score should be 0. 
 
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
