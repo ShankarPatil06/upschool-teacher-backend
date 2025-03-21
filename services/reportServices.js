@@ -164,26 +164,6 @@ exports.getTargetedLearningExpectation = async (request) => {
 exports.getTargetedLearningExpectationDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-  if (!schoolDataRes.Items[0] || !schoolDataRes.Items[0].pre_quiz_config || !schoolDataRes.Items[0].post_quiz_config)
-    return {};
-  const classPercentagePre = schoolDataRes.Items[0].pre_quiz_config.class_percentage;
-  const passPercentagePre = schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
-  const classPercentagePost = schoolDataRes.Items[0].post_quiz_config.class_percentage;
-  const passPercentagePost = schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
-  const studentDataRes = await studentRepository.getStudentsData2(request);
-  const classStrength = studentDataRes.Items.length;
-  const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-  quizDataRes.Items = await Promise.all(
-    quizDataRes.Items.map(async (val) => ({
-      ...val,
-      selectedTopics: await Promise.all(
-        val.selectedTopics.map(async (topic) => ({
-          ...topic,
-          topicQuestionDetails: await calculateNumberOfQuestions(topic.topic_id, val),
-        }))
-      ),
-    }))
-  );
   const calculateNumberOfQuestions = async (topicId, val) => {
     let topicQuestionDetails = {
       noOfQuestions: 0,
@@ -211,6 +191,27 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
     });
     return topicQuestionDetails;
   }
+
+  if (!schoolDataRes.Items[0] || !schoolDataRes.Items[0].pre_quiz_config || !schoolDataRes.Items[0].post_quiz_config)
+    return {};
+  const classPercentagePre = schoolDataRes.Items[0].pre_quiz_config.class_percentage;
+  const passPercentagePre = schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach;
+  const classPercentagePost = schoolDataRes.Items[0].post_quiz_config.class_percentage;
+  const passPercentagePost = schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
+  const studentDataRes = await studentRepository.getStudentsData2(request);
+  const classStrength = studentDataRes.Items.length;
+  const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
+  quizDataRes.Items = await Promise.all(
+    quizDataRes.Items.map(async (val) => ({
+      ...val,
+      selectedTopics: await Promise.all(
+        val.selectedTopics.map(async (topic) => ({
+          ...topic,
+          topicQuestionDetails: await calculateNumberOfQuestions(topic.topic_id, val),
+        }))
+      ),
+    }))
+  );
 
   const groupByChapterId = (data) => {
     data.sort((a, b) => a.chapter_id.localeCompare(b.chapter_id));
