@@ -6,7 +6,6 @@ const s3Services = require("./s3Service");
 
 exports.topicUnlockService = async function (request, callback) {
   /** FETCH USER BY EMAIL **/
-  console.log("request : ", request);
 
   teacherRepository.fetchTeacherByID(request, async function (individual_teacher_err, individual_teacher_response) {
     if (individual_teacher_err) {
@@ -244,6 +243,65 @@ exports.splitActiveAndArchivedDigicards = async function (request, digicardList,
     }
   });
 }
+
+exports.splitActiveAndArchivedDigicards2 = async function (request, digicardList) {
+  let reqData = request.data;
+  try {
+    let teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
+
+    let finalDigiList = {
+      activeDigicards: [],
+      archivedDigicards: []
+    };
+
+    let digicardActivities = teachActivity_response.Items.length > 0 && teachActivity_response.Items[0].digicard_activities
+      ? teachActivity_response.Items[0].digicard_activities
+      : [];
+
+    let chapterData = digicardActivities.length > 0
+      ? digicardActivities.filter(chap => chap.chapter_id === reqData.chapter_id)
+      : [];
+
+    let prePostData = chapterData.length > 0
+      ? chapterData[0][reqData.learningType === constant.prePostConstans.preLearningVal
+        ? constant.prePostConstans.preLearning
+        : constant.prePostConstans.postLearning]
+      : [];
+
+    let topicData = prePostData.length > 0
+      ? prePostData.filter(prePost => prePost.topic_id === reqData.topic_id)
+      : [];
+
+    if (topicData.length > 0) {
+      if (topicData[0].digicardOrder.length === 0) {
+        topicData[0].digicardOrder = digicardList.map(defaultOrder => defaultOrder.digi_card_id);
+      }
+
+      topicData[0].digicardOrder = await helper.removeDuplicates(topicData[0].digicardOrder);
+      topicData[0].archivedDigicard = await helper.removeDuplicates(topicData[0].archivedDigicard);
+
+      let activeCardOrder = await helper.getDifferenceValueFromTwoArray(
+        topicData[0].digicardOrder,
+        topicData[0].archivedDigicard
+      );
+
+      let archivedCards = topicData[0].archivedDigicard;
+
+      finalDigiList.activeDigicards = digicardList.filter(d => activeCardOrder.includes(d.digi_card_id));
+      finalDigiList.archivedDigicards = digicardList.filter(d => archivedCards.includes(d.digi_card_id));
+
+      console.log(finalDigiList);
+      return finalDigiList;
+    } else {
+      finalDigiList.activeDigicards = digicardList;
+      return finalDigiList;
+    }
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
 exports.getTopicsBasedonChapters = async (request)=> {
   try {
     if (!Array.isArray(request.data.chapter_array) || request.data.chapter_array.length === 0) {
