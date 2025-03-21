@@ -14,32 +14,26 @@ exports.fetchIndividualDigiCard = (req, res, next) => {
     });
 };
 
-exports.fetchAllStudents = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    studentServices.fetchAllStudents(request, function (fetch_all_digicard_err, fetch_all_digicard_response) {
-        if (fetch_all_digicard_err) {
-            res.status(fetch_all_digicard_err).json(fetch_all_digicard_response);
-        } else {
-            console.log("Fetch All DigiCards Successfull");
-            res.json(fetch_all_digicard_response);
-        }
-    });
+exports.fetchAllStudents = async (req, res, next) => {
+    try {
+        let request = req.body;
+        request["token"] = req.header('Authorization');
+        const fetchAllStudentsResponse = await studentServices.fetchAllStudents(request);
+        res.json(fetchAllStudentsResponse);
+    } catch (error) {
+        next(error);
+    }
 };
 
-exports.topAndBottomPerformers = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    studentServices.topAndBottomPerformers(request, function (top_and_bottom_performers_err, fetch_top_and_bottom_performers_response) {
-        if (top_and_bottom_performers_err) {
-            res.status(top_and_bottom_performers_err).json(fetch_top_and_bottom_performers_response);
-        } else {
-            console.log("Fetching Top and Bottom Performers Successfull");
-            res.json(fetch_top_and_bottom_performers_response);
-        }
-    });
+exports.topAndBottomPerformers = async (req, res, next) => {
+    try {
+        let request = req.body;
+        request["token"] = req.header('Authorization');
+        const topAndBottomPerformersResponse = await studentServices.topAndBottomPerformers(request);
+        res.json(topAndBottomPerformersResponse);
+    } catch (error) {
+        next(error);
+    }
 };
 
 exports.needAttention = async (req, res, next) => {
@@ -61,18 +55,6 @@ exports.studentChaptersPerformance = async (req, res, next) => {
         res.json(result);
     } catch (error) {
         console.error("Error fetching studentPerformance students:", error);
-        res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
-    }
-};
-
-exports.studentAvgVsClassAvg = async (req, res, next) => {
-    let request = req.body;
-    try {
-        const result = await studentServices.studentAvgVsClassAvg(request);
-        console.log("Fetch student and class average Successful");
-        res.json(result);
-    } catch (error) {
-        console.error("Error fetching student and class average students:", error);
         res.status(500).json({ message: "An error occurred while fetching data.", details: error.message });
     }
 };
