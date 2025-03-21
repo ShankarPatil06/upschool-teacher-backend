@@ -159,6 +159,12 @@ exports.messages = {
     UPLOAD_URL_Sent: "Please, check your email to access the URL to upload Answer Sheets!",
     OTP_EXPIRED: "OTP Expired!",
     INVALID_OTP: "Invalid OTP!",
+    SNS_ERROR: "SNS ERROR",
+    IMAGE_UPLOADED_SUCCESSFULLY: "Image Uploaded successfully",
+    IMAGE_SUCCESSFULLY_UPDATED: "Image Successfully updated",
+    IMAGE_UPDATED_ISSUE: "Image Update Issue",
+    NEW_STUDENT_RECORD_NOT_ADDED: "New Student Record Not Added",
+    NEW_STUDENT_INSERT_ISSUE_IN_QUIZ: "New Student Insert issue in quiz",
 
     // School Admin
     SCHOOL_USER_EXISTS_ALREADY: 'User exists already, please use a different email Id!',
@@ -175,7 +181,25 @@ exports.common = {
     No: "No",
     Yes: "Yes",
     AND: "AND",
-    Active: "Active"
+    Active: "Active",
+    Archived:"Archived",
+    MasterAdmin:"MasterAdmin"
+}
+exports.commonConditionValue = {
+    pageNo: "pageNo",
+    page_no: "pageno",
+    testID: "Test ID",
+    quizID: "Quiz ID",
+    test_id: "testid",
+    rollNo: "Roll No",
+    roll_no: "rollno",
+    quiz_id: "quizid",
+    set: "set",
+    a: "a",
+    b: "b",
+    c: "c",
+    classTest:"classTest",
+    quiz:"quiz"
 }
 
 exports.constValues = {
@@ -203,6 +227,10 @@ exports.mailSubject = {
     otpForCreatingPassword: "OTP for Creating Password",
     quizGeneration: "Quiz Generation"
 
+}
+exports.mailFor = {
+    urlToUploadAnswerSheets: "urlToUploadAnswerSheets",
+    otpToScanAnswerSheets: "otpToScanAnswerSheets",
 }
 
 exports.unlockChapterValues = {
@@ -321,4 +349,14 @@ exports.groupTypes = {
 
 exports.awsConstants = {
     batchSize: 25
+}
+
+exports.signedUrlConstants = {
+    replace:"**REPLACE**"
+}
+
+exports.requestData={
+    scannerSessionId:"scanner_session_id",
+    userResetOtp:"user_reset_otp",
+    userJwt:"user_jwt"
 }
