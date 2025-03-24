@@ -12,47 +12,55 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
 
-const http = require('http');
-const agent = new http.Agent({ keepAlive: true });
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
 });
 
 exports.addClassTest = async (request) => {
-    const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    console.log("fetch_class_test_res - ", fetch_class_test_res);
-    if (fetch_class_test_res.Items.length === 0) {
-        request.data.class_test_id = helper.getRandomString();
-        console.log("request.data.class_test_id - ", request.data.class_test_id);
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const options = {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            data: qs.stringify(request),
-            url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-            timeout: 30000,
-            httpAgent: agent  // Allow HTTP
-            // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
-        };
-        // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-        console.log({ firsttttt: options })
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        try {
-            // Await the axios response
+    try {
+        // Fetch existing class test data
+        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request);
+        console.log("fetch_class_test_res - ", fetch_class_test_res);
+
+        // If class test doesn't exist, proceed with creation
+        if (!fetch_class_test_res || !fetch_class_test_res.Items || fetch_class_test_res.Items.length === 0) {
+            request.data.class_test_id = helper.getRandomString();
+            console.log("Generated class_test_id - ", request.data.class_test_id);
+
+            // Convert request data to URL-encoded format
+            const requestData = qs.stringify(request.data);
+            console.log("Formatted Request Data: ", requestData);
+
+            const options = {
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: requestData, // Ensure only `request.data` is stringified
+                url: `${process.env.PDF_GENERATION_URL}/createQuestionAndAnswerPapers`,
+                timeout: 60000
+            };
+
+            console.log("Sending request with options:", options);
+
+            // Await response from PDF generation service
             const pdfData = await axios(options);
             console.log("PDF Data Received: ", pdfData.data);
 
+            // Store generated templates in request
             request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
             request.data.question_paper_template = pdfData.data.question_paper_template || " ";
             request.data.key_answer_template = pdfData.data.key_answer_template || " ";
 
+            // Insert new class test record
+            console.log({request});
             await classTestRepository.insertClassTest2(request);
             return 200;
-        } catch (error) {
-            console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
-            return { status: 500, message: "PDF Generation Failed" };
+        } else {
+            return { status: 409, message: "Class test already exists" };
         }
+    } catch (error) {
+        console.error("Error in addClassTest:", error.response ? error.response.data : error.message);
+        return { status: 500, message: "Internal Server Error" };
     }
 };
 
