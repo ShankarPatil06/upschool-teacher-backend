@@ -12,47 +12,62 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
 
-const http = require('http');
-const agent = new http.Agent({ keepAlive: true });
-
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
 });
 
 exports.addClassTest = async (request) => {
-    const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    console.log("fetch_class_test_res - ", fetch_class_test_res);
-    if (fetch_class_test_res.Items.length === 0) {
-        request.data.class_test_id = helper.getRandomString();
-        console.log("request.data.class_test_id - ", request.data.class_test_id);
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const options = {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            data: qs.stringify(request),
-            url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-            timeout: 30000,
-            httpAgent: agent  // Allow HTTP
-            // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
-        };
-        // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-        console.log({ firsttttt: options })
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        try {
-            // Await the axios response
-            const pdfData = await axios(options);
-            console.log("PDF Data Received: ", pdfData.data);
+    try {
+        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request);
 
-            request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
-            request.data.question_paper_template = pdfData.data.question_paper_template || " ";
-            request.data.key_answer_template = pdfData.data.key_answer_template || " ";
+        if (fetch_class_test_res.Items.length === 0) {
+            request.data.class_test_id = helper.getRandomString();
+            console.log("request.data.class_test_id - ", request.data.class_test_id);
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+            const options = {
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify(request),
+                url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
+                timeout: 60000,
+            };
 
-            await classTestRepository.insertClassTest2(request);
+            console.log({ firsttttt: options })
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+
+            request.data.answer_sheet_template = " ";
+            request.data.question_paper_template = " ";
+            request.data.key_answer_template = " ";
+
+            await classTestRepository.insertClassTest2(request)
+                .then(() => console.log("Class Test Inserted"))
+                .catch(err => console.error("DB Insert Error:", err));
+
+
+            axios(options)
+                .then(response => {
+                    
+                    console.log("PDF Data Received: ", response.data);
+                    request.data.answer_sheet_template = response.data.answer_sheet_template || "";
+                    request.data.question_paper_template = response.data.question_paper_template || "";
+                    request.data.key_answer_template = response.data.key_answer_template || "";
+
+                    console.log("request==", request);
+
+                    classTestRepository.updateClassTest(request)
+                        .then(() => console.log("Class Test Updated"))
+                        .catch(err => console.error("DB Update Error:", err));
+                })
+                .catch(error => {
+                    console.error("PDF Generation Error:", error);
+                });
+
+
             return 200;
-        } catch (error) {
-            console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
-            return { status: 500, message: "PDF Generation Failed" };
         }
+    } catch (error) {
+        console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
+        return { status: 500, message: "PDF Generation Failed" };
     }
 };
 
@@ -247,7 +262,7 @@ exports.startEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
                         console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
@@ -294,18 +309,16 @@ exports.startEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Please compare the following answers for similarity. 
-            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
-            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
-            
+            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, compare it with the rubrics/ marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+         
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
-                    const correctAnswers = extractValidAnswers(pair.correctAnswer);
+                    // const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
             Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
-            Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
+            Correct Answers: ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
-            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
+            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',
