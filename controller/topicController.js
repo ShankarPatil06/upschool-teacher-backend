@@ -1,32 +1,31 @@
 const topicServices = require("../services/topicServices");
 const { formatResponse } = require("../helper/helper");
+const { constant } = require("../constants");
 
-exports.topicUnlock = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    topicServices.topicUnlockService(request, function (unlock_topic_err, unlock_topic_response) {
-        if (unlock_topic_err) {
-            res.status(unlock_topic_err).json(unlock_topic_response);
-        } else {
-            console.log("Chapter Lock Status Changed Successfully");
-            res.json(unlock_topic_response);
-        }
-    });
+exports.topicUnlock = async (req, res) => {
+    try {
+        let request = req.body;
+        request["token"] = req.header(constant.messages.AUTHORIZATION);
+
+        const unlock_topic_response = await topicServices.topicUnlockService(request);
+        res.json(unlock_topic_response);
+    } catch (error) {
+        res.status(error.status || 500).json(error.message || constant.messages.INTERNAL_SERVER_ERROR);
+    }
 };
-exports.fetchDigicardsBasedonTopic = (req, res, next) => {
-    let request = req.body;
-    request["token"] = req.header('Authorization');
-    
-    topicServices.getDigicardsBasedonTopic(request, function (individual_topic_err, individual_topic_response) {
-        if (individual_topic_err) {
-            res.status(individual_topic_err).json(individual_topic_response);
-        } else {
-            console.log("Topic related Concepts Fetched Successfully");
-            res.json(individual_topic_response);
-        }
-    });
+
+exports.fetchDigicardsBasedonTopic = async (req, res) => {
+    try {
+        let request = req.body;
+        request["token"] = req.header(constant.messages.AUTHORIZATION);
+
+        const individual_topic_response = await topicServices.getDigicardsBasedonTopic(request);
+        res.json(individual_topic_response);
+    } catch (error) {
+        res.status(error.status || 500).json(error.message || constant.messages.INTERNAL_SERVER_ERROR);
+    }
 };
+
 exports.fetchTopicsBasedonChapters = async (req, res, next) => {
     try {
         const request = req.body;
