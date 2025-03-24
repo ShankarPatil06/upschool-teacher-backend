@@ -12,7 +12,6 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
 
-
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
 });
@@ -23,10 +22,8 @@ exports.addClassTest = async (request) => {
         console.log("fetch_class_test_res - ", fetch_class_test_res);
         if (fetch_class_test_res.Items.length === 0) {
             request.data.class_test_id = helper.getRandomString();
-
             console.log("request.data.class_test_id - ", request.data.class_test_id);
             console.log("qs.stringify(request) - ", qs.stringify(request));
-
             const options = {
                 method: 'POST',
                 headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -36,18 +33,33 @@ exports.addClassTest = async (request) => {
                 // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
             };
             // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-
             console.log({ firsttttt: options })
             console.log("qs.stringify(request) - ", qs.stringify(request));
             // Await the axios response
-            const pdfData = await axios(options);
-            console.log("PDF Data Received: ", pdfData.data);
+            axios(options)
+            .then(response => {
+                console.log("PDF Data Received: ", response.data);
 
-            request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
-            request.data.question_paper_template = pdfData.data.question_paper_template || " ";
-            request.data.key_answer_template = pdfData.data.key_answer_template || " ";
+                request.data.answer_sheet_template = response.data.answer_sheet_template || " ";
+                request.data.question_paper_template = response.data.question_paper_template || " ";
+                request.data.key_answer_template = response.data.key_answer_template || " ";
 
-            await classTestRepository.insertClassTest2(request);
+                // Insert into database asynchronously
+                classTestRepository.insertClassTest2(request)
+                    .then(() => console.log("Class Test Inserted"))
+                    .catch(err => console.error("DB Insert Error:", err));
+            })
+            .catch(error => {
+                console.error("PDF Generation Error:", error);
+            });
+            // const pdfData = await axios(options);
+            // console.log("PDF Data Received: ", pdfData.data);
+
+            // request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
+            // request.data.question_paper_template = pdfData.data.question_paper_template || " ";
+            // request.data.key_answer_template = pdfData.data.key_answer_template || " ";
+
+            // await classTestRepository.insertClassTest2(request);
             return 200;
         }
     } catch (error) {
