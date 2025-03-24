@@ -21,6 +21,7 @@ exports.messages = {
     INCORRECT_OLDPASSWORD: "Invalid Current Password!",
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
+    INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -182,8 +183,8 @@ exports.common = {
     Yes: "Yes",
     AND: "AND",
     Active: "Active",
-    Archived:"Archived",
-    MasterAdmin:"MasterAdmin"
+    Archived: "Archived",
+    MasterAdmin: "MasterAdmin"
 }
 exports.commonConditionValue = {
     pageNo: "pageNo",
@@ -198,8 +199,8 @@ exports.commonConditionValue = {
     a: "a",
     b: "b",
     c: "c",
-    classTest:"classTest",
-    quiz:"quiz"
+    classTest: "classTest",
+    quiz: "quiz"
 }
 
 exports.constValues = {
@@ -352,11 +353,11 @@ exports.awsConstants = {
 }
 
 exports.signedUrlConstants = {
-    replace:"**REPLACE**"
+    replace: "**REPLACE**"
 }
 
-exports.requestData={
-    scannerSessionId:"scanner_session_id",
-    userResetOtp:"user_reset_otp",
-    userJwt:"user_jwt"
+exports.requestData = {
+    scannerSessionId: "scanner_session_id",
+    userResetOtp: "user_reset_otp",
+    userJwt: "user_jwt"
 }

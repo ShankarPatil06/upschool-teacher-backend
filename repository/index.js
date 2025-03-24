@@ -28,9 +28,6 @@ const topicRepository = require('./topicRepository');
 const unitRepository = require('./unitRepository');
 const userRepository = require('./userRepository');
 
-
-
-
 module.exports = {
     baseRepository,
     baseRepositoryNew,

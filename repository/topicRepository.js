@@ -328,6 +328,37 @@ exports.fetchTopicConceptIDData = function (request, callback) {
         }
     });
 }
+
+exports.fetchTopicConceptIDData2 = async (request) => {
+    const { topic_array } = request;
+
+    if (!topic_array || topic_array.length === 0) {
+        throw new Error("Invalid topic_array");
+    }
+
+    let params = {
+        TableName: TABLE_NAMES.upschool_topic_table,
+        ProjectionExpression: "topic_id, topic_concept_id",
+        ExpressionAttributeValues: { ":topic_status": "Active" }
+    };
+
+    if (topic_array.length === 1) {
+        params.KeyConditionExpression = "topic_id = :topic_id";
+        params.FilterExpression = "topic_status = :topic_status";
+        params.ExpressionAttributeValues[":topic_id"] = topic_array[0];
+        return await DATABASE_TABLE2.query(params);
+    } else {
+        const filterConditions = topic_array.map((id, index) => `(topic_id = :topic_id${index} AND topic_status = :topic_status)`).join(" OR ");
+
+        params.FilterExpression = filterConditions;
+        topic_array.forEach((id, index) => {
+            params.ExpressionAttributeValues[`:topic_id${index}`] = id;
+        });
+
+        return await DATABASE_TABLE2.query(params);
+    }
+};
+
 exports.fetchTopicIDandTopicConceptID = function (request, callback) {
 
     console.log("fetchTopicData : ", request);

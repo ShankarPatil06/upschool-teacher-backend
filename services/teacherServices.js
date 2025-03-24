@@ -162,494 +162,295 @@ exports.getTeacherPreLearningPermissions = async (request) => {
   }
 };
 
-exports.generateQuizForPreLearning = (request, callback) => {
-  /** CHECK PRE QUIZ EXIST **/
-  quizRepository.fetchQuizData(request, async function (quizData_err, quizData_res) {
-    if (quizData_err) {
-      console.log(quizData_err);
-      callback(quizData_err, quizData_res);
+exports.generateQuizForPreLearning = async (request) => {
+  try {
+    const quizDataRes = await quizRepository.fetchQuizData2(request);
+
+    if (!helper.isEmptyArray(quizDataRes.Items)) {
+      throw new Error(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
     }
-    else {
-      if (quizData_res.Items.length > 0) {
-        // If Quiz Already Generated : 
-        console.log(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
-        callback(400, constant.messages.PRE_QUIZ_ALREADY_GENERATED);
-      }
-      else {
-        schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
-          if (schoolDataErr) {
-            console.log(schoolDataErr);
-            callback(schoolDataErr, schoolDataRes);
-          }
-          else {
-            if (schoolDataRes.Items[0].pre_quiz_config) {
-              request.data.pre_post_quiz_config = schoolDataRes.Items[0].pre_quiz_config;
-              request.data.quiz_id = helper.getRandomString();
-              request.data.quiz_duration = 0;
 
-              if (request.data.quizType === constant.prePostConstans.automatedType) {
+    const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-                // Automatic : 
-                /** FETCH TEACHING ACTIVITY **/
-                teachingActivityRepository.fetchTeachingActivity(request, async function (teachActivity_err, teachActivity_response) {
+    if (schoolDataRes.Items[0].pre_quiz_config) {
+      request.data.pre_post_quiz_config = schoolDataRes.Items[0].pre_quiz_config;
+      request.data.quiz_id = helper.getRandomString();
+      request.data.quiz_duration = 0;
 
-                  if (teachActivity_err) {
+      if (request.data.quizType === constant.prePostConstans.automatedType) {
 
-                    console.log(teachActivity_err);
-                    callback(teachActivity_err, teachActivity_response);
-                  } else {
+        const teachActivityRes = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-                    let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
-                    let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].pre_learning.archivedTopics : [];
+        let chapterActivity = teachActivityRes.Items.length > 0
+          ? teachActivityRes.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
+          : [];
 
-                    /** FETCH CHAPTER DATA **/
-                    chapterRepository.fetchChapterByID(request, async function (chapterData_err, chapterData_response) {
-                      if (chapterData_err) {
-                        console.log(chapterData_err);
-                        callback(chapterData_err, chapterData_response);
-                      } else {
-                        let preLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].prelearning_topic_id : [];
+        let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].pre_learning.archivedTopics : [];
 
-                        let AcitveTopics = await helper.getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
+        const chapterDataRes = await chapterRepository.fetchChapterByID2(request);
 
-                        if (AcitveTopics.length > 0) {
-                          let selectedTop = [];
-                          await AcitveTopics.forEach(actTop => {
-                            selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
-                          })
+        let preLearningTopicIds = chapterDataRes.Items.length > 0
+          ? chapterDataRes.Items[0].prelearning_topic_id
+          : [];
 
-                          request.data.selectedTopics = selectedTop;
-                          request.data.AcitveTopics = AcitveTopics;
+        let activeTopics = await helper.getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
 
-                          exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
-                            if (add_quiz_basedon_varient_err) {
-                              callback(add_quiz_basedon_varient_err, add_quiz_basedon_varient_response);
-                            } else {
-
-                              if (add_quiz_basedon_varient_response === 200) {
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
-                        }
-                        else {
-                          console.log(constant.messages.NO_ACTIVE_TOPICS);
-                          callback(400, constant.messages.NO_ACTIVE_TOPICS);
-                        }
-                      }
-                    })
-                    /** END FETCH CHAPTER DATA **/
-                  }
-                })
-                /** END FETCH TEACHING ACTIVITY **/
-              }
-              else {
-
-                // Fetch Topics Response : 
-                // Fetch related Concept Response : 
-                // Fetch Related groups
-                let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
-                topicRepository.fetchTopicConceptIDData({ topic_array: selectedTopics }, async function (fetch_topics_err, fetch_topics_response) {
-                  if (fetch_topics_err) {
-                    console.log(fetch_topics_err);
-                    callback(fetch_topics_err, fetch_topics_response);
-                  } else {
-                    let topic_concept_id = [];
-                    await fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
-
-                    conceptRepository.fetchConceptData({ topic_concept_id: topic_concept_id }, async function (fetch_concepts_err, fetch_concepts_response) {
-                      if (fetch_concepts_err) {
-                        console.log(fetch_concepts_err);
-                        callback(fetch_concepts_err, fetch_concepts_response);
-                      } else {
-
-                        if (request.data.quizType === constant.prePostConstans.expressType) {
-                          // Express : 
-                          exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
-                              // callback(add_express_quiz_basedon_varient_err, 200); 
-                              if (add_express_quiz_basedon_varient_response === 200) {
-
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-
-                            }
-                          })
-
-                        } else if (request.data.quizType === constant.prePostConstans.manualType) {
-                          // Manual : 
-                          exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
-                              if (add_express_quiz_basedon_varient_response === 200) {
-
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-
-                                    if (create_pdf_and_update_details_err) {
-
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
-                        }
-
-                      }
-                    })
-                  }
-                })
-
-              }
-
-            } else {
-              console.log(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
-              callback(400, constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
-            }
-
-          }
-        })
-      }
-    }
-  })
-  /** END CHECK PRE QUIZ EXIST **/
-}
-
-exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
-
-  topicRepository.fetchTopicConceptIDData({ topic_array: request.data.AcitveTopics }, async function (fetch_topics_err, fetch_topics_response) {
-    if (fetch_topics_err) {
-      console.log(fetch_topics_err);
-      callback(fetch_topics_err, fetch_topics_response);
-    } else {
-      let topic_concept_id = [];
-      fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
-
-      conceptRepository.fetchConceptData({ topic_concept_id: topic_concept_id }, async function (fetch_concepts_err, fetch_concepts_response) {
-        if (fetch_concepts_err) {
-          console.log(fetch_concepts_err);
-          callback(fetch_concepts_err, fetch_concepts_response);
-        } else {
-
-          let basic_groups = [];
-          let intermediate_groups = [];
-          let advanced_groups = [];
-          // Filter Basic, Intermediate, Advanced Groups : 
-          await fetch_concepts_response.Items.forEach((e) => {
-            basic_groups.push(...e.concept_group_id.basic)
-            intermediate_groups.push(...e.concept_group_id.intermediate)
-            advanced_groups.push(...e.concept_group_id.advanced)
-          });
-
-          basic_groups = await questionServices.processGroups(basic_groups); //helper.removeDuplicates(basic_groups);
-          intermediate_groups = await questionServices.processGroups(intermediate_groups); //helper.removeDuplicates(intermediate_groups);
-          advanced_groups =await questionServices.processGroups(advanced_groups); //helper.removeDuplicates(advanced_groups);
-
-          questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async function (matrix_count_err, matrix_count_response) {
-            if (matrix_count_err) {
-              console.log(matrix_count_err);
-              callback(matrix_count_err, matrix_count_response);
-            } else {
-              // Filtering Groups based on the matrix count : 
-              basic_groups = basic_groups.slice(0, Number(matrix_count_response.basic_count));
-              intermediate_groups = intermediate_groups.slice(0, Number(matrix_count_response.intermediate_count));
-              advanced_groups = advanced_groups.slice(0, Number(matrix_count_response.advance_count));
-              // Combine All Group ID's : 
-              let final_group_ids = [];
-              final_group_ids.push(...basic_groups, ...intermediate_groups, ...advanced_groups);
-              request.data.quiz_question_details = {};
-
-              await groupRepository.fetchGroupsData({ group_array: final_group_ids }, async function (group_err, group_response) {
-                if (group_err) {
-                  console.log(group_err);
-                  callback(group_err, group_response);
-                } else {
-                  let quiz_duration = 0;
-
-                  let randomDupCheck = [];
-                  request.data.question_track_details = {};
-                  // Declcare all topics as selected in an Obj 
-                  let non_considered_topic_data = {};
-                  request.data.selectedTopics.forEach((topic) => {
-                    non_considered_topic_data[topic.topic_id] = true
-                  });
-
-                  if (request.data.varient === "randomOrder") {
-
-                    let questions_list = [];
-                    let group_list = [];
-                    let dupcheck = [];
-
-                    async function getRandomGroups(i) {
-                      if (group_list.length < Number(request.data.noOfQuestionsForAuto)) {
-
-                        const randomIndexforGroup = Math.floor(Math.random() * group_response.Items.length);
-
-                        if (dupcheck.includes(randomIndexforGroup)) {
-                          i++;
-                          getRandomGroups(i);
-                        } else {
-                          let randomGroup = group_response.Items[randomIndexforGroup];
-                          group_list.push(randomGroup);
-                          dupcheck.push(randomIndexforGroup);
-                          i++;
-                          getRandomGroups(i);
-                        }
-
-                      } else {
-                        // Final 
-                        await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
-                        request.data.quiz_duration += quiz_duration;
-
-                        let indheck = [];
-                        async function qtnLoop(ind) {
-                          if (ind < group_list.length) {
-                            let availableQuestions = [...group_list[ind].group_question_id];
-                            if (indheck.length < Number(request.data.noOfQuestionsForAuto)) {
-                              // Pick Random Questions out of each group : 
-                              const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-                              let qtn_id = availableQuestions[randomIndex];
-                              let dupCheck = randomDupCheck.filter((id) => id === qtn_id);
-
-                              !indheck.includes(randomIndex) && indheck.push(randomIndex);
-
-                              if (dupCheck.length > 0) {
-                                qtnLoop(ind);
-                              } else {
-                                questions_list.push(qtn_id);
-                                randomDupCheck.push(qtn_id);
-                                ind++;
-                                qtnLoop(ind);
-                              }
-                            } else {
-                              console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                              callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
-                            }
-
-                          } else {
-
-                            // Formatting Topic-Concept-Group-Question level DS 
-                            let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(request.data.selectedTopics, fetch_topics_response.Items, fetch_concepts_response.Items, questions_list, non_considered_topic_data, group_list);
-                            non_considered_topic_data = res_non_considered_topic_data;
-
-                            res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
-
-                            request.data.question_track_details.qp_set_a = res_questionTrackData
-                            request.data.question_track_details.qp_set_b = res_questionTrackData
-                            request.data.question_track_details.qp_set_c = res_questionTrackData
-
-                            // Create Shuffled Orders of same questions based on admin -  no of random order :
-                            // Later Changed to Fixed 3 sets by Vishal :  
-                            request.data.quiz_question_details.qp_set_a = await helper.shuffleArray(questions_list);
-                            request.data.quiz_question_details.qp_set_b = await helper.shuffleArray(questions_list);
-                            request.data.quiz_question_details.qp_set_c = await helper.shuffleArray(questions_list);
-
-                            // add Non considered topics to DB : 
-                            request.data.not_considered_topics = [];
-                            for (var i in non_considered_topic_data) {
-                              non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-                            };
-                            console.log({ request , "quiz_duration" : quiz_duration , questions_list});
-
-                            quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-                              if (addQuiz_err) {
-                                console.log(addQuiz_err);
-                                callback(addQuiz_err, addQuiz_response);
-                              } else {
-                                console.log("QUIZ GENERATED!");
-                                callback(0, 200);
-                              }
-                            })
-
-                          }
-                        };
-                        qtnLoop(0);
-                      }
-                    }
-                    getRandomGroups(0);
-
-                  } else if (request.data.varient === "randomQuestions") {
-
-                    await helper.getRandomGroups(group_response.Items, request.data.noOfQuestionsForAuto, quiz_duration).then(async (data) => {
-                      request.data.quiz_duration += data.quiz_duration;
-                      request.data.question_track_details = {};
-                      // Declcare all topics as selected in an Obj 
-                      let non_considered_topic_data = {};
-                      request.data.selectedTopics.forEach((topic) => {
-                        non_considered_topic_data[topic.topic_id] = true
-                      });
-
-                      // Create 3 Sets of Question Paper : 
-                      async function splitSetQuestions(setIndex) {
-                        if (setIndex < 4) {
-
-                          let indheck = [];
-                          let questions_list = [];
-                          randomDupCheck = [];
-
-                          async function qtnLoop(ind) {
-                            if (ind < data.group_list.length) {
-
-                              if (indheck.length < Number(request.data.noOfQuestionsForAuto)) {
-                                // Pick Random Questions out of each group : 
-                                const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                                let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                                let dupCheck = randomDupCheck.filter((id) => id === qtn_id);
-
-                                !indheck.includes(randomIndex) && indheck.push(randomIndex);
-
-                                if (dupCheck.length > 0) {
-                                  qtnLoop(ind);
-                                } else {
-                                  questions_list.push(qtn_id);
-                                  randomDupCheck.push(qtn_id)
-
-                                  ind++;
-                                  qtnLoop(ind);
-                                }
-                              } else {
-                                console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                                callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
-                              }
-                            } else {
-
-                              // Formatting Topic-Concept-Group-Question level DS 
-                              let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(request.data.selectedTopics, fetch_topics_response.Items, fetch_concepts_response.Items, questions_list, non_considered_topic_data, data.group_list);
-
-                              res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
-
-                              if (setIndex === 1) {
-                                request.data.quiz_question_details.qp_set_a = questions_list
-                                request.data.question_track_details.qp_set_a = res_questionTrackData
-                              } else if (setIndex === 2) {
-                                request.data.quiz_question_details.qp_set_b = questions_list
-                                request.data.question_track_details.qp_set_b = res_questionTrackData
-                              } else if (setIndex === 3) {
-                                request.data.quiz_question_details.qp_set_c = questions_list
-                                request.data.question_track_details.qp_set_c = res_questionTrackData
-                              }
-                              non_considered_topic_data = res_non_considered_topic_data;
-
-                              setIndex++;
-                              splitSetQuestions(setIndex);
-                            }
-                          };
-                          qtnLoop(0);
-
-                        } else {
-                          // add Non considered topics to DB : 
-                          request.data.not_considered_topics = [];
-                          for (var i in non_considered_topic_data) {
-                            non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-                          };
-
-                          // Add Quiz : 
-                          quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-                            if (addQuiz_err) {
-                              console.log(addQuiz_err);
-                              callback(addQuiz_err, addQuiz_response);
-                            } else {
-                              console.log("QUIZ GENERATED!");
-                              callback(0, 200);
-                            }
-                          })
-
-                        }
-                      }
-                      await splitSetQuestions(1);
-                    })
-                      .catch(function (err) {
-                        console.log(err);
-                        callback(400, err);
-                      })
-                  }
-                }
-              });
-            }
-          })
+        if (activeTopics.length === 0) {
+          return { status: 400, message: constant.messages.NO_ACTIVE_TOPICS };
         }
-      })
+
+        let selectedTopics = activeTopics.map(topicId => ({
+          topic_id: topicId,
+          noOfQuestions: "N.A."
+        }));
+
+        request.data.selectedTopics = selectedTopics;
+        request.data.activeTopics = activeTopics;
+
+        const add_quiz_basedon_varient_response = await this.addAutomatedQuizBasedonVarient(request);
+
+        if (add_quiz_basedon_varient_response === 200) {
+          if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+            await exports.sendMailtoTeacher2(request);
+            return await exports.createPDFandUpdateTemplateDetails2(request);
+          } else {
+            throw new Error(constant.messages.INVALID_QUIZ_MODE);
+          }
+        } else {
+          throw new Error(add_quiz_basedon_varient_response);
+        }
+      } else {
+        let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
+        const fetch_topics_response = await topicRepository.fetchTopicConceptIDData2({ topic_array: selectedTopics });
+
+        let topic_concept_id = [];
+        fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
+        const fetch_concepts_response = await conceptRepository.fetchConceptData3({ topic_concept_id });
+
+        if (request.data.quizType === constant.prePostConstans.expressType) {
+          // Express : 
+          const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
+          if (add_express_quiz_basedon_varient_response === 200) {
+            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+              await exports.sendMailtoTeacher2(request);
+              return await exports.createPDFandUpdateTemplateDetails2(request);
+            } else {
+              throw new Error(constant.messages.INVALID_QUIZ_MODE);
+            }
+          } else {
+            throw new Error(add_express_quiz_basedon_varient_response);
+          }
+        } else if (request.data.quizType === constant.prePostConstans.manualType) {
+          // Manual : 
+          try {
+            const addQuizResponse = await exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
+            if (addQuizResponse !== 200) {
+              throw new Error(addQuizResponse);
+            }
+
+            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+              await exports.sendMailtoTeacher2(request);
+              return await exports.createPDFandUpdateTemplateDetails2(request);
+            }
+            throw new Error(constant.messages.INVALID_QUIZ_MODE);
+          } catch (error) {
+            throw error;
+          }
+        }
+      }
+    } else {
+      return { status: 400, message: constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG };
     }
-  })
+  } catch (quizDataErr) {
+    throw quizDataErr;
+  }
 }
 
-exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_response, callback) => {
+exports.addAutomatedQuizBasedonVarient = async (request) => {
+  try {
+    const fetchTopicsResponse = await topicRepository.fetchTopicConceptIDData2({ topic_array: request.data.activeTopics });
+    let topicConceptIds = fetchTopicsResponse.Items.flatMap(e => e.topic_concept_id);
+    const fetchConceptsResponse = await conceptRepository.fetchConceptData3({ topic_concept_id: topicConceptIds });
+
+    let basicGroups = [];
+    let intermediateGroups = [];
+    let advancedGroups = [];
+
+    fetchConceptsResponse.forEach(e => {
+      basicGroups.push(...e.concept_group_id.basic);
+      intermediateGroups.push(...e.concept_group_id.intermediate);
+      advancedGroups.push(...e.concept_group_id.advanced);
+    });
+
+    basicGroups = await questionServices.processGroups(basicGroups);
+    intermediateGroups = await questionServices.processGroups(intermediateGroups);
+    advancedGroups = await questionServices.processGroups(advancedGroups);
+
+    const matrix_count_response = await questionServices.calculateCountUsingMatrix2(
+      basicGroups,
+      intermediateGroups,
+      advancedGroups,
+      request.data.pre_post_quiz_config
+    );
+
+    basicGroups = basicGroups.slice(0, Number(matrix_count_response.basic_count));
+    intermediateGroups = intermediateGroups.slice(0, Number(matrix_count_response.intermediate_count));
+    advancedGroups = advancedGroups.slice(0, Number(matrix_count_response.advance_count));
+
+    let final_group_ids = [...basicGroups, ...intermediateGroups, ...advancedGroups];
+    request.data.quiz_question_details = {};
+
+    const group_response = await groupRepository.fetchGroupsData2({ group_array: final_group_ids });
+
+    let quiz_duration = 0;
+    let randomDupCheck = [];
+    request.data.question_track_details = {};
+    let non_considered_topic_data = {};
+
+    request.data.selectedTopics.forEach((topic) => {
+      non_considered_topic_data[topic.topic_id] = true;
+    });
+
+    if (request.data.varient === "randomOrder") {
+      let questions_list = [];
+      let group_list = [];
+      let dupcheck = [];
+
+      const getRandomGroups = async () => {
+        while (group_list.length < Number(request.data.noOfQuestionsForAuto)) {
+          const randomIndex = Math.floor(Math.random() * group_response.length);
+          if (!dupcheck.includes(randomIndex)) {
+            let randomGroup = group_response[randomIndex];
+            group_list.push(randomGroup);
+            dupcheck.push(randomIndex);
+          }
+        }
+      };
+
+      await getRandomGroups();
+      group_list.forEach((Grp) => (quiz_duration += Number(Grp.question_duration || 1)));
+      request.data.quiz_duration += quiz_duration;
+
+      const qtnLoop = async (ind) => {
+        if (ind < group_list.length) {
+          let availableQuestions = [...group_list[ind].group_question_id];
+          if (randomDupCheck.length < Number(request.data.noOfQuestionsForAuto)) {
+            const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+            let qtn_id = availableQuestions[randomIndex];
+
+            if (!randomDupCheck.includes(qtn_id)) {
+              questions_list.push(qtn_id);
+              randomDupCheck.push(qtn_id);
+            }
+
+            await qtnLoop(ind + 1);
+          } else {
+            throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+          }
+        } else {
+          let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(
+            request.data.selectedTopics,
+            fetchTopicsResponse.Items,
+            fetchConceptsResponse,
+            questions_list,
+            non_considered_topic_data,
+            group_list
+          );
+
+          non_considered_topic_data = res_non_considered_topic_data;
+          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+
+          request.data.question_track_details = {
+            qp_set_a: res_questionTrackData,
+            qp_set_b: res_questionTrackData,
+            qp_set_c: res_questionTrackData,
+          };
+
+          request.data.quiz_question_details = {
+            qp_set_a: await helper.shuffleArray(questions_list),
+            qp_set_b: await helper.shuffleArray(questions_list),
+            qp_set_c: await helper.shuffleArray(questions_list),
+          };
+
+          request.data.not_considered_topics = Object.keys(non_considered_topic_data).filter(
+            (key) => non_considered_topic_data[key]
+          );
+
+          await quizRepository.addQuiz2(request);
+          return 200;
+        }
+      };
+      await qtnLoop(0);
+      return 200;
+    } else if (request.data.varient === "randomQuestions") {
+      try {
+        const data = await helper.getRandomGroups(group_response, request.data.noOfQuestionsForAuto, quiz_duration);
+        request.data.quiz_duration = request.data.quiz_duration ? request.data.quiz_duration += data.quiz_duration : data.quiz_duration;
+
+        const splitSetQuestions = async (setIndex) => {
+          if (setIndex > 3) {
+            request.data.not_considered_topics = Object.keys(non_considered_topic_data).filter(
+              (key) => non_considered_topic_data[key]
+            );
+            await quizRepository.addQuiz2(request);
+            console.log("QUIZ GENERATED!");
+            return 200;
+          }
+
+          let questions_list = [];
+          randomDupCheck = [];
+
+          for (const group of data.group_list) {
+            if (randomDupCheck.length < Number(request.data.noOfQuestionsForAuto)) {
+              const randomIndex = Math.floor(Math.random() * group.group_question_id.length);
+              let qtn_id = group.group_question_id[randomIndex];
+
+              if (!randomDupCheck.includes(qtn_id)) {
+                questions_list.push(qtn_id);
+                randomDupCheck.push(qtn_id);
+              }
+            } else {
+              throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+            }
+          }
+
+          let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(
+            request.data.selectedTopics,
+            fetchTopicsResponse.Items,
+            fetchConceptsResponse,
+            questions_list,
+            non_considered_topic_data,
+            data.group_list
+          );
+
+          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+
+          if (setIndex === 1) {
+            request.data.quiz_question_details.qp_set_a = questions_list;
+            request.data.question_track_details.qp_set_a = res_questionTrackData;
+          } else if (setIndex === 2) {
+            request.data.quiz_question_details.qp_set_b = questions_list;
+            request.data.question_track_details.qp_set_b = res_questionTrackData;
+          } else if (setIndex === 3) {
+            request.data.quiz_question_details.qp_set_c = questions_list;
+            request.data.question_track_details.qp_set_c = res_questionTrackData;
+          }
+
+          non_considered_topic_data = res_non_considered_topic_data;
+          await splitSetQuestions(setIndex + 1);
+        };
+        await splitSetQuestions(1);
+      } catch (err) {
+        console.error(err);
+        throw new Error(err);
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_response) => {
 
   let randomOrderQuestions = [];
   let setAQuestions = [];
@@ -669,7 +470,6 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
 
   topic_response = await helper.assignNumberofQuestions(topic_response, request.data.selectedTopics, "topics");
 
-  // Declcare all topics as selected in an Obj 
   let non_considered_topic_data = {};
   request.data.question_track_details = {};
 
@@ -688,156 +488,136 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       let intermediate_groups = splitGroups.intermediate_groups;
       let advanced_groups = splitGroups.advanced_groups;
 
-      // basic_groups = helper.removeDuplicates(basic_groups);
-      // intermediate_groups = helper.removeDuplicates(intermediate_groups);
-      // advanced_groups = helper.removeDuplicates(advanced_groups);
-
-      basic_groups = await questionServices.processGroups(basic_groups); 
-      intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+      basic_groups = await questionServices.processGroups(basic_groups);
+      intermediate_groups = await questionServices.processGroups(intermediate_groups);
       advanced_groups = await questionServices.processGroups(advanced_groups);
 
+      const matrix_response = await questionServices.calculateCountUsingMatrix2(
+        basic_groups,
+        intermediate_groups,
+        advanced_groups,
+        request.data.pre_post_quiz_config
+      );
 
-      questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
-        if (matrix_err) {
-          callback(400, matrix_err);
-        } else {
+      basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
+      intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
+      advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
 
-          basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
-          intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
-          advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
+      let final_group_ids = [];
+      final_group_ids.push(...basic_groups, ...intermediate_groups, ...advanced_groups);
 
-          let final_group_ids = [];
-          final_group_ids.push(...basic_groups, ...intermediate_groups, ...advanced_groups);
+      request.data.quiz_question_details = {};
+      const group_response = await groupRepository.fetchGroupsData2({ group_array: final_group_ids });
 
-          request.data.quiz_question_details = {};
+      if (request.data.varient === "randomOrder") {
 
-          await groupRepository.fetchGroupsData({ group_array: final_group_ids }, async function (group_err, group_response) {
-            if (group_err) {
-              console.log(group_err);
-              callback(group_err, group_response);
-            } else {
+        await helper.getRandomQuestionsFromGroups(group_response, topicData.noOfQuestions, randomDupCheck, quiz_duration).then((data) => {
 
-              if (request.data.varient === "randomOrder") {
+          if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
+            callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
+          } else {
+            randomOrderQuestions.push(...data.questions_list);
+            randomDupCheck = data.randomDupCheck;
+            request.data.quiz_duration += data.quiz_duration || 0;
 
-                await helper.getRandomQuestionsFromGroups(group_response.Items, topicData.noOfQuestions, randomDupCheck, quiz_duration).then((data) => {
+            let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, data.questions_list, non_considered_topic_data, data.group_list);
 
-                  if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
-                    callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
-                  } else {
-                    randomOrderQuestions.push(...data.questions_list);
-                    randomDupCheck = data.randomDupCheck;
-                    request.data.quiz_duration += data.quiz_duration;
+            non_considered_topic_data = res_non_considered_topic_data;
+            questionTrackData.push(...res_topic);
 
-                    // getting Question tracking per each topic : 
-                    let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, data.questions_list, non_considered_topic_data, data.group_list);
+            topicIndex++;
+            topicLoop(topicIndex);
+          }
+        }).catch(function (err) {
+          console.log(err);
+          throw new Error(err);
+        })
+      } else if (request.data.varient === "randomQuestions") {
 
-                    non_considered_topic_data = res_non_considered_topic_data;
-                    questionTrackData.push(...res_topic);
+        await helper.getRandomGroups(group_response, topicData.noOfQuestions, quiz_duration).then(async (data) => {
+          request.data.quiz_duration += data.quiz_duration || 0;
 
-                    topicIndex++;
-                    topicLoop(topicIndex);
-                  }
-                })
-                  .catch(function (err) {
-                    console.log(err);
-                    callback(400, err);
-                  })
+          // Create 3 Sets of Question Paper : 
+          async function splitSetQuestions(setIndex) {
+            if (setIndex < 4) {
 
-              } else if (request.data.varient === "randomQuestions") {
+              let indheck = [];
+              let questions_list = [];
 
-                await helper.getRandomGroups(group_response.Items, topicData.noOfQuestions, quiz_duration).then(async (data) => {
-                  request.data.quiz_duration += data.quiz_duration;
+              function qtnLoop(ind) {
+                if (ind < data.group_list.length) {
 
-                  // Create 3 Sets of Question Paper : 
-                  async function splitSetQuestions(setIndex) {
-                    if (setIndex < 4) {
+                  if (indheck.length < Number(topicData.noOfQuestions)) {
+                    if (data.group_list[ind].group_question_id.length > 0) {
 
-                      let indheck = [];
-                      let questions_list = [];
+                      // Pick Random Questions out of each group : 
+                      const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
+                      let qtn_id = data.group_list[ind].group_question_id[randomIndex];
+                      let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
 
-                      function qtnLoop(ind) {
-                        if (ind < data.group_list.length) {
+                      !indheck.includes(randomIndex) && indheck.push(randomIndex);
 
-                          if (indheck.length < Number(topicData.noOfQuestions)) {
-                            if (data.group_list[ind].group_question_id.length > 0) {
-
-                              // Pick Random Questions out of each group : 
-                              const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                              let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                              let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
-
-                              !indheck.includes(randomIndex) && indheck.push(randomIndex);
-
-                              if (dupCheck.length > 0) {
-                                qtnLoop(ind);
-                              } else {
-                                questions_list.push(qtn_id);
-                                if (setIndex === 1) {
-                                  setADupCheck.push(qtn_id)
-                                } else if (setIndex === 2) {
-                                  setBDupCheck.push(qtn_id)
-                                } else if (setIndex === 3) {
-                                  setCDupCheck.push(qtn_id)
-                                }
-
-                                ind++;
-                                qtnLoop(ind);
-                              }
-                            } else {
-                              ind++;
-                              qtnLoop(ind)
-                            }
-
-                          } else {
-                            console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                            callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
-                          }
-
-                        } else {
-                          // getting Question tracking per each topic : 
-                          let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, questions_list, non_considered_topic_data, data.group_list);
-                          non_considered_topic_data = res_non_considered_topic_data;
-
-                          if (setIndex === 1) {
-                            setAQuestions.push(...questions_list);
-                            setAQuestionTrackData.push(...res_topic);
-                          }
-                          if (setIndex === 2) {
-                            setBQuestions.push(...questions_list);
-                            setBQuestionTrackData.push(...res_topic);
-                          }
-                          if (setIndex === 3) {
-                            setCQuestions.push(...questions_list);
-                            setCQuestionTrackData.push(...res_topic);
-                          }
-
-                          setIndex++;
-                          splitSetQuestions(setIndex);
+                      if (dupCheck.length > 0) {
+                        qtnLoop(ind);
+                      } else {
+                        questions_list.push(qtn_id);
+                        if (setIndex === 1) {
+                          setADupCheck.push(qtn_id)
+                        } else if (setIndex === 2) {
+                          setBDupCheck.push(qtn_id)
+                        } else if (setIndex === 3) {
+                          setCDupCheck.push(qtn_id)
                         }
-                      };
-                      qtnLoop(0);
 
+                        ind++;
+                        qtnLoop(ind);
+                      }
                     } else {
-                      topicIndex++;
-                      topicLoop(topicIndex);
+                      ind++;
+                      qtnLoop(ind)
                     }
+
+                  } else {
+                    console.log(constant.messages.INSUFFICIENT_QUESTIONS);
+                    callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
                   }
-                  await splitSetQuestions(1);
 
-                })
-                  .catch(function (err) {
-                    console.log(err);
-                    callback(400, err);
-                  })
-              }
+                } else {
+                  // getting Question tracking per each topic : 
+                  let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, questions_list, non_considered_topic_data, data.group_list);
+                  non_considered_topic_data = res_non_considered_topic_data;
 
+                  if (setIndex === 1) {
+                    setAQuestions.push(...questions_list);
+                    setAQuestionTrackData.push(...res_topic);
+                  }
+                  if (setIndex === 2) {
+                    setBQuestions.push(...questions_list);
+                    setBQuestionTrackData.push(...res_topic);
+                  }
+                  if (setIndex === 3) {
+                    setCQuestions.push(...questions_list);
+                    setCQuestionTrackData.push(...res_topic);
+                  }
+
+                  setIndex++;
+                  splitSetQuestions(setIndex);
+                }
+              };
+              qtnLoop(0);
+
+            } else {
+              topicIndex++;
+              topicLoop(topicIndex);
             }
+          }
+          await splitSetQuestions(1);
+        })
+          .catch(function (err) {
+            throw new Error(err);
           })
-        }
-      });
-
+      }
     } else {
-      // After Topic Loop is Over : 
       if (request.data.varient === "randomOrder") {
 
         questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
@@ -858,15 +638,12 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
         };
 
         // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
+        try {
+          await quizRepository.addQuiz2(request);
+          return 200;
+        } catch (addQuizErr) {
+          throw new Error(addQuizErr);
+        }
       } else if (request.data.varient === "randomQuestions") {
 
         // get Questions track based on Set of Diff. questions 
@@ -884,24 +661,20 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
           non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
         };
 
-        // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
+        try {
+          await quizRepository.addQuiz2(request);
+          return 200;
+        } catch (addQuizErr) {
+          throw new Error(addQuizErr);
+        }
       }
-
     }
   }
   await topicLoop(0);
+  return 200;
 }
-exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_response, callback) => {
 
+exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_response) => {
   let randomOrderQuestions = [];
   let setAQuestions = [];
   let setBQuestions = [];
@@ -920,7 +693,6 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
 
   concepts_response = await helper.assignNumberofQuestions(concepts_response, request.data.selectedTopics, "concepts");
 
-  // Declcare all topics as selected in an Obj 
   let non_considered_topic_data = {};
   request.data.question_track_details = {};
 
@@ -946,154 +718,124 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           // intermediate_groups = helper.removeDuplicates(intermediate_groups);
           // advanced_groups = helper.removeDuplicates(advanced_groups);
 
-          basic_groups = await questionServices.processGroups(basic_groups); 
-          intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+          basic_groups = await questionServices.processGroups(basic_groups);
+          intermediate_groups = await questionServices.processGroups(intermediate_groups);
           advanced_groups = await questionServices.processGroups(advanced_groups);
 
-          questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
-            if (matrix_err) {
-              callback(400, matrix_err);
-            } else {
+          const matrix_response = await questionServices.calculateCountUsingMatrix2(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config);
 
-              basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
-              intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
-              advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
+          basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
+          intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
+          advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
 
-              let final_group_ids = [];
-              request.data.quiz_question_details = {};
-              final_group_ids.push(...basic_groups, ...intermediate_groups, ...advanced_groups);
+          let final_group_ids = [];
+          request.data.quiz_question_details = {};
+          final_group_ids.push(...basic_groups, ...intermediate_groups, ...advanced_groups);
 
-              await groupRepository.fetchGroupsData({ group_array: final_group_ids }, async function (group_err, group_response) {
-                if (group_err) {
-                  console.log(group_err);
-                  callback(group_err, group_response);
-                } else {
+          const group_response = await groupRepository.fetchGroupsData2({ group_array: final_group_ids });
 
-                  if (request.data.varient === "randomOrder") {
+          if (request.data.varient === "randomOrder") {
 
-                    await helper.getRandomQuestionsFromGroups(group_response.Items, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
+            await helper.getRandomQuestionsFromGroups(group_response, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
 
-                      if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
-                        callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
-                      } else {
-                        randomOrderQuestions.push(...data.questions_list);
-                        randomDupCheck = data.randomDupCheck;
-                        request.data.quiz_duration += data.quiz_duration;
+              if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
+                throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+              } else {
+                randomOrderQuestions.push(...data.questions_list);
+                randomDupCheck = data.randomDupCheck;
+                request.data.quiz_duration += data.quiz_duration;
 
-                        // getting Question tracking per each topic : 
-                        let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, data.questions_list, non_considered_topic_data, data.group_list);
+                // getting Question tracking per each topic : 
+                let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, data.questions_list, non_considered_topic_data, data.group_list);
 
-                        non_considered_topic_data = res_non_considered_topic_data;
-                        questionTrackData.push(...res_concept);
+                non_considered_topic_data = res_non_considered_topic_data;
+                questionTrackData.push(...res_concept);
 
-                        conceptIndex++;
-                        conceptLoop(conceptIndex);
-                      }
+                conceptIndex++;
+                conceptLoop(conceptIndex);
+              }
+            }).catch(function (err) {
+              console.log(err);
+              callback(400, err);
+            })
+          } else if (request.data.varient === "randomQuestions") {
 
-                    })
-                      .catch(function (err) {
-                        console.log(err);
-                        callback(400, err);
-                      })
+            await helper.getRandomGroups(group_response, conceptData[0].noOfQuestions, quiz_duration).then(async (data) => {
+              request.data.quiz_duration += data.quiz_duration || 0;
 
-                  } else if (request.data.varient === "randomQuestions") {
+              // Create 3 Sets of Question Paper : 
+              function splitSetQuestions(setIndex) {
+                if (setIndex < 4) {
 
-                    await helper.getRandomGroups(group_response.Items, conceptData[0].noOfQuestions, quiz_duration).then(async (data) => {
-                      request.data.quiz_duration += data.quiz_duration;
+                  let indheck = [];
+                  let questions_list = [];
+                  async function qtnLoop(ind) {
+                    if (ind < data.group_list.length) {
 
-                      // Create 3 Sets of Question Paper : 
-                      function splitSetQuestions(setIndex) {
-                        if (setIndex < 4) {
+                      if (indheck.length < Number(conceptData[0].noOfQuestions)) { // data.group_list[ind].group_question_id.length
+                        // Pick Random Questions out of each group : 
+                        const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
+                        let qtn_id = data.group_list[ind].group_question_id[randomIndex];
+                        let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
 
-                          let indheck = [];
-                          let questions_list = [];
-                          async function qtnLoop(ind) {
-                            if (ind < data.group_list.length) {
+                        !indheck.includes(randomIndex) && indheck.push(randomIndex);
 
-                              if (indheck.length < Number(conceptData[0].noOfQuestions)) { // data.group_list[ind].group_question_id.length
-                                // Pick Random Questions out of each group : 
-                                const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                                let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                                let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
-
-                                !indheck.includes(randomIndex) && indheck.push(randomIndex);
-
-                                if (dupCheck.length > 0) {
-                                  qtnLoop(ind);
-                                } else {
-                                  questions_list.push(qtn_id);
-                                  if (setIndex === 1) {
-                                    setADupCheck.push(qtn_id)
-                                  } else if (setIndex === 2) {
-                                    setBDupCheck.push(qtn_id)
-                                  } else if (setIndex === 3) {
-                                    setCDupCheck.push(qtn_id)
-                                  }
-                                  ind++;
-                                  qtnLoop(ind);
-                                }
-                              } else {
-                                console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                                callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
-                              }
-
-                            } else {
-
-                              // getting Question tracking per each topic : 
-                              let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, questions_list, non_considered_topic_data, data.group_list);
-
-                              non_considered_topic_data = res_non_considered_topic_data;
-
-                              if (setIndex === 1) {
-                                setAQuestions.push(...questions_list);
-                                setAQuestionTrackData.push(...res_concept)
-                              };
-                              if (setIndex === 2) {
-                                setBQuestions.push(...questions_list);
-                                setBQuestionTrackData.push(...res_concept)
-                              };
-                              if (setIndex === 3) {
-                                setCQuestions.push(...questions_list);
-                                setCQuestionTrackData.push(...res_concept)
-                              };
-
-                              setIndex++;
-                              splitSetQuestions(setIndex);
-
-                            }
-                          };
-                          qtnLoop(0);
-
+                        if (dupCheck.length > 0) {
+                          qtnLoop(ind);
                         } else {
-
-                          conceptIndex++;
-                          conceptLoop(conceptIndex);
+                          questions_list.push(qtn_id);
+                          if (setIndex === 1) {
+                            setADupCheck.push(qtn_id)
+                          } else if (setIndex === 2) {
+                            setBDupCheck.push(qtn_id)
+                          } else if (setIndex === 3) {
+                            setCDupCheck.push(qtn_id)
+                          }
+                          ind++;
+                          qtnLoop(ind);
                         }
+                      } else {
+                        throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
                       }
-                      await splitSetQuestions(1);
+                    } else {
 
-                    })
-                      .catch(function (err) {
-                        console.log(err);
-                        callback(400, err);
-                      })
+                      // getting Question tracking per each topic : 
+                      let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, questions_list, non_considered_topic_data, data.group_list);
 
-                  }
-
+                      non_considered_topic_data = res_non_considered_topic_data;
+                      if (setIndex === 1) {
+                        setAQuestions.push(...questions_list);
+                        setAQuestionTrackData.push(...res_concept)
+                      };
+                      if (setIndex === 2) {
+                        setBQuestions.push(...questions_list);
+                        setBQuestionTrackData.push(...res_concept)
+                      };
+                      if (setIndex === 3) {
+                        setCQuestions.push(...questions_list);
+                        setCQuestionTrackData.push(...res_concept)
+                      };
+                      setIndex++;
+                      splitSetQuestions(setIndex);
+                    }
+                  };
+                  qtnLoop(0);
+                } else {
+                  conceptIndex++;
+                  conceptLoop(conceptIndex);
                 }
-              })
-            }
-          })
-
+              }
+              await splitSetQuestions(1);
+            }).catch(function (err) {
+              throw err;
+            })
+          }
         } else {
-          // Loop Topic : 
           topicIndex++;
           topicLoop(topicIndex);
         }
-
       }
       conceptLoop(0);
-
     } else {
       // After Topic Loop is Over : 
       if (request.data.varient === "randomOrder") {
@@ -1116,15 +858,8 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
         };
 
         // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
+        await quizRepository.addQuiz2(request);
+        return 200;
       } else if (request.data.varient === "randomQuestions") {
 
         // // get Questions track based on Set of Diff. questions 
@@ -1143,289 +878,143 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
         };
 
         // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
+        await quizRepository.addQuiz2(request);
+        return 200;
       }
     }
   }
   await topicLoop(0);
+  return 200;
 }
-exports.generateQuizForPostLearning = (request, callback) => {
 
-  /** CHECK PRE QUIZ EXIST **/
-  quizRepository.fetchQuizData(request, async function (postQuizData_err, postQuizData_res) {
-    if (postQuizData_err) {
-      console.log(postQuizData_err);
-      callback(postQuizData_err, postQuizData_res);
-    }
-    else {
-      schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
-        if (schoolDataErr) {
-          console.log(schoolDataErr);
-          callback(schoolDataErr, schoolDataRes);
-        }
-        else {
-          if (schoolDataRes.Items[0].post_quiz_config) {
-            let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
-            if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
-              console.log(constant.messages.POST_QUIZ_ALREADY_GENERATED);
-              callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED);
+exports.generateQuizForPostLearning = async (request) => {
+  try {
+    const postQuizData_res = await quizRepository.fetchQuizData2(request);
+
+    const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+    if (schoolDataRes.Items[0].post_quiz_config) {
+      let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
+      if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
+        throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+      }
+      else {
+        request.data.pre_post_quiz_config = postQuizConfig;
+        request.data.quiz_id = helper.getRandomString();
+        request.data.quiz_duration = 0;
+
+        if (request.data.quizType === constant.prePostConstans.automatedType) {
+          let selectedTop = [];
+          if (request.data.topicList.length > 0) {
+            await request.data.topicList.map(reqTop => {
+              selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
+            })
+
+            request.data.selectedTopics = selectedTop;
+            request.data.AcitveTopics = request.data.topicList;
+
+            const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
+
+            if (add_quiz_basedon_varient_response === 200) {
+              if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                await exports.sendMailtoTeacher2(request);
+                return await exports.createPDFandUpdateTemplateDetails2(request);
+              } else {
+                throw new Error(constant.messages.INVALID_QUIZ_MODE);
+              }
+            } else {
+              throw new Error(add_quiz_basedon_varient_response);
             }
-            else {
-              request.data.pre_post_quiz_config = postQuizConfig;
-              request.data.quiz_id = helper.getRandomString();
-              request.data.quiz_duration = 0;
+          } else {
+            try {
+              const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-              if (request.data.quizType === constant.prePostConstans.automatedType) {
-                let selectedTop = [];
-                if (request.data.topicList.length > 0) {
-                  await request.data.topicList.map(reqTop => {
-                    selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
-                  })
+              let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
+              let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
 
-                  request.data.selectedTopics = selectedTop;
-                  request.data.AcitveTopics = request.data.topicList;
+              /** FETCH CHAPTER DATA **/
+              const chapterData_response = await chapterRepository.fetchChapterByID2(request);
+              let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
+              let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
 
-                  exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
-                    if (add_quiz_basedon_varient_err) {
-                      callback(add_quiz_basedon_varient_err, 0);
-                    } else {
+              if (AcitveTopics.length > 0) {
+                await AcitveTopics.forEach(actTop => {
+                  selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
+                })
 
-                      if (add_quiz_basedon_varient_response === 200) {
+                request.data.selectedTopics = selectedTop;
+                request.data.AcitveTopics = AcitveTopics;
 
-                        if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                          console.log("test 4");
+                const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
 
-                          exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                            if (create_pdf_and_update_details_err) {
-
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            } else {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            }
-                          })
-
-                        } else if (request.data.quizMode === "online") {
-
-                          exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                            if (create_pdf_and_update_details_err) {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            } else {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            }
-                          })
-
-                        } else {
-                          callback(400, constant.messages.INVALID_QUIZ_MODE)
-                        }
-
-                      } else {
-                        callback(400, add_quiz_basedon_varient_response);
-                      }
-                    }
-                  })
+                if (add_quiz_basedon_varient_response === 200) {
+                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                    await exports.sendMailtoTeacher2(request);
+                    return await exports.createPDFandUpdateTemplateDetails2(request);
+                  } else {
+                    throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                  }
+                } else {
+                  throw new Error(add_quiz_basedon_varient_response);
                 }
-                else {
-                  // Generate for All Post Topics for the Chapter : 
-                  /** FETCH TEACHING ACTIVITY **/
-                  teachingActivityRepository.fetchTeachingActivity(request, async function (teachActivity_err, teachActivity_response) {
-                    if (teachActivity_err) {
-                      console.log(teachActivity_err);
-                      callback(teachActivity_err, teachActivity_response);
-                    } else {
-                      let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
-                      let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
-
-                      /** FETCH CHAPTER DATA **/
-                      chapterRepository.fetchChapterByID(request, async function (chapterData_err, chapterData_response) {
-                        if (chapterData_err) {
-                          console.log(chapterData_err);
-                          callback(chapterData_err, chapterData_response);
-                        } else {
-                          let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
-
-                          let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
-
-                          if (AcitveTopics.length > 0) {
-                            await AcitveTopics.forEach(actTop => {
-                              selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
-                            })
-
-                            request.data.selectedTopics = selectedTop;
-                            request.data.AcitveTopics = AcitveTopics;
-
-                            exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
-                              if (add_quiz_basedon_varient_err) {
-                                callback(add_quiz_basedon_varient_err, 0);
-                              } else {
-
-                                if (add_quiz_basedon_varient_response === 200) {
-
-                                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-
-                                    exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                      if (create_pdf_and_update_details_err) {
-
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      } else {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      }
-                                    })
-
-                                  } else if (request.data.quizMode === "online") {
-
-                                    exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                      if (create_pdf_and_update_details_err) {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      } else {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      }
-                                    })
-
-                                  } else {
-                                    callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                  }
-
-                                } else {
-                                  callback(400, add_quiz_basedon_varient_response);
-                                }
-                              }
-                            })
-                          }
-                          else {
-                            console.log(constant.messages.NO_ACTIVE_TOPICS);
-                            callback(400, constant.messages.NO_ACTIVE_TOPICS);
-                          }
-                        }
-                      })
-                    }
-                  })
-                }
-                // set selected topics to the request here 
               }
               else {
-                let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
-
-                topicRepository.fetchTopicConceptIDData({ topic_array: selectedTopics }, async function (fetch_topics_err, fetch_topics_response) {
-                  if (fetch_topics_err) {
-                    console.log(fetch_topics_err);
-                    callback(fetch_topics_err, fetch_topics_response);
-                  } else {
-                    let topic_concept_id = [];
-                    await fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
-
-                    conceptRepository.fetchConceptData({ topic_concept_id: topic_concept_id }, async function (fetch_concepts_err, fetch_concepts_response) {
-                      if (fetch_concepts_err) {
-                        console.log(fetch_concepts_err);
-                        callback(fetch_concepts_err, fetch_concepts_response);
-                      } else {
-
-                        if (request.data.quizType === constant.prePostConstans.expressType) {
-                          // Express : 
-                          exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
-
-                              if (add_express_quiz_basedon_varient_response === 200) {
-
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                                  console.log("test 6");
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
-
-                        } else if (request.data.quizType === constant.prePostConstans.manualType) {
-                          // Manual : 
-                          exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
-
-                              if (add_express_quiz_basedon_varient_response === 200) {
-
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                                  console.log("test 7");
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
-                        }
-
-                      }
-                    })
-                  }
-                })
+                throw new Error(constant.messages.NO_ACTIVE_TOPICS);
               }
+            } catch (error) {
+              throw error;
             }
           }
-          else {
-            console.log(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
-            callback(400, constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+        } else {
+          let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
+
+          try {
+            const fetch_topics_response = await topicRepository.fetchTopicConceptIDData2({ topic_array: selectedTopics });
+            let topicConceptIds = [];
+            fetch_topics_response.Items.forEach(e => topicConceptIds.push(...e.topic_concept_id));
+            const fetch_concepts_response = await conceptRepository.fetchConceptData3({ topic_concept_id: topicConceptIds });
+
+            if (request.data.quizType === constant.prePostConstans.expressType) {
+              // Express : 
+              const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
+              if (add_express_quiz_basedon_varient_response === 200) {
+                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                  await exports.sendMailtoTeacher2(request);
+                  return await exports.createPDFandUpdateTemplateDetails2(request);
+                } else {
+                  throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                }
+              } else {
+                throw new Error(add_express_quiz_basedon_varient_response);
+              }
+            } else if (request.data.quizType === constant.prePostConstans.manualType) {
+              // Manual : 
+              try {
+                const addQuizResponse = await exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
+                if (addQuizResponse !== 200) {
+                  throw new Error(addQuizResponse);
+                }
+                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                  await exports.sendMailtoTeacher2(request);
+                  return await exports.createPDFandUpdateTemplateDetails2(request);
+                }
+                throw new Error(constant.messages.INVALID_QUIZ_MODE);
+              } catch (error) {
+                throw error;
+              }
+            }
+          } catch (error) {
+            throw error;
           }
         }
-      })
+      }
+    } else {
+      throw new Error(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
     }
-  })
+  } catch (error) {
+    throw error;
+  }
 }
+
 exports.addteacherDigicardExtension = async (request) => {
   try {
     const digiExtensionResponse = await digicardExtension.getExtensionDetails2(request);
@@ -1437,7 +1026,6 @@ exports.addteacherDigicardExtension = async (request) => {
 
       if (!(JSON.stringify(extFile).includes("digicard_extension/")) && extFile && extFile !== "N.A.") {
         let extFilesS3 = await helper.PutObjectS3SigneUdrl(extFile, "digicard_extension");
-        console.log({ extFilesS3 });
 
         request.data.extensions[i].ext_file = extFilesS3.Key;
         finalResponse.push({ file_name: extFile, s3Url: extFilesS3.uploadURL });
@@ -1447,242 +1035,142 @@ exports.addteacherDigicardExtension = async (request) => {
     if (digiExtensionResponse.Items.length > 0) {
       request.data.extension_id = digiExtensionResponse.Items[0].extension_id;
       await digicardExtension.updateDigiExtension2(request);
-      console.log("Extension Updated Successfully");
     } else {
       await digicardExtension.addDigiExtension2(request);
-      console.log("Extension Added Successfully");
     }
-
     return finalResponse;
-
   } catch (error) {
-    console.error("Error handling digicard extension:", error);
     throw new Error(`Failed to handle digicard extension: ${error.message}`);
   }
 };
 
-exports.getTeacherPostLearningPermissions = function (request, callback) {
+exports.getTeacherPostLearningPermissions = async (request) => {
 
-  if (request === undefined || request.data === undefined || request.data.client_class_id === undefined || request.data.client_class_id === "" || request.data.section_id === undefined || request.data.section_id === "" || request.data.subject_id === undefined || request.data.subject_id === "" || request.data.chapter_id === undefined || request.data.chapter_id === "" || request.data.school_id === undefined || request.data.school_id === "" || request.data.topics === undefined || request.data.topics === "") {
-    callback(400, constant.messages.INVALID_REQUEST_FORMAT)
-  } else {
+  try {
+    if (!request?.data || !request.data.client_class_id || !request.data.section_id || !request.data.subject_id || !request.data.chapter_id || !request.data.school_id || !request.data.topics) {
+      throw { status: 400, message: constant.messages.INVALID_REQUEST_FORMAT };
+    }
 
-    schoolRepository.getSchoolDetailsById(request, (schoolDataErr, schoolDataRes) => {
-      if (schoolDataErr) {
-        console.log(schoolDataErr);
-        callback(schoolDataErr, schoolDataRes);
-      }
-      else {
-        console.log("schoolDataRes.Items[0] : ", schoolDataRes.Items[0]);
+    const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-        if (schoolDataRes.Items[0].post_quiz_config) {
-          let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
+    if (!schoolDataRes.Items || schoolDataRes.Items.length === 0) {
+      throw { status: 400, message: "School details not found" };
+    }
 
-          teachingActivityRepository.fetchTeachingActivity(request, async function (teachActivity_err, teachActivity_response) {
-            if (teachActivity_err) {
-              console.log(teachActivity_err);
-              callback(teachActivity_err, teachActivity_response);
-            } else {
-              console.log("TEACHER ACTIVITY : ", teachActivity_response);
+    if (schoolDataRes.Items[0].post_quiz_config) {
+      let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
 
-              let requestTopics = request.data.topics.map((e) => e.topic_id);
-              console.log("requestTopics : ", requestTopics);
+      const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-              /** CHECK DIGICARDS UNLOCK **/
-              let chapterActivity = teachActivity_response.Items.length > 0 ? await teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
-              console.log("chapterActivity : ", chapterActivity);
+      let requestTopics = request.data.topics.map((e) => e.topic_id);
+      let chapterActivity = teachActivity_response.Items.length > 0 ? await teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
 
-              let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
-              let unlockDigicards = chapterActivity.length > 0 ? chapterActivity[0].post_learning.unlocked_digicard : [];
-              console.log("unlockDigicards : ", unlockDigicards);
+      let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
+      let unlockDigicards = chapterActivity.length > 0 ? chapterActivity[0].post_learning.unlocked_digicard : [];
 
-              let unlockTopicDigicard = unlockDigicards.length > 0 ? unlockDigicards : [];
-              let UnlockedTopicIDs = [];
-              await unlockTopicDigicard.map((e) => UnlockedTopicIDs.push(...e.topics.map((j) => j.topic_id)));
-              console.log("UnlockedTopicIDs :", UnlockedTopicIDs);
-              /////////////////
-              /** CHECK QUIZ EXIST **/
-              request.data.learningType = constant.prePostConstans.postLearningVal;
+      let unlockTopicDigicard = unlockDigicards.length > 0 ? unlockDigicards : [];
+      let UnlockedTopicIDs = [];
+      await unlockTopicDigicard.map((e) => UnlockedTopicIDs.push(...e.topics.map((j) => j.topic_id)));
+      request.data.learningType = constant.prePostConstans.postLearningVal;
 
-              quizRepository.fetchQuizData(request, async function (quizData_err, quizData_res) {
-                if (quizData_err) {
-                  console.log(quizData_err);
-                  callback(quizData_err, quizData_res);
-                }
-                else {
-                  console.log("QUIZ DATA : ", quizData_res);
+      const quizData_res = await quizRepository.fetchQuizData2(request);
 
-                  if (postQuizConfig.choose_topic === "Yes") {
+      if (postQuizConfig.choose_topic === "Yes") {
 
-                    // requestTopics shouldn't be empty
-                    // Check if they are archived or not and filter unarchived topics 
-                    // check if requestTopics which are unlocked or not if unlock digicard is mandatory ,  if not, intimate user that, digicard is not unlocked 
-                    // requestTopics shouldn't be empty , if yes, throw error 
-                    // check quiz table, if there is data, check if the requestTopics id's are there in selectedTopics columns or not 
-                    // If yes, throw error, that its already generated 
-                    let quizGenerated = "No";
-                    console.log("quizData_res.Items : ", quizData_res.Items)
-                    console.log("requestTopics : ", requestTopics)
+        // requestTopics shouldn't be empty
+        // Check if they are archived or not and filter unarchived topics 
+        // check if requestTopics which are unlocked or not if unlock digicard is mandatory ,  if not, intimate user that, digicard is not unlocked 
+        // requestTopics shouldn't be empty , if yes, throw error 
+        // check quiz table, if there is data, check if the requestTopics id's are there in selectedTopics columns or not 
+        // If yes, throw error, that its already generated 
+        let quizGenerated = "No";
 
-                    await quizData_res.Items.length > 0 && quizData_res.Items.forEach((e) => {
-                      e.selectedTopics.length > 0 && e.selectedTopics.forEach((a) =>
-                        requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = "Yes"))
-                    })
-                    console.log("ok****");
-                    if (quizData_res.Items.length > 0 && quizGenerated === "Yes") {
-                      callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED)
-                    } else {
-                      if (requestTopics.length > 0) {
-                        // Filter UnArchived Topics : 
-                        // console.log("postQuizConfig", postQuizConfig);
-                        if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
-                          // if requestTopics topics are there in unlockTopicDigicard, then proceed 
-
-                          const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(requestTopics, UnlockedTopicIDs);
-
-                          if (unlockAllTopicsCheck) {
-                            // Proceed : 
-                            exports.generateResponse(postQuizConfig, (generate_err, generate_response) => {
-                              if (generate_err) {
-                                callback(400, generate_err);
-                              } else {
-                                callback(200, generate_response);
-                              }
-                            })
-                          } else {
-                            callback(400, constant.messages.DIDNT_UNLOCK_DIGICARD);
-                          }
-                        } else if (postQuizConfig.unlock_digicard_mandatory === "No") {
-                          // Proceed : 
-                          // assign to response , that do you want to generate quiz without unlocking digicard ? 
-                          exports.generateResponse(postQuizConfig, (generate_err, generate_response) => {
-                            if (generate_err) {
-                              callback(400, generate_err);
-                            } else {
-                              console.log(generate_response);
-                              callback(200, generate_response);
-                            }
-                          })
-
-                        } else {
-                          callback(400, constant.messages.DIDNT_SET_CONFIG);
-                        }
-                      } else {
-                        console.log(constant.messages.NO_TOPICS_SELECTED);
-                        callback(400, constant.messages.NO_TOPICS_SELECTED);
-                      }
-                    }
-                  }
-                  else if (postQuizConfig.choose_topic === "No") {
-
-                    // if request.data.topics is [], fetch all post topics and removed archived topics 
-                    // check digicads are unlocked for those topics or not if its mandatory
-                    // check quiz table, if the there is data, throw error, that quiz already generated 
-                    if (quizData_res.Items.length === 0) {
-
-                      chapterRepository.fetchChapterByID(request, async function (single_chapter_err, single_chapter_response) {
-                        if (single_chapter_err) {
-                          console.log(single_chapter_err);
-                          callback(single_chapter_err, single_chapter_response);
-                        } else {
-                          console.log("single_chapter_response : ", single_chapter_response);
-
-                          topicRepository.fetchPostTopicData(single_chapter_response.Items[0], async function (post_topic_err, post_topic_response) {
-                            if (post_topic_err) {
-                              console.log("post_topic_err", post_topic_err);
-                              callback(post_topic_err, post_topic_response);
-                            } else {
-
-                              if (requestTopics.length === 0) {
-
-                                let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
-
-                                let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
-
-                                if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
-                                  let unlockCheck = [];
-
-                                  AcitveTopics.forEach((e) => UnlockedTopicIDs.filter((a) => e === a).length > 0 && unlockCheck.push(e));
-
-                                  const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, unlockCheck);
-
-                                  if (unlockAllTopicsCheck) {
-                                    // Proceed : 
-                                    exports.generateResponse(postQuizConfig, (generate_err, generate_response) => {
-                                      if (generate_err) {
-                                        callback(400, generate_err);
-                                      } else {
-                                        console.log(generate_response);
-                                        callback(200, generate_response);
-                                      }
-                                    })
-
-                                  } else {
-                                    callback(400, constant.messages.DIDNT_UNLOCK_DIGICARD);
-                                  }
-                                } else if (postQuizConfig.unlock_digicard_mandatory === "No") {
-                                  // Proceed : 
-                                  // assign to response , that do you want to generate quiz without unlocking digicard ? 
-                                  exports.generateResponse(postQuizConfig, (generate_err, generate_response) => {
-                                    if (generate_err) {
-                                      callback(400, generate_err);
-                                    } else {
-                                      console.log(generate_response);
-                                      callback(200, generate_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.DIDNT_SET_CONFIG);
-                                }
-                              } else {
-                                let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
-
-                                let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
-                                console.log("AcitveTopics : ", AcitveTopics);
-
-                                const selectAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, requestTopics);
-
-                                if (selectAllTopicsCheck === true) {
-                                  exports.generateResponse(postQuizConfig, (generate_err, generate_response) => {
-                                    if (generate_err) {
-                                      callback(400, generate_err);
-                                    } else {
-                                      console.log(generate_response);
-                                      callback(200, generate_response);
-                                    }
-                                  })
-                                } else {
-                                  callback(400, constant.messages.SELECT_ALL_TOPICS)
-                                }
-                              }
-                            }
-                          })
-                        }
-                      })
-                    } else {
-                      console.log("HERE : ================ ");
-                      callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED)
-                    }
-                  }
-                  /** CHECK DIGICARDS UNLOCK **/
-                }
-              })
-              /** END CHECK QUIZ EXIST **/
+        await quizData_res.Items.length > 0 && quizData_res.Items.forEach((e) => {
+          e.selectedTopics.length > 0 && e.selectedTopics.forEach((a) =>
+            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = "Yes"))
+        })
+        if (quizData_res.Items.length > 0 && quizGenerated === "Yes") {
+          throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+        } else {
+          if (requestTopics.length === 0) {
+            console.log(constant.messages.NO_TOPICS_SELECTED);
+            return { status: 400, message: constant.messages.NO_TOPICS_SELECTED };
+          }
+          if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
+            const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(requestTopics, UnlockedTopicIDs);
+            if (!unlockAllTopicsCheck) {
+              return { status: 400, message: constant.messages.DIDNT_UNLOCK_DIGICARD };
             }
-          })
+          } else if (postQuizConfig.unlock_digicard_mandatory !== "No") {
+            return { status: 400, message: constant.messages.DIDNT_SET_CONFIG };
+          }
+
+          const generateResponse = await exports.generateResponse(postQuizConfig);
+          return { status: 200, data: generateResponse };
         }
-        else {
-          console.log(constant.messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG);
-          callback(400, constant.messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG);
+      } else if (postQuizConfig.choose_topic === "No") {
+
+        // if request.data.topics is [], fetch all post topics and removed archived topics 
+        // check digicads are unlocked for those topics or not if its mandatory
+        // check quiz table, if the there is data, throw error, that quiz already generated 
+        if (quizData_res.Items.length === 0) {
+
+          const singleChapterResponse = await chapterRepository.fetchChapterByID2(request);
+
+          if (!singleChapterResponse.Items || singleChapterResponse.Items.length === 0) {
+            return { status: 400, message: "No chapter data found" };
+          }
+
+          const post_topic_response = await topicRepository.fetchPostTopicData2(singleChapterResponse.Items[0]);
+
+          if (requestTopics.length === 0) {
+            let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
+
+            let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
+
+            if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
+              let unlockCheck = [];
+
+              AcitveTopics.forEach((e) => UnlockedTopicIDs.filter((a) => e === a).length > 0 && unlockCheck.push(e));
+
+              const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, unlockCheck);
+
+              if (unlockAllTopicsCheck) {
+                return await exports.generateResponse(postQuizConfig);
+              } else {
+                throw new Error(constant.messages.DIDNT_UNLOCK_DIGICARD);
+              }
+            } else if (postQuizConfig.unlock_digicard_mandatory === "No") {
+              return await exports.generateResponse(postQuizConfig);
+            } else {
+              throw new Error(constant.messages.DIDNT_SET_CONFIG);
+            }
+          } else {
+            let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
+            let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
+            const selectAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, requestTopics);
+
+            if (selectAllTopicsCheck === true) {
+              return await exports.generateResponse(postQuizConfig);
+            } else {
+              throw new Error(constant.messages.SELECT_ALL_TOPICS);
+            }
+          }
+        } else {
+          throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
         }
       }
-    })
+    }
+    else {
+      throw new Error(constant.messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG);
+    }
+  } catch (error) {
+    throw error;
   }
 }
-exports.generateResponse = (postQuizConfig, callback) => {
 
-  /** SET FINAL RESPONSE **/
+exports.generateResponse = (postQuizConfig) => {
+
   let response = {
     postLearning: {
       quizModes: [],
@@ -1713,26 +1201,18 @@ exports.generateResponse = (postQuizConfig, callback) => {
   response.postLearning.min_qn_at_topic_level = postQuizConfig.min_qn_at_topic_level;
   response.postLearning.min_qn_at_chapter_level = postQuizConfig.min_qn_at_chapter_level;
 
-  console.log("PERMISSIONS : ", JSON.stringify(response));
-  callback(0, response);
-  /** END SET FINAL RESPONSE **/
-
+  return response;
 }
-exports.changeDigiCardOrder = async function (request) {
+exports.changeDigiCardOrder = async (request) => {
   if (!request || !request.data || !request.data.client_class_id || !request.data.section_id || !request.data.subject_id || !request.data.chapter_id) {
     throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
   }
-
   try {
     const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
-    console.log("TEACHER ACTIVITY:", teachActivity_response);
-
     const digicard_activity_data = await exports.createDigicardActivityData2(request);
-    console.log("digicard_activity_data:", digicard_activity_data);
 
     const allDigicardActivity = teachActivity_response.Items[0]?.digicard_activities || [];
     const digicardActivity = allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
-    console.log("digicardActivity:", digicardActivity);
 
     let PrePOstActivity = digicardActivity.length > 0 ? (request.data.learningType === "Pre" ? [...digicardActivity[0].pre_learning] : [...digicardActivity[0].post_learning]) : [];
     let reordered_data = {
@@ -1766,9 +1246,7 @@ exports.changeDigiCardOrder = async function (request) {
 
     await teachingActivityRepository.updateTeachingDigiCardActivity2(request);
     return constant.messages.DIGICARD_ORDER_CHANGED;
-
   } catch (error) {
-    console.error(error);
     throw new Error(error.message || constant.messages.ERROR);
   }
 };
@@ -1801,8 +1279,7 @@ exports.createDigicardActivityData2 = async (request) => {
   return individual_digicard_activity;
 };
 
-
-exports.activeAndArchiveDigicardsInTopic = async function (request) {
+exports.activeAndArchiveDigicardsInTopic = async (request) => {
   if (!request?.data?.client_class_id || !request?.data?.section_id || !request?.data?.subject_id || !request?.data?.chapter_id || !request?.data?.action) {
     throw helper.formatErrorResponse(400, constant.messages.INVALID_REQUEST_FORMAT);
   }
@@ -1861,11 +1338,8 @@ exports.activeAndArchiveDigicardsInTopic = async function (request) {
 
       await teachingActivityRepository.updateTeachingDigiCardActivity2(request);
     }
-
     return request.data.action === "delete" ? constant.messages.DIGICARD_DELETED_IN_TOPIC : constant.messages.DIGICARD_ACTIVATED_IN_TOPIC;
-
   } catch (error) {
-    console.error(error);
     throw helper.formatErrorResponse(error.statusCode || 500, error.message || "Internal Server Error");
   }
 };
@@ -1992,6 +1466,7 @@ exports.getDigiCardstoReorder = function (request, callback) {
     })
   }
 }
+
 exports.getAllDigicardsBasedonTopic = async function (request, callback) {
 
   request === undefined ? callback(400, constant.messages.INVALID_REQUEST) : request.data === undefined ? callback(400, constant.messages.INVALID_REQUEST) : (request.data.topic_id === undefined || request.data.topic_id === "") ? callback(400, constant.messages.INVALID_REQUEST) :
@@ -2152,6 +1627,23 @@ exports.createPDFandUpdateTemplateDetails = (request, callback) => {
   callback(0, 200);
 }
 
+exports.createPDFandUpdateTemplateDetails2 = async (request) => {
+  try {
+    // Call API in EC2 Service and get Question and Answer Paper Paths
+    const options = {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      data: qs.stringify(request),
+      url: process.env.PDF_GENERATION_URL + '/createQuizQuestionAndAnswerPapers',
+    };
+
+    await axios(options);
+    return 200;
+  } catch (error) {
+    throw error;
+  }
+};
+
 exports.sendMailtoTeacher = (request, callback) => {
 
   userRepository.fetchTeacherEmailById(request, async function (fetch_teacher_email_err, fetch_teacher_email_res) {
@@ -2179,5 +1671,30 @@ exports.sendMailtoTeacher = (request, callback) => {
       }
     }
   })
-
 }
+
+exports.sendMailtoTeacher2 = async (request) => {
+  try {
+    const fetchTeacherEmailRes = await userRepository.fetchTeacherEmailById2(request);
+    if (!fetchTeacherEmailRes.Items || fetchTeacherEmailRes.Items.length === 0) {
+      throw new Error("Teacher email not found");
+    }
+
+    const mailPayload = {
+      "quiz_name": request.data.quiz_name,
+      "toMail": fetchTeacherEmailRes.Items[0].user_email,
+      "subject": constant.mailSubject.quizGeneration,
+      "mailFor": "quizGeneration",
+    };
+
+    const dataEmail = await sendMail.process(mailPayload);
+
+    if (dataEmail.httpStatusCode === 200) {
+      return constant.messages.QUIZ_GENERATED;
+    } else {
+      throw new Error("SNS ERROR");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
