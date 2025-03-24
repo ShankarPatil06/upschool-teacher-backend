@@ -30,6 +30,7 @@ app.use(fileUpload());
 app.use(cors());
 
 /** Login **/
+app.get("/v1", (req,res)=> res.send("Hello world"));
 app.post("/v1/login", commonController.userLogin);
 app.post("/v1/loginWithOTP", commonController.userLoginWithoutPassword);
 app.post("/v1/validateOTP", commonController.validateUserOtp);
@@ -48,8 +49,6 @@ app.post("/v1/fetchAllStudents",  studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
 
-// app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning); 
-// app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock); // removed beacuse of not used
 app.post("/v1/topicUnlock", validator.validUser, topicController.topicUnlock);
 app.post("/v1/digicardUnlock", validator.validUser, digicardController.digicardUnlock);
 app.post("/v1/fetchAvailableNumOfQuestions", validator.validUser, questionController.fetchAvailableNumOfQuestions);

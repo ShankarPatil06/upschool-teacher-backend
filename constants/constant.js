@@ -21,6 +21,7 @@ exports.messages = {
     INCORRECT_OLDPASSWORD: "Invalid Current Password!",
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
+    AUTHORIZATION:"Authorization",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -51,6 +52,9 @@ exports.messages = {
     UNABLE_TO_UNLOCK_DIGICARDS: "Unable to unlock Digicards for **REPLACE** as they are unlocked",
     DIDNT_UNLOCK_DIGICARD: "Digicards haven't been unlocked for the selected Topics!",
     DIGICARDS_FETCHED_FOR_REORDERING: "DigiCard Fetched for Reordering",
+    NO_DIGICARDS_FOUND:"No digicards found",
+    NO_SORTED_DIGICARDS_FOUND:"No sorted digicards found",
+    DIGI_CARD_ID:"digi_card_id",
 
     // Quiz : 
     PRE_QUIZ_ALREADY_GENERATED: "Pre learning quiz has been generated already!",
@@ -79,6 +83,7 @@ exports.messages = {
     NO_TOPICS_SELECTED: "No Topics Selected",
     NO_TOPIC_IS_SELECTED: "No topic has been selected!",
     TOPICS_ALREADY_UNLOCKED: "**REPLACE** topics's digicards have already been unlocked!",
+    TOPICS_NOT_FOUND:"Topic not found",
 
     // Chapter :
     CHAPTER_DATABASE_ERROR: "Chapter Database Error",
@@ -89,6 +94,7 @@ exports.messages = {
     CHAPTER_NAME_ALREADY_EXISTS: "Chapter Name Already Exists",
     UNABLE_TO_DELETE_THE_CHAPTER: "Unable to delete the chapter as it is mapped with the units: **REPLACE**",
     INVALID_REQUEST: "Invalid Request",
+    
 
     // Unit :
     UNIT_DATABASE_ERROR: "Unit Database Error",
@@ -115,6 +121,7 @@ exports.messages = {
     // Concept : 
     CONCEPT_TITLE_ALREADY_EXIST: "Concept Title Already Exist!",
     UNABLE_TO_DELETE_THE_CONCEPT: "Unable to delete the concept as it is mapped with the topics: **REPLACE**",
+    NO_RELATED_CONCEPTS_FOUND:"No related concepts found",
 
     // Subject : 
     SUBJECT_TITLE_ALREADY_EXIST: "Subject Title Already Exist!",
@@ -178,12 +185,15 @@ exports.messages = {
 
 exports.common = {
     NA: "N.A.",
+    OR:"OR",
     No: "No",
     Yes: "Yes",
     AND: "AND",
     Active: "Active",
     Archived:"Archived",
-    MasterAdmin:"MasterAdmin"
+    MasterAdmin:"MasterAdmin",
+    YYYY_MM_DD:"yyyy_mm_dd",
+    DD_MM_YYYY:"dd_mm_yyyy"
 }
 exports.commonConditionValue = {
     pageNo: "pageNo",
@@ -352,7 +362,8 @@ exports.awsConstants = {
 }
 
 exports.signedUrlConstants = {
-    replace:"**REPLACE**"
+    replace:"**REPLACE**",
+    uploads:"uploads/"
 }
 
 exports.requestData={
