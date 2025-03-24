@@ -18,8 +18,8 @@ const openai = new OpenAI({
 
 exports.addClassTest = async (request) => {
     try {
-        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-        console.log("fetch_class_test_res - ", fetch_class_test_res);
+        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request);
+
         if (fetch_class_test_res.Items.length === 0) {
             request.data.class_test_id = helper.getRandomString();
             console.log("request.data.class_test_id - ", request.data.class_test_id);
@@ -30,36 +30,30 @@ exports.addClassTest = async (request) => {
                 data: qs.stringify(request),
                 url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
                 timeout: 60000,
-                // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
             };
-            // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+
             console.log({ firsttttt: options })
             console.log("qs.stringify(request) - ", qs.stringify(request));
-            // Await the axios response
+            
             axios(options)
-            .then(response => {
-                console.log("PDF Data Received: ", response.data);
+                .then(response => {
+                    console.log("PDF Data Received: ", response.data);
+                    request.data.answer_sheet_template = response.data.answer_sheet_template ||"";
+                    request.data.question_paper_template = response.data.question_paper_template ||"";
+                    request.data.key_answer_template =response.data.key_answer_template ||"";
 
-                request.data.answer_sheet_template = response.data.answer_sheet_template || " ";
-                request.data.question_paper_template = response.data.question_paper_template || " ";
-                request.data.key_answer_template = response.data.key_answer_template || " ";
+                    classTestRepository.updateClassTest(request)
+                        .then(() => console.log("Class Test Updated"))
+                        .catch(err => console.error("DB Update Error:", err));
+                })
+                .catch(error => {
+                    console.error("PDF Generation Error:", error);
+                });
 
-                // Insert into database asynchronously
-                classTestRepository.insertClassTest2(request)
-                    .then(() => console.log("Class Test Inserted"))
-                    .catch(err => console.error("DB Insert Error:", err));
-            })
-            .catch(error => {
-                console.error("PDF Generation Error:", error);
-            });
-            // const pdfData = await axios(options);
-            // console.log("PDF Data Received: ", pdfData.data);
+            await classTestRepository.insertClassTest2(request)
+                .then(() => console.log("Class Test Inserted"))
+                .catch(err => console.error("DB Insert Error:", err));
 
-            // request.data.answer_sheet_template = pdfData.data.answer_sheet_template || " ";
-            // request.data.question_paper_template = pdfData.data.question_paper_template || " ";
-            // request.data.key_answer_template = pdfData.data.key_answer_template || " ";
-
-            // await classTestRepository.insertClassTest2(request);
             return 200;
         }
     } catch (error) {

@@ -104,9 +104,9 @@ exports.insertClassTest2 = async (request) => {
             "test_end_date": request.data.test_end_date === "N.A." ? "N.A." : { yyyy_mm_dd: request.data.test_end_date, dd_mm_yyyy: helper.change_dd_mm_yyyy(request.data.test_end_date) },
             "test_start_time": request.data.test_start_time,
             "test_end_time": request.data.test_end_time,
-            "answer_sheet_template": request.data.answer_sheet_template,
-            "question_paper_template": request.data.question_paper_template,
-            "key_answer_template": request.data.key_answer_template,
+            "answer_sheet_template": request.data.answer_sheet_template || " ",
+            "question_paper_template": request.data.question_paper_template || " ",
+            "key_answer_template": request.data.key_answer_template || " ",
             "class_test_status": "Active",
             "common_id": constant.constValues.common_id,
             "created_ts": helper.getCurrentTimestamp(),
@@ -117,7 +117,22 @@ exports.insertClassTest2 = async (request) => {
     const data = (await DATABASE_TABLE2.putItem(params)).$metadata.httpStatusCode;
     return data;
 }
-
+exports.updateClassTest = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        Key: {
+            "class_test_id" :request.data.class_test_id
+        },
+        UpdateExpression: "set answer_sheet_template = :answer_sheet_template, question_paper_template = :question_paper_template, key_answer_template=:key_answer_template, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":updated_ts": helper.getCurrentTimestamp(),
+            ":answer_sheet_template": request.data.answer_sheet_template,
+            ":question_paper_template": request.data.question_paper_template,
+            ":key_answer_template": request.data.key_answer_template
+        },
+    };
+    return await DATABASE_TABLE2.updateService(params);
+}
 exports.fetchClassTestByName = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
