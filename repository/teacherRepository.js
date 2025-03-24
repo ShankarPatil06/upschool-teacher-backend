@@ -270,6 +270,28 @@ exports.updateTeacherInfo = function (request, callback) {
         }
     });
 }
+
+exports.updateTeacherInfo2 = async function (request) {
+    try {
+
+        let update_params = {
+            TableName: TABLE_NAMES.upschool_teacher_info,
+            Key: {
+                "teacher_id": request.teacher_id
+            },
+            UpdateExpression: "set teacher_info = :teacher_info, updated_ts = :updated_ts",
+            ExpressionAttributeValues: {
+                ":teacher_info": request.teacher_info,
+                ":updated_ts": helper.getCurrentTimestamp()
+            },
+        };
+
+        const response = await DATABASE_TABLE2.updateService(update_params);
+        return response;
+    } catch (error) {
+        throw { status: 500, message: constant.messages.DATABASE_ERROR };
+    }
+};
 exports.fetchTeacherActivityDetails = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {

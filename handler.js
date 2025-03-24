@@ -30,6 +30,7 @@ app.use(fileUpload());
 app.use(cors());
 
 /** Login **/
+app.get("/v1", (req,res)=> res.send("Hello world"));
 app.post("/v1/login", commonController.userLogin);
 app.post("/v1/loginWithOTP", commonController.userLoginWithoutPassword);
 app.post("/v1/validateOTP", commonController.validateUserOtp);
