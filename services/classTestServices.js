@@ -34,13 +34,25 @@ exports.addClassTest = async (request) => {
 
             console.log({ firsttttt: options })
             console.log("qs.stringify(request) - ", qs.stringify(request));
-            
+
+            request.data.answer_sheet_template = " ";
+            request.data.question_paper_template = " ";
+            request.data.key_answer_template = " ";
+
+            await classTestRepository.insertClassTest2(request)
+                .then(() => console.log("Class Test Inserted"))
+                .catch(err => console.error("DB Insert Error:", err));
+
+
             axios(options)
                 .then(response => {
+                    
                     console.log("PDF Data Received: ", response.data);
-                    request.data.answer_sheet_template = response.data.answer_sheet_template ||"";
-                    request.data.question_paper_template = response.data.question_paper_template ||"";
-                    request.data.key_answer_template =response.data.key_answer_template ||"";
+                    request.data.answer_sheet_template = response.data.answer_sheet_template || "";
+                    request.data.question_paper_template = response.data.question_paper_template || "";
+                    request.data.key_answer_template = response.data.key_answer_template || "";
+
+                    console.log("request==", request);
 
                     classTestRepository.updateClassTest(request)
                         .then(() => console.log("Class Test Updated"))
@@ -50,9 +62,6 @@ exports.addClassTest = async (request) => {
                     console.error("PDF Generation Error:", error);
                 });
 
-            await classTestRepository.insertClassTest2(request)
-                .then(() => console.log("Class Test Inserted"))
-                .catch(err => console.error("DB Insert Error:", err));
 
             return 200;
         }
