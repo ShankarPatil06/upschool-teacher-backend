@@ -340,7 +340,7 @@ exports.startEvaluationProcess = async (request) => {
                         }
                     }
                 } else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         totalMarks += questionAnswerPairs[index].marks;
                     } else {

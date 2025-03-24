@@ -1012,7 +1012,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     }
                 }
                 else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         // totalMarks += questionAnswerPairs[index].marks;
