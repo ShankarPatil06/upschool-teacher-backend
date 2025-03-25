@@ -69,6 +69,7 @@ exports.messages = {
     DIGICARD_ACTIVATED_IN_TOPIC: "DigiCards Activated",
     INSUFFICIENT_QUESTIONS: "Insufficient Questions!",
     ERROR_IN_GENERATING_QUIZ: "Error in Generating Quiz",
+    ERROR_IN_FETCHING_QUIZ: "Error in Fetching Quiz",
     NO_ANSWER_SHEET_FOUND: "No answer sheets to evaluate!",
     DUPLICATE_QUIZ_NAME: "Quiz name exists already!",
     COULDNOT_READ_QUIZ_ID: "Couldn't extract Quiz ID, please re-upload!",
@@ -201,14 +202,24 @@ exports.common = {
     OR: "OR",
     No: "No",
     Yes: "Yes",
+    yes: "yes",
+    no: "no",
     AND: "AND",
     Active: "Active",
     Archived: "Archived",
     MasterAdmin: "MasterAdmin",
     YYYY_MM_DD: "yyyy_mm_dd",
     DD_MM_YYYY: "dd_mm_yyyy",
+    Number: "number",
     Pre: "Pre",
     Post: "Post",
+    Image: "Image",
+    AudioFile: "Audio File",
+    unknownConcept: "Unknown Concept",
+    unknownTopic: "Unknown Topic",
+    unknownChapter: "Unknown Chapter",
+    unknownLearningType: "Unknown Learning Type",
+    unknownStudent: "Unknown Student",
 }
 exports.commonConditionValue = {
     automated: "Automated",
@@ -381,7 +392,8 @@ exports.awsConstants = {
 
 exports.signedUrlConstants = {
     replace: "**REPLACE**",
-    uploads: "uploads/"
+    uploads: "uploads/",
+    digicardExtension: "digicard_extension/",
 }
 
 exports.requestData = {
@@ -394,6 +406,10 @@ exports.requestData = {
     cognitiveName: "cognitive_name",
     chapterId: "chapter_id",
     chapterStatus: "chapter_status",
+    classTestId: "class_test_id",
+    questionPaperId: "question_paper_ids",
+    digiCardTitle: "digi_card_title",
+    displayName: "display_name",
     postLearningTopicId: "postlearning_topic_id",
     preLearningTopicId: "prelearning_topic_id",
     topicId: "topic_id",
@@ -420,5 +436,6 @@ exports.requestData = {
     reset: "reset",
     create: "create",
     sendOTP: "Send OTP",
-    userOTP: "user_otp"
+    userOTP: "user_otp",
+    unitChapterId: "unit_chapter_id",
 }

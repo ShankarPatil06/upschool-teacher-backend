@@ -1,14 +1,13 @@
 const quizRepository = require("../repository/quizRepository");
 const quizResultRepository = require("../repository/quizResultRepository");
 const classTestServices = require("./classTestServices");
-const constant = require("../constants/constant");
-const helper = require('../helper/helper');
+const { messages, prePostConstans, groupTypes, question, quizSetDetails, quizFolder, quizSets, status } = require("../constants/constant");
+const { concatAnswers, fetchQuizSetName, formatErrorResponse, getAnswerContentFileUrl, getCurrentTimestamp, getQuizMarksDetailsFormat, isEmptyObject, removeDuplicates, splitStudentQuizAnswer } = require("../helper/helper");
 const commonRepository = require("../repository/commonRepository");
-const { TABLE_NAMES } = require('../constants/tables');
+const { TABLE_NAMES } = require("../constants/tables");
 const schoolRepository = require("../repository/schoolRepository");
 const s3Services = require("./s3Service");
-
-const { OpenAI } = require('openai');
+const { OpenAI } = require("openai");
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY,
@@ -16,34 +15,34 @@ const openai = new OpenAI({
 
 exports.checkDuplicateQuizName = async (request) => {
     const quizData_response = await quizRepository.checkDuplicateQuizName2(request)
-    if (quizData_response.Items.length > 0) {
-        throw helper.formatErrorResponse(constant.messages.DUPLICATE_QUIZ_NAME, 400);
+    if (!isEmptyArray(quizData_response.Items)) {
+        throw formatErrorResponse(messages.DUPLICATE_QUIZ_NAME, 400);
     }
     return quizData_response
 }
 
 exports.updateQuizStatus = async (request) => {
-    if (request.data.quiz_status !== constant.status.active) {
+    if (request.data.quiz_status !== status.active) {
         return await quizRepository.updateQuizStatus2(request);
     }
 
     const preQuiz_response = await quizRepository.fetchQuizDataById2(request);
-    if (!preQuiz_response.Item) throw new Error('Error fetching preQuiz data');
+    if (!preQuiz_response.Item) throw new Error(messages.ERROR_IN_FETCHING_QUIZ);
 
     const { client_class_id, chapter_id, subject_id, section_id, learningType, selectedTopics } = preQuiz_response.Item;
     Object.assign(request.data, { client_class_id, chapter_id, subject_id, section_id, learningType });
 
     const quizRes = await quizRepository.fetchQuizData2(request);
-    if (quizRes.Items.length > 0) {
-        if (learningType === constant.prePostConstans.preLearningVal) {
-            throw new Error(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
+    if (!isEmptyArray(quizRes.Items)) {
+        if (learningType === prePostConstans.preLearningVal) {
+            throw new Error(messages.PRE_QUIZ_ALREADY_GENERATED);
         }
 
         const resSelectedTop = quizRes.Items.flatMap(qData => qData.selectedTopics);
         const duplicatedTopics = await checkDuplicateTopics(resSelectedTop, selectedTopics);
 
-        if (duplicatedTopics.length > 0) {
-            throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+        if (!isEmptyArray(duplicatedTopics)) {
+            throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
         }
     }
 
@@ -72,7 +71,7 @@ exports.fetchQuizBasedonStatus = async (request) => {
 exports.getQuizResult = async (request) => {
 
     const result_response = await quizRepository.getQuizResult2(request);
-    if (result_response.Items.length)
+    if (!isEmptyArray(result_response.Items))
         await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
             result.content_url = await s3Services.getS3SignedUrl(result.url);
         }));
@@ -85,8 +84,8 @@ exports.editStudentQuizMarks = async (request) => {
     try {
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
 
-        if (quizTestRes.Item.quiz_status !== "Active") {
-            throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
+        if (quizTestRes.Item.quiz_status !== status.active) {
+            throw formatErrorResponse(messages.NO_DATA, 400);
         }
 
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
@@ -94,7 +93,7 @@ exports.editStudentQuizMarks = async (request) => {
         let classPassPercentage = 0;
         let passPassPercentage = 0;
         let groupPassPercentage = {};
-        if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
+        if (quizTestRes.Item.learningType === prePostConstans.preLearningVal) {
             classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
             groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
@@ -108,14 +107,14 @@ exports.editStudentQuizMarks = async (request) => {
 
         const fetchBulkQtnReq = {
             IdArray: questionIds,
-            fetchIdName: "question_id",
+            fetchIdName: question.question_id,
             TableName: TABLE_NAMES.upschool_question_table,
-            projectionExp: ["question_id", "marks"]
+            projectionExp: [question.question_id, question.marks]
         };
 
         const quizIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
 
-        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: "OR" })
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection2({ items: quizIds, condition: common.OR })
 
         const overallResult = await knowPassOrFail(request.data.marks_details[0], questionDataRes, classPassPercentage, passPassPercentage);
         request.data.marks_details[0].totalMark = overallResult.totalMarks;
@@ -133,7 +132,7 @@ exports.editStudentQuizMarks = async (request) => {
         const questionMarksMap = {};
 
         questionDataRes?.forEach(question => {
-            if (question.question_id && typeof question.marks === 'number') {
+            if (question.question_id && typeof question.marks === common.Number) {
 
                 questionMarksMap[question.question_id] = question.marks;
             }
@@ -160,20 +159,20 @@ exports.editStudentQuizMarks = async (request) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
                 switch (question.type) {
-                    case 'Basic':
+                    case groupTypes.Basic:
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        basicObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'Intermediate':
+                    case groupTypes.Intermediate:
                         intermediateQuestions += 1;
                         intermediateMarks += marksPerQuestion;
-                        intermediateObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        intermediateObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'Advanced':
+                    case groupTypes.Advanced:
                         advancedQuestions += 1;
                         advancedMarks += marksPerQuestion;
-                        advancedObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        advancedObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                 }
             });
@@ -207,7 +206,7 @@ exports.editStudentQuizMarks = async (request) => {
         return fetchQuizDataRes.Items;
 
     } catch (error) {
-        throw helper.formatErrorResponse(error.message || constant.messages.NO_DATA, 400);
+        throw formatErrorResponse(error.message || messages.NO_DATA, 400);
     }
 };
 
@@ -218,27 +217,27 @@ exports.viewQuizQuestionPaper = async (request) => {
         // Fetch quiz result data of student
         // const schoolInfo = await schoolRepository.getSchoolDetailsById2(request)
         const fetchQuizResultData = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
-        if (!fetchQuizResultData || fetchQuizResultData.Items.length === 0) {
-            throw new Error(constant.messages.NO_ANSWER_SHEET_FOUND);
+        if (!fetchQuizResultData || isEmptyArray(fetchQuizResultData.Items)) {
+            throw new Error(messages.NO_ANSWER_SHEET_FOUND);
         }
 
         const quizType = fetchQuizResultData.Items[0].quiz_set;
-        const quizSetName = await helper.fetchQuizSetName(quizType);
+        const quizSetName = await fetchQuizSetName(quizType);
 
         // Fetch quiz data by ID
         const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
-        if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
-            throw new Error(constant.messages.COULDNOT_READ_QUIZ_ID);
+        if (isEmptyObject(fetchQuizDataResponse.Item)) {
+            throw new Error(messages.COULDNOT_READ_QUIZ_ID);
         }
         // Extract question details
         const questionsData = fetchQuizDataResponse.Item.quiz_question_details[quizSetName];
-        const questionIDs = helper.removeDuplicates(questionsData);
+        const questionIDs = removeDuplicates(questionsData);
         // Fetch questions data
         const fetchBulkCatReq = {
             IdArray: questionIDs,
-            fetchIdName: "question_id",
+            fetchIdName: question.question_id,
             TableName: TABLE_NAMES.upschool_question_table,
-            projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+            projectionExp: [question.question_id, question.question_content, question.answers_of_question, question.question_type, question.marks, requestData.displayAnswer]
         };
         const questionIds = fetchBulkCatReq.IdArray.map((val) => ({ question_id: val }));
         const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
@@ -247,7 +246,7 @@ exports.viewQuizQuestionPaper = async (request) => {
         return { Items: questionsRes };
 
     } catch (error) {
-        throw helper.formatErrorResponse(error.message || constant.messages.DEFAULT_ERROR, 400);
+        throw formatErrorResponse(error.message || messages.DEFAULT_ERROR, 400);
     }
 };
 
@@ -261,10 +260,10 @@ exports.setQuestionPaperView = async (questionIDs, questionData) => {
             if (!matchedQuestion) return null;
 
             try {
-                const url = await helper.getAnswerContentFileUrl(matchedQuestion.answers_of_question);
+                const url = await getAnswerContentFileUrl(matchedQuestion.answers_of_question);
                 matchedQuestion.answers_of_question = url;
             } catch (err) {
-                matchedQuestion.answers_of_question = "N.A.";
+                matchedQuestion.answers_of_question = common.NA;
             }
 
             return matchedQuestion;
@@ -278,7 +277,7 @@ exports.setQuestionPaperView = async (questionIDs, questionData) => {
 exports.fetchQuizTemplates = async (request) => {
     try {
         // if(!request.data.quiz_status)
-        // request.data.quiz_status = "Active";
+        // request.data.quiz_status = status.active;
         const quizRes = await quizRepository.fetchQuizTemplates2(request);
 
         if (quizRes.Items[0]?.quiz_template_details) {
@@ -287,23 +286,23 @@ exports.fetchQuizTemplates = async (request) => {
                 const questionSheetKey = `set_${set_code}`;
                 const quizTemplate = quizRes.Items[0].quiz_template_details[questionSheetKey] || {};
 
-                const questionTemp = quizTemplate.question_sheet || "N.A.";
-                const questionUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                const questionTemp = quizTemplate.question_sheet || common.NA;
+                const questionUrlCheck = quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.question_sheet_url = questionTemp.includes(questionUrlCheck)
                     ? await s3Services.getS3SignedUrl(questionTemp)
-                    : "N.A.";
+                    : common.NA;
 
-                const answerTemp = quizTemplate.answer_sheet || "N.A.";
-                const answerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                const answerTemp = quizTemplate.answer_sheet || common.NA;
+                const answerUrlCheck = quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.answer_sheet_url = answerTemp.includes(answerUrlCheck)
                     ? await s3Services.getS3SignedUrl(answerTemp)
-                    : "N.A.";
+                    : common.NA;
 
-                const keyanswerTemp = quizTemplate.key_answer || "N.A.";
-                const keyanswerUrlCheck = constant.quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
+                const keyanswerTemp = quizTemplate.key_answer || common.NA;
+                const keyanswerUrlCheck = quizFolder[`questionPapersSet${set_code.toUpperCase()}`].split("/")[0];
                 quizTemplate.key_answer_url = answerTemp.includes(keyanswerUrlCheck)
                     ? await s3Services.getS3SignedUrl(keyanswerTemp)
-                    : "N.A.";
+                    : common.NA;
             }
         } else {
             quizRes.Items[0].quiz_template_details = {};
@@ -311,7 +310,7 @@ exports.fetchQuizTemplates = async (request) => {
 
         return quizRes;
     } catch (error) {
-        throw helper.formatErrorResponse(error.message, 400);
+        throw formatErrorResponse(error.message, 400);
     }
 };
 
@@ -349,7 +348,7 @@ const addIndividualGroupPerformance = (markAssignRes, questionDataRes, group_pas
     markAssignRes[0].answer_metadata = mergeStudentAnswers(markAssignRes[0].answer_metadata);
 
     questionDataRes?.forEach(question => {
-        if (question.question_id && typeof question.marks === 'number') {
+        if (question.question_id && typeof question.marks === common.Number) {
             questionMarksMap[question.question_id] = question.marks;
         }
     });
@@ -383,20 +382,20 @@ const addIndividualGroupPerformance = (markAssignRes, questionDataRes, group_pas
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
                 switch (question.type) {
-                    case 'Basic':
+                    case groupTypes.Basic:
                         basicQuestions += 1;
                         basicMarks += marksPerQuestion;
-                        basicObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        basicObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'Intermediate':
+                    case groupTypes.Intermediate:
                         intermediateQuestions += 1;
                         intermediateMarks += marksPerQuestion;
-                        intermediateObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        intermediateObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
-                    case 'Advanced':
+                    case groupTypes.Advanced:
                         advancedQuestions += 1;
                         advancedMarks += marksPerQuestion;
-                        advancedObtained += question.modified_marks !== 'N.A.' ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
+                        advancedObtained += question.modified_marks !== common.NA ? parseFloat(question.modified_marks) || 0 : parseFloat(question.obtained_marks) || 0;
                         break;
                 }
             });
@@ -431,18 +430,18 @@ const addIndividualGroupPerformance = (markAssignRes, questionDataRes, group_pas
 
 exports.startQuizEvaluationProcess = async (request) => {
     try {
-        const quizSets = constant.quizSets;
+        const allQuizSets = quizSets;
         const quizTestRes = await quizRepository.fetchQuizDataById2(request);
 
-        if (!quizTestRes || !quizTestRes.Item || quizTestRes.Item.quiz_status !== "Active") {
-            throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
+        if (!quizTestRes || !quizTestRes.Item || quizTestRes.Item.quiz_status !== status.active) {
+            throw formatErrorResponse(messages.NO_DATA, 400);
         }
 
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
         let classPassPercentage = 0;
         let groupPassPercentage = {};
-        if (quizTestRes.Item.learningType === constant.prePostConstans.preLearningVal) {
+        if (quizTestRes.Item.learningType === prePostConstans.preLearningVal) {
             classPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.class_percentage);
             passPassPercentage = Number(schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach);
             groupPassPercentage = schoolDataRes.Items[0].pre_quiz_config.group_pass_percentage
@@ -454,29 +453,29 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         let studentMetaRes = await quizResultRepository.fetchStudentQuiRresultMetadata2(request);
 
-        if (studentMetaRes.Items.length === 0) {
-            throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
+        if (isEmptyArray(studentMetaRes.Items)) {
+            throw formatErrorResponse(messages.NO_ANSWER_SHEET_FOUND, 400);
         }
 
         const questionArray = await getQuizQuestionIds(quizTestRes.Item.quiz_question_details);
 
         const fetchBulkQtnReq = {
             IdArray: questionArray,
-            fetchIdName: "question_id",
+            fetchIdName: question.question_id,
             TableName: TABLE_NAMES.upschool_question_table,
-            projectionExp: ["question_id", "question_label", "answers_of_question", "question_content", "question_disclaimer", "question_type", "marks"]
+            projectionExp: [question.question_id, question.question_label, question.answers_of_question, question.question_content, question.question_disclaimer, question.question_type, question.marks]
         };
 
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
 
         let answerCompareArray = [];
-        const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
+        const setsMarkFormat = await getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
 
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
         for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
             const studentData = studentMarkDetail;
-            const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
+            const quizSetKey = allQuizSets[studentData.quiz_set.toLowerCase()];
 
             const markDetails = setsMarkFormat.filter(markForm => markForm.set_key === quizSetKey);
             studentMarkDetail.marks_details = markDetails;
@@ -486,7 +485,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             const mergedAnswers = allStudentAnswers.reduce((acc, curr) => {
                 const existing = acc.find(item => item.question === curr.question);
                 if (existing) {
-                    existing.answer += ' ' + curr.answer; // Merge answers with a space
+                    existing.answer += " " + curr.answer; // Merge answers with a space
                 } else {
                     acc.push({ ...curr });
                 }
@@ -514,20 +513,20 @@ exports.startQuizEvaluationProcess = async (request) => {
                 );
 
                 if (question) {
-                    if (question.question_type === "Descriptive") {
+                    if (question.question_type === question.Descriptive) {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_weightage > 0)
                             .map((ans) => ans.answer_content) // Extract all answer_content
                             .join(" ");
-                    } else if (question.question_type === "Objective") {
+                    } else if (question.question_type === question.Objective) {
                         const index = question.answers_of_question.findIndex(
-                            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+                            (ans) => ans.answer_display === common.Yes || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
                         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
-                    } else if (question.question_type === "Subjective") {
+                    } else if (question.question_type === question.Subjective) {
                         correctAnswer = question.answers_of_question
-                            .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+                            .filter((ans) => ans.answer_display === common.Yes)  // Filter answers with answer_display as common.Yes
                             .map((ans) => ans.answer_content)               // Extract the answer_content
                             .join(" ");                                     // Join the answer contents into a single string
 
@@ -566,7 +565,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Please compare the following answers for similarity. The student's response should be analyzed properly, compare it with the Correct Answers (which is very important) provided in the correct answer to perform a semantic evaluation and provide a similarity score. - Ensure different phrases or concepts are not mistakenly considered similar, don't override the student's response by more than 5%. If the student's answer does not match any of the meanings as per the Correct Answers present in the correct answer, the similarity score should be 0. 
+            const userPrompt = `Please compare the following answers for similarity. The student"s response should be analyzed properly, compare it with the Correct Answers (which is very important) provided in the correct answer to perform a semantic evaluation and provide a similarity score. - Ensure different phrases or concepts are not mistakenly considered similar, don"t override the student"s response by more than 5%. If the student"s answer does not match any of the meanings as per the Correct Answers present in the correct answer, the similarity score should be 0. 
 
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
@@ -578,13 +577,13 @@ exports.startQuizEvaluationProcess = async (request) => {
             In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
 
             const response = await openai.chat.completions.create({
-                model: 'gpt-4-turbo',
+                model: "gpt-4-turbo",
                 messages: [
                     {
-                        role: 'system',
-                        content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                        role: "system",
+                        content: "You are a helpful assistant that compares answers and provides similarity scores between 0 and 100."
                     },
-                    { role: 'user', content: userPrompt }
+                    { role: "user", content: userPrompt }
                 ],
             });
 
@@ -595,7 +594,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === question.Descriptive) {
                     const range = 100 / Number(questionAnswerPairs[index].marks)
                     if (Number.isNaN(scores[index]) || scores[index] < 10) mark.obtained_marks = 0;
                     else {
@@ -616,8 +615,8 @@ exports.startQuizEvaluationProcess = async (request) => {
                     }
                 }
 
-                totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
-                mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
+                totalMarks += mark.obtained_marks !== common.NA ? mark.obtained_marks : 0;
+                mark.obtained_marks = mark.obtained_marks === common.NA ? 0 : mark.obtained_marks;
                 mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
                 let newMarksData = { ...mark }
                 qa_detailsCopyArray[i].push(newMarksData);
@@ -631,7 +630,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             });
 
             studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
-            studentMetaRes.Items[i].evaluated = "Yes";
+            studentMetaRes.Items[i].evaluated = common.Yes;
             studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
             studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
             studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
@@ -663,30 +662,30 @@ exports.startQuizEvaluationProcess = async (request) => {
 };
 
 const getQuizQuestionIds = async (quiz_question_details) => {
-    let quizSetDetails = constant.quizSetDetails;
+    let allQuizSetDetails = quizSetDetails;
     let questionArr = [];
 
-    await quizSetDetails.forEach(indSet => {
+    await allQuizSetDetails.forEach(indSet => {
         questionArr.push(...quiz_question_details[indSet.setKey]);
     })
-    questionArr = await helper.removeDuplicates(questionArr);
+    questionArr = await removeDuplicates(questionArr);
     return questionArr;
 }
 
 exports.assigningQuizMarks = async (studResultData, quizQuestionSets, quesAns, classPassPercentage, groupPassPercentage, questionTrackDetails) => {
     try {
-        const quizSets = constant.quizSets;
-        const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizQuestionSets);
-        studResultData = await helper.concatAnswers(studResultData);
+        const allQuizSets = quizSets;
+        const setsMarkFormat = await getQuizMarksDetailsFormat(quizQuestionSets);
+        studResultData = await concatAnswers(studResultData);
 
         for (let i = 0; i < studResultData.length; i++) {
             const studentData = studResultData[i];
-            const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
+            const quizSetKey = allQuizSets[studentData.quiz_set.toLowerCase()];
             const questionPaper = quizQuestionSets[quizSetKey];
             const questionPaperTrack = questionTrackDetails[quizSetKey];
             const markDetails = setsMarkFormat.filter(markForm => markForm.set_key === quizSetKey);
 
-            if (studentData.overall_answer.length > 0) {
+            if (!isEmptyArray(studentData.overall_answer)) {
                 const finalMarksDetails = await exports.comparingQuizAnswer(
                     studentData.overall_answer,
                     markDetails,
@@ -703,8 +702,8 @@ exports.assigningQuizMarks = async (studResultData, quizQuestionSets, quesAns, c
                 studentData.marks_details = markDetails;
                 studentData.isPassed = false;
             }
-            studentData.evaluated = "Yes";
-            studentData.updated_ts = helper.getCurrentTimestamp();
+            studentData.evaluated = common.Yes;
+            studentData.updated_ts = getCurrentTimestamp();
         }
         return studResultData;
     } catch (error) {
@@ -714,11 +713,11 @@ exports.assigningQuizMarks = async (studResultData, quizQuestionSets, quesAns, c
 
 exports.comparingQuizAnswer = async (studAns, markDetails, questionPaper, quesAns, classPassPercentage, group_pass_percentage, questionPaperTrack) => {
     return new Promise(async (resolve, reject) => {
-        await helper.splitStudentQuizAnswer(studAns).then((splitedAns) => {
+        await splitStudentQuizAnswer(studAns).then((splitedAns) => {
             let passStatus = false;
             const sectionLoop = async (i) => {
                 if (i < markDetails.length) {
-                    if (splitedAns[i] && splitedAns[i].individualAns && splitedAns[i].individualAns.length > 0) {
+                    if (splitedAns[i] && splitedAns[i].individualAns && !isEmptyArray(splitedAns[i].individualAns)) {
                         await exports.setQizQaDetails(markDetails[i].qa_details, splitedAns[i].individualAns, quesAns, questionPaperTrack).then(async (secQaDetails) => {
                             markDetails[i].qa_details = secQaDetails;
 
@@ -769,9 +768,9 @@ const knowPassOrFail = (marks_details, quesAndAns, classPercentage, individualPa
         const studentResult = marks_details?.qa_details?.filter(studentProgress => {
             return quesAndAns.some(question => question?.question_id === studentProgress?.question_id);
         }).reduce((acc, item) => {
-            if (item?.modified_marks != 'N.A.')
+            if (item?.modified_marks != common.NA)
                 return acc + parseFloat(item?.modified_marks)
-            if (item?.obtained_marks != 'N.A.')
+            if (item?.obtained_marks != common.NA)
                 return acc + parseFloat(item?.obtained_marks)
             return acc;
         }, 0);
