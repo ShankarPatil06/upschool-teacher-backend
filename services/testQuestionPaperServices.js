@@ -1,5 +1,5 @@
 const { blueprintRepository, testQuestionPaperRepository, commonRepository } = require("../repository")
-const constant = require('../constants/constant');
+const { messages , requestData , common } = require('../constants/constant');
 const helper = require('../helper/helper');
 const { TABLE_NAMES } = require('../constants/tables');
 
@@ -35,7 +35,7 @@ exports.addTestQuestionPaper2 = async (request) => {
   if (helper.isEmptyArray(fetchQuestionPaperRes.Items) && request.section_id == fetchQuestionPaperRes.Items[0].section_id) {
     return {
       statusCode: 400,
-      message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
+      message: messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
     };
   }
   const addQuestionPaperRes = await testQuestionPaperRepository.insertTestQuestionPaper2(request);
@@ -54,7 +54,7 @@ exports.validateQuestionPaperName2 = async (request) => {
   } else {
     return {
       statusCode: 400,
-      message: constant.messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
+      message: messages.TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS,
     };
   }
 };
@@ -64,7 +64,7 @@ exports.viewTestQuestionPaper2 = async (request) => {
   const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
 
   if (helper.isEmptyArray(fetchQuestionPaperRes.Items)) {
-    return { statusCode: 400, message: constant.messages.NO_DATA };
+    return { statusCode: 400, message: messages.NO_DATA };
   }
 
   const questionsData = fetchQuestionPaperRes.Items[0].questions;
@@ -84,16 +84,16 @@ exports.viewTestQuestionPaper2 = async (request) => {
 
   const fetchBulkCatReq = {
     IdArray: questionIDs,
-    fetchIdName: "question_id",
+    fetchIdName: requestData.questionId,
     TableName: TABLE_NAMES.upschool_question_table,
-    projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+    projectionExp: [requestData.questionId, requestData.questionContent, requestData.answersOfQuestion, requestData.questionType, requestData.marks, requestData.displayAnswer]
   };
 
   const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
 
 
   if (helper.isEmptyArray(fetchQuestionsRes)) {
-    return { statusCode: 400, message: "Questions not found." };
+    return { statusCode: 400, message: messages.QUESTIONS_NOT_FOUND };
   }
 
   const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
@@ -118,7 +118,7 @@ exports.setQuestionPaperView2 = async (questionsSectionData, questionData) => {
           individualQuestion.answers_of_question = url;
         }
       } catch (err) {
-        individualQuestion.answers_of_question = constant.common.NA;
+        individualQuestion.answers_of_question = common.NA;
       }
 
       return individualQuestion;

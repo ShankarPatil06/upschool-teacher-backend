@@ -1,12 +1,12 @@
 const { conceptRepository, topicRepository } = require("../repository")
-const constant = require('../constants/constant');
+const { messages } = require('../constants/constant');
 const { helper } = require("../helper");
 
 exports.getConceptsBasedonTopicsNew = async (request) => {
     if (helper.isEmptyArray(request.data.topic_array)) {
         return {
             statusCode: 400,
-            body: constant.messages.INVALID_REQUEST,
+            body: messages.INVALID_REQUEST,
         };
     }
 

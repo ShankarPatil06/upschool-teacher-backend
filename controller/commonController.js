@@ -1,4 +1,4 @@
-const { constant } = require("../constants");
+const { messages } = require("../constants");
 const { formatResponse } = require("../helper/helper");
 const {commonServices} = require("../services");
 
@@ -14,7 +14,7 @@ exports.userLogin = async (req, res, next) => {
 
 exports.userLogout = async (req, res, next) => {
     let request = req.body;
-    request[constant.messages.TOKEN] = req.header(constant.messages.AUTHORIZATION);
+    request[messages.TOKEN] = req.header(messages.AUTHORIZATION);
 
     try {
         const logout_response = await commonServices.userLogout(request);

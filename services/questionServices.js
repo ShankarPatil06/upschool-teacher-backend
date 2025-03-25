@@ -1,6 +1,6 @@
 const chapterServices = require("../services/chapterServices");
-const { schoolRepository,chapterRepository,topicRepository,teachingActivityRepository,conceptRepository, groupRepository } = require("../repository")
-const constant = require('../constants/constant');
+const { schoolRepository, chapterRepository, topicRepository, teachingActivityRepository, conceptRepository, groupRepository } = require("../repository")
+const { prePostConstans, messages, common, commonConditionValue } = require('../constants/constant');
 const helper = require('../helper/helper');
 
 exports.fetchAvailableQuestions = async function (request) {
@@ -9,15 +9,15 @@ exports.fetchAvailableQuestions = async function (request) {
         const teacherActivityDetails = await teachingActivityRepository.fetchTeachingActivity2(request);
         const chapterResponse = await chapterRepository.fetchChapterByID2(request);
 
-        if (chapterResponse.Items.length === 0) {
-            throw new Error(constant.messages.CHAPTER_COMBO_DOESNT_EXISTS);
+        if (helper.isEmptyArray(chapterResponse.Items)) {
+            throw new Error(messages.CHAPTER_COMBO_DOESNT_EXISTS);
         }
 
         const chapterData = chapterResponse.Items[0];
 
-        if (request.data.test_stage === "Pre") {
+        if (request.data.test_stage === common.Pre) {
             let preTopicData = await topicRepository.fetchPreTopicData2(chapterData);
-            const prePostType = constant.prePostConstans.preLearning;
+            const prePostType = prePostConstans.preLearning;
             const preQuizConfig = schoolDetails.Items[0].pre_quiz_config;
             const finalPreTopicData = await chapterServices.appendPreTopicsArchivedStatus4(
                 request,
@@ -27,20 +27,20 @@ exports.fetchAvailableQuestions = async function (request) {
             );
 
             const topicConceptIds = finalPreTopicData
-                .filter(e => e.isArchived === "No")
+                .filter(e => e.isArchived === common.No)
                 .flatMap(e => e.topic_concept_id);
-            
+
             return await exports.fetchCountofQuestions2(request, finalPreTopicData, preQuizConfig, topicConceptIds);
-        } 
-        
-        if (request.data.test_stage === "Post") {
-            if (!request.data.topics || request.data.topics.length === 0) {
-                throw new Error(constant.messages.NO_TOPICS_SELECTED);
+        }
+
+        if (request.data.test_stage === common.Post) {
+            if (helper.isEmptyArray(request.data.topics)) {
+                throw new Error(messages.NO_TOPICS_SELECTED);
             }
 
             const postTopicData = await topicRepository.fetchPostTopicData2({ postlearning_topic_id: request.data.topics });
 
-            const postPostType = constant.prePostConstans.postLearning;
+            const postPostType = prePostConstans.postLearning;
             const postQuizConfig = schoolDetails.Items[0].post_quiz_config;
 
             const finalPostTopicData = await chapterServices.appendPostTopicsArchivedStatus3(
@@ -51,13 +51,13 @@ exports.fetchAvailableQuestions = async function (request) {
             );
 
             const topicConceptIds = finalPostTopicData
-                .filter(e => e.isArchived === "No")
+                .filter(e => e.isArchived === common.No)
                 .flatMap(e => e.topic_concept_id);
 
             return await exports.fetchCountofQuestions2(request, finalPostTopicData, postQuizConfig, topicConceptIds);
         }
 
-        throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
+        throw new Error(messages.INVALID_REQUEST_FORMAT);
     } catch (error) {
         throw error;
     }
@@ -68,14 +68,14 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
         const concept_response = await conceptRepository.fetchConceptData3({ topic_concept_id });
 
         switch (request.data.quiz_type) {
-            case "automated":
+            case commonConditionValue.automated:
 
                 let basic_groups = [];
                 let intermediate_groups = [];
                 let advanced_groups = [];
 
                 finalPreTopicData.forEach((e) => {
-                    if (e.isArchived === "No") {
+                    if (e.isArchived === common.No) {
                         e.topic_concept_id.forEach((f) => {
                             concept_response.forEach((a) => {
                                 if (a.concept_id === f) {
@@ -101,11 +101,11 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
                     totalNoOfQuestions
                 };
 
-            case "express":
+            case commonConditionValue.express:
                 let topicData = [];
 
                 await Promise.all(finalPreTopicData.map(async (e) => {
-                    if (e.isArchived === "No") {
+                    if (e.isArchived === common.No) {
                         let basic_groups = [];
                         let intermediate_groups = [];
                         let advanced_groups = [];
@@ -141,7 +141,7 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
                     topicData
                 };
 
-            case "manual":
+            case commonConditionValue.manual:
                 let topicArray = [];
 
                 await Promise.all(finalPreTopicData.map(async (e) => {
@@ -170,7 +170,7 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
                         }));
                     }));
 
-                    if (e.isArchived === "No") {
+                    if (e.isArchived === common.No) {
                         topicArray.push({
                             topic_name: e.display_name,
                             topic_id: e.topic_id,
@@ -185,7 +185,7 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
                 };
 
             default:
-                throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
+                throw new Error(messages.INVALID_REQUEST_FORMAT);
         }
     } catch (error) {
         throw error;
@@ -195,7 +195,7 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
 exports.processGroups = async (groupArray) => {
     groupArray = helper.removeDuplicates(groupArray);
 
-    if (groupArray.length === 0) return [];
+    if (helper.isEmptyArray(groupArray)) return [];
 
     const groupDetails = await groupRepository.fetchGroupsData2({ group_array: groupArray });
 
@@ -223,22 +223,22 @@ exports.calculateMatrix = (basic_groups, intermediate_groups, advanced_groups, p
     return basic_count + intermediate_count + advance_count;
 };
 
-exports.calculateCountUsingMatrix = function (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, callback) {  
+exports.calculateCountUsingMatrix = function (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config, callback) {
     let basic_percent = pre_post_quiz_config.test_matrix.Basic
     let intermediate_percent = pre_post_quiz_config.test_matrix.Intermediate
     let advanced_percent = pre_post_quiz_config.test_matrix.Advanced
 
-    let basic_count = Math.round((basic_groups.length/100) * basic_percent); 
-    let intermediate_count = Math.round((intermediate_groups.length/100) * intermediate_percent); 
-    let advance_count = Math.round((advanced_groups.length/100) * advanced_percent); 
-    
+    let basic_count = Math.round((basic_groups.length / 100) * basic_percent);
+    let intermediate_count = Math.round((intermediate_groups.length / 100) * intermediate_percent);
+    let advance_count = Math.round((advanced_groups.length / 100) * advanced_percent);
+
     let questionsCount = {
-        basic_count, 
-        intermediate_count, 
+        basic_count,
+        intermediate_count,
         advance_count
     }
 
-    callback(0, questionsCount); 
+    callback(0, questionsCount);
 }
 
 exports.calculateCountUsingMatrix2 = (basic_groups, intermediate_groups, advanced_groups, pre_post_quiz_config) => {

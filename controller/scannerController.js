@@ -62,21 +62,6 @@ exports.uploadQuizAnswerSheets2 = async (req, res, next) => {
   }
 };
 
-exports.uploadAnswerSheets = (req, res, next) => {
-  let request = req.body;
-
-  scannerServices.uploadAnswerSheets(
-    request,
-    function (upload_answer_sheets_err, upload_answer_sheets_response) {
-      if (upload_answer_sheets_err) {
-        res.status(400).json(upload_answer_sheets_err);
-      } else {
-        res.json(upload_answer_sheets_response);
-      }
-    }
-  );
-};
-
 exports.uploadAnswerSheets2 = async (req, res, next) => {
   let request = req.body;
   try {

@@ -22,10 +22,10 @@ exports.messages = {
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
     AUTHORIZATION: "Authorization",
-    TOKEN:'token',
+    TOKEN: 'token',
     INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
-    TOPIC_NOT_FOUND:"Topic Not Found",
-    DIGICARDS_NOT_FOUND:"DigiCards Not Found",
+    TOPIC_NOT_FOUND: "Topic Not Found",
+    DIGICARDS_NOT_FOUND: "DigiCards Not Found",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -190,7 +190,8 @@ exports.messages = {
     OTP_SENT_SUCCESS: "OTP sent successfully.",
     USER_EMAIL_NOT_EXIST: "User email does not exist.",
     PASSWORD_RESET_SUCCESS: "Password reset successfully.",
-    PASSWORD_CHANGED_SUCCESS: "Password changed successfully."
+    PASSWORD_CHANGED_SUCCESS: "Password changed successfully.",
+    QUESTIONS_NOT_FOUND: "Questions not found."
 
 
 }
@@ -205,9 +206,14 @@ exports.common = {
     Archived: "Archived",
     MasterAdmin: "MasterAdmin",
     YYYY_MM_DD: "yyyy_mm_dd",
-    DD_MM_YYYY: "dd_mm_yyyy"
+    DD_MM_YYYY: "dd_mm_yyyy",
+    Pre: "Pre",
+    Post: "Post",
 }
 exports.commonConditionValue = {
+    automated: "Automated",
+    express: "express",
+    manual: "manual",
     pageNo: "pageNo",
     page_no: "pageno",
     testID: "Test ID",
@@ -408,10 +414,11 @@ exports.requestData = {
     questionSource: "question_source",
     questionStatus: "question_status",
     questionType: "question_type",
-    publish:"Publish",
-    teacherId:"teacher_id",
-    reset:"reset",
-    create:"create",
-    sendOTP:"Send OTP",
-    userOTP:"user_otp"
+    displayAnswer: "display_answer",
+    publish: "Publish",
+    teacherId: "teacher_id",
+    reset: "reset",
+    create: "create",
+    sendOTP: "Send OTP",
+    userOTP: "user_otp"
 }

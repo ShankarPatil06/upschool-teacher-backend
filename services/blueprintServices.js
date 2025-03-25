@@ -1,6 +1,6 @@
 const { blueprintRepository, questionRepository, commonRepository, testQuestionPaperRepository, groupRepository, subjectRepository, unitRepository, chapterRepository, topicRepository, conceptRepository } = require("../repository")
 const { TABLE_NAMES } = require('../constants/tables');
-const constant = require('../constants/constant');
+const { messages , common  , questionKeys , requestData ,status } = require('../constants/constant');
 const helper = require('../helper/helper');
 
 exports.getBlueprintByItsId = async (request) => {
@@ -8,7 +8,7 @@ exports.getBlueprintByItsId = async (request) => {
         const singleBlueprint_res = await blueprintRepository.fetchBlueprintById2(request);
 
         if (helper.isEmptyArray(singleBlueprint_res.Items)) {
-            throw new Error(constant.messages.NO_DATA);
+            throw new Error(messages.NO_DATA);
         }
 
         let questionSection = JSON.parse(JSON.stringify(singleBlueprint_res.Items[0].sections));
@@ -26,15 +26,15 @@ exports.getBlueprintByItsId = async (request) => {
         const [cateData_res, cognData_res] = await Promise.all([
             commonRepository.fetchBulkDataWithProjection5({
                 IdArray: catIds,
-                fetchIdName: constant.requestData.categoryId,
+                fetchIdName: requestData.categoryId,
                 TableName: TABLE_NAMES.upschool_content_category,
-                projectionExp: [constant.requestData.categoryId, constant.requestData.categoryName],
+                projectionExp: [requestData.categoryId, requestData.categoryName],
             }),
             commonRepository.fetchBulkDataWithProjection5({
                 IdArray: skillIds,
-                fetchIdName: constant.requestData.cognitiveId,
+                fetchIdName: requestData.cognitiveId,
                 TableName: TABLE_NAMES.upschool_cognitive_skill,
-                projectionExp: [constant.requestData.cognitiveId, constant.requestData.cognitiveName],
+                projectionExp: [requestData.cognitiveId, requestData.cognitiveName],
             }),
         ]);
 
@@ -120,10 +120,10 @@ exports.setBlueprintFinalData = async (questionSection, catData, skillData) => {
             const question = questionSection[j].questions[k];
 
             const category = catData.find(cat => cat.category_id === question.category_id);
-            question.question_category = category ? category.category_name : constant.common.NA;
+            question.question_category = category ? category.category_name : common.NA;
 
             const skill = skillData.find(co => co.cognitive_id === question.cognitive_id);
-            question.cognitive_skill = skill ? skill.cognitive_name : constant.common.NA;
+            question.cognitive_skill = skill ? skill.cognitive_name : common.NA;
 
             await questionLoop(k + 1);
         }
@@ -146,16 +146,16 @@ exports.fetchBlueprintQuestions = async (request) => {
         /** FETCH CHAPTER DATA **/
         const fetchBulkChapReq = {
             IdArray: request.data.chapter_ids,
-            fetchIdName: constant.requestData.chapterId,
+            fetchIdName: requestData.chapterId,
             TableName: TABLE_NAMES.upschool_chapter_table,
-            projectionExp: [constant.requestData.chapterId, constant.requestData.chapterStatus, constant.requestData.postLearningTopicId, constant.requestData.preLearningTopicId]
+            projectionExp: [requestData.chapterId, requestData.chapterStatus, requestData.postLearningTopicId, requestData.preLearningTopicId]
         };
 
         const chapData_res = await commonRepository.fetchBulkDataWithProjection5(fetchBulkChapReq);
 
         let topicIds = [];
         chapData_res.forEach(cItem => {
-            if (cItem.chapter_status === constant.status.active) {
+            if (cItem.chapter_status === status.active) {
                 topicIds = topicIds.concat(cItem.postlearning_topic_id, cItem.prelearning_topic_id);
             }
         });
@@ -165,16 +165,16 @@ exports.fetchBlueprintQuestions = async (request) => {
         /** FETCH TOPIC DATA **/
         const fetchBulkTopReq = {
             IdArray: topicIds,
-            fetchIdName: constant.requestData.topicId,
+            fetchIdName: requestData.topicId,
             TableName: TABLE_NAMES.upschool_topic_table,
-            projectionExp: [constant.requestData.topicId, constant.requestData.topicStatus, constant.requestData.topicConceptId]
+            projectionExp: [requestData.topicId, requestData.topicStatus, requestData.topicConceptId]
         };
 
         const topicData_res = await commonRepository.fetchBulkDataWithProjection5(fetchBulkTopReq);
 
         let conceptIds = [];
         topicData_res.forEach(topItem => {
-            if (topItem.topic_status === constant.status.active) {
+            if (topItem.topic_status === status.active) {
                 conceptIds = conceptIds.concat(topItem.topic_concept_id);
             }
         });
@@ -184,16 +184,16 @@ exports.fetchBlueprintQuestions = async (request) => {
 
         const fetchBulkConReq = {
             IdArray: conceptIds,
-            fetchIdName: constant.requestData.conceptId,
+            fetchIdName: requestData.conceptId,
             TableName: TABLE_NAMES.upschool_concept_blocks_table,
-            projectionExp: [constant.requestData.conceptId, constant.requestData.conceptQuestionId, constant.requestData.conceptStatus]
+            projectionExp: [requestData.conceptId, requestData.conceptQuestionId, requestData.conceptStatus]
         };
 
         const conceptData_res = await commonRepository.fetchBulkDataWithProjection5(fetchBulkConReq);
 
         let workQuesIds = [];
         conceptData_res.forEach(conItem => {
-            if (conItem.concept_status === constant.status.active && conItem.concept_question_id) {
+            if (conItem.concept_status === status.active && conItem.concept_question_id) {
                 workQuesIds = workQuesIds.concat(conItem.concept_question_id);
             }
         });
@@ -202,14 +202,14 @@ exports.fetchBlueprintQuestions = async (request) => {
 
         const fetchBulkquesReq = {
             IdArray: workQuesIds,
-            fetchIdName: constant.requestData.questionId,
+            fetchIdName: requestData.questionId,
             TableName: TABLE_NAMES.upschool_question_table,
-            questionStatus: constant.requestData.publish,
+            questionStatus: requestData.publish,
             sourceIds: request.data.source_ids,
             projectionExp: [
-                constant.requestData.questionId, constant.requestData.answersOfQuestion, constant.requestData.appearsIn, constant.requestData.cognitiveSkill, constant.requestData.difficultyLevel,
-                constant.requestData.marks, constant.requestData.questionActiveStatus, constant.requestData.questionCategory, constant.requestData.questionContent,
-                constant.requestData.questionSource, constant.requestData.questionStatus, constant.requestData.questionType
+                requestData.questionId, requestData.answersOfQuestion, requestData.appearsIn, requestData.cognitiveSkill, requestData.difficultyLevel,
+                requestData.marks, requestData.questionActiveStatus, requestData.questionCategory, requestData.questionContent,
+                requestData.questionSource, requestData.questionStatus, requestData.questionType
             ]
         };
 
@@ -231,7 +231,7 @@ exports.fetchBlueprintQuestions = async (request) => {
 
         return questionPaper;
     } catch (error) {
-        throw new Error(error.message || constant.messages.BLUEPRINT_QUESTIONS_FETCH_FAILED);
+        throw new Error(error.message || messages.BLUEPRINT_QUESTIONS_FETCH_FAILED);
     }
 };
 
@@ -248,7 +248,7 @@ exports.createQuestionPaper = async (priorities, request, blueprint, chapterData
             let secPos = priorities[j].sec;
             let quePos = priorities[j].que;
 
-            if (priorities[j].qStatus === constant.common.No) {
+            if (priorities[j].qStatus === common.No) {
                 if (priorities[j].pre === 0) {
                     try {
                         const conAvailData = await exports.getConceptAvailQuestions(reqSection[secPos].questions[quePos].concept_ids, conceptData, questionData);
@@ -256,7 +256,7 @@ exports.createQuestionPaper = async (priorities, request, blueprint, chapterData
 
                         responseData[secPos].questions[quePos] = quesObjData.quesObj;
                         exitingQuesIds = quesObjData.questionExistId;
-                        priorities[j].qStatus = constant.common.Yes;
+                        priorities[j].qStatus = common.Yes;
                     } catch (error) {
                         throw error;
                     }
@@ -268,7 +268,7 @@ exports.createQuestionPaper = async (priorities, request, blueprint, chapterData
 
                         responseData[secPos].questions[quePos] = quesTopObjData.quesObj;
                         exitingQuesIds = quesTopObjData.questionExistId;
-                        priorities[j].qStatus = constant.common.Yes;
+                        priorities[j].qStatus = common.Yes;
                     } catch (error) {
                         throw error;
                     }
@@ -279,7 +279,7 @@ exports.createQuestionPaper = async (priorities, request, blueprint, chapterData
 
                         responseData[secPos].questions[quePos] = quesObjChapData.quesObj;
                         exitingQuesIds = quesObjChapData.questionExistId;
-                        priorities[j].qStatus = constant.common.Yes;
+                        priorities[j].qStatus = common.Yes;
                     } catch (error) {
                         throw error;
                     }
@@ -332,11 +332,11 @@ exports.getTopicsAvailQuestions = async (topicId, topicData, conceptData, questi
 
 exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId) => {
     let endRes = {
-        quesObj: constant.common.NA,
+        quesObj: common.NA,
         questionExistId: []
     };
 
-    let getQuestion = blueQues.cognitive_id !== constant.common.NA ?
+    let getQuestion = blueQues.cognitive_id !== common.NA ?
         avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id &&
             Qs.cognitive_skill === blueQues.cognitive_id &&
             Qs.difficulty_level === blueQues.difficulty_level &&
@@ -347,12 +347,12 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId) => 
             Number(Qs.marks) === Number(blueQues.marks) &&
             Qs.question_type === blueQues.question_type);
 
-    getQuestion = await helper.removeExistObject(questionExistId, getQuestion, constant.requestData.questionId);
+    getQuestion = await helper.removeExistObject(questionExistId, getQuestion, requestData.questionId);
 
     if ( !helper.isEmptyArray(getQuestion) && (!questionExistId.includes(getQuestion[0].question_id))) {
-        let contUrl = constant.common.NA;
+        let contUrl = common.NA;
 
-        if (blueQues.question_type === constant.questionKeys.objective) {
+        if (blueQues.question_type === questionKeys.objective) {
             try {
                 contUrl = await helper.getAnswerContentFileUrl(getQuestion[0].answers_of_question);
             } catch (curlErr) {
@@ -380,9 +380,9 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId) => 
                 question_type: blueQues.question_type,
                 marks: blueQues.marks,
                 difficulty_level: blueQues.difficulty_level,
-                question_id: constant.common.NA,
-                question_content: constant.common.NA,
-                answers_of_question: constant.common.NA
+                question_id: common.NA,
+                question_content: common.NA,
+                answers_of_question: common.NA
             },
             questionExistId: questionExistId
         };
