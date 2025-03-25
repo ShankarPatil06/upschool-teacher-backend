@@ -1,6 +1,6 @@
 const { topicRepository, chapterRepository, teacherRepository, conceptRepository, digicardRepository, teachingActivityRepository } = require("../repository")
 const teacherServices = require("../services/teacherServices");
-const constant = require("../constants/constant");
+const { messages , common ,prePostConstans ,signedUrlConstants } = require("../constants/constant");
 const helper = require("../helper/helper");
 const s3Services = require("./s3Service");
 
@@ -9,7 +9,7 @@ exports.topicUnlockService = async (request) =>{
     const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request);
 
     if (helper.isEmptyArray(individual_teacher_response?.Items)) {
-      throw { status: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
+      throw { status: 400, message: messages.TEACHER_DOESNOT_EXISTS };
     }
 
     let teacher_info = individual_teacher_response.Items[0].teacher_info.filter(
@@ -20,7 +20,7 @@ exports.topicUnlockService = async (request) =>{
     );
 
     if (helper.isEmptyArray(teacher_info)) {
-      throw { status: 400, message: constant.messages.CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST };
+      throw { status: 400, message: messages.CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST };
     }
 
     let chapter_data = teacher_info[0].chapter_data.filter(
@@ -28,7 +28,7 @@ exports.topicUnlockService = async (request) =>{
     );
 
     if (helper.isEmptyArray(chapter_data)) {
-      throw { status: 400, message: constant.messages.CHAPTER_COMBO_DOESNT_EXISTS };
+      throw { status: 400, message: messages.CHAPTER_COMBO_DOESNT_EXISTS };
     }
 
     let topic_data = chapter_data[0].post_learning.topic_details.filter(
@@ -42,10 +42,10 @@ exports.topicUnlockService = async (request) =>{
         topic_locked: request.data.topic_locked,
         due_date: {
           yyyy_mm_dd:
-            request.data.topic_locked == constant.common.Yes ? constant.common.YYYY_MM_DD: request.data.due_date,
+            request.data.topic_locked == common.Yes ? common.YYYY_MM_DD: request.data.due_date,
           dd_mm_yyyy:
-            request.data.topic_locked == constant.common.Yes
-              ? constant.common.DD_MM_YYYY
+            request.data.topic_locked == common.Yes
+              ? common.DD_MM_YYYY
               : helper.change_dd_mm_yyyy(request.data.due_date),
         },
       };
@@ -58,10 +58,10 @@ exports.topicUnlockService = async (request) =>{
             topic_locked: request.data.topic_locked,
             due_date: {
               yyyy_mm_dd:
-                request.data.topic_locked == constant.common.Yes ? constant.common.YYYY_MM_DD: request.data.due_date,
+                request.data.topic_locked == common.Yes ? common.YYYY_MM_DD: request.data.due_date,
               dd_mm_yyyy:
-                request.data.topic_locked == constant.common.Yes
-                  ? constant.common.DD_MM_YYYY
+                request.data.topic_locked == common.Yes
+                  ? common.DD_MM_YYYY
                   : helper.change_dd_mm_yyyy(request.data.due_date),
             },
           };
@@ -99,24 +99,24 @@ exports.topicUnlockService = async (request) =>{
 exports.getDigicardsBasedonTopic = async function (request) {
   try {
     if (!request?.data?.topic_id) {
-      throw { status: 400, message: constant.messages.INVALID_REQUEST };
+      throw { status: 400, message: messages.INVALID_REQUEST };
     }
 
     const singleTopicResponse = await topicRepository.fetchTopicByID2(request);
     if (helper.isEmptyArray(singleTopicResponse?.Items)) {
-      throw { status: 404, message: constant.messages.TOPICS_NOT_FOUND };
+      throw { status: 404, message: messages.TOPICS_NOT_FOUND };
     }
 
     const topicRelatedConceptResponse = await conceptRepository.fetchConceptData3(singleTopicResponse.Items[0]);
     if (helper.isEmptyArray(topicRelatedConceptResponse?.Items)) {
-      throw { status: 404, message: constant.messages.NO_RELATED_CONCEPTS_FOUND };
+      throw { status: 404, message: messages.NO_RELATED_CONCEPTS_FOUND };
     }
 
     const conceptDigicardIds = topicRelatedConceptResponse.Items.flatMap(e => e.concept_digicard_id);
 
     const digicardResponse = await digicardRepository.fetchDigiCardData2(conceptDigicardIds);
     if (helper.isEmptyArray(digicardResponse?.Items)) {
-      throw { status: 404, message: constant.messages.NO_DIGICARDS_FOUND };
+      throw { status: 404, message: messages.NO_DIGICARDS_FOUND };
     }
 
     const defaultOrderData = await teacherServices.sortDigiCardsBasedonTopic(
@@ -126,7 +126,7 @@ exports.getDigicardsBasedonTopic = async function (request) {
     );
 
     if (helper.isEmptyArray(defaultOrderData?.Items)) {
-      throw { status: 404, message: constant.messages.NO_SORTED_DIGICARDS_FOUND };
+      throw { status: 404, message: messages.NO_SORTED_DIGICARDS_FOUND };
     }
 
     let digicardList = defaultOrderData.Items;
@@ -135,21 +135,21 @@ exports.getDigicardsBasedonTopic = async function (request) {
       if (
         digicard.digicard_image &&
         digicard.digicard_image !== "" &&
-        digicard.digicard_image !== constant.common.NA &&
-        digicard.digicard_image.includes(constant.signedUrlConstants.uploads)
+        digicard.digicard_image !== common.NA &&
+        digicard.digicard_image.includes(signedUrlConstants.uploads)
       ) {
         digicard.digicard_imageURL = await s3Services.getS3SignedUrl(digicard.digicard_image);
       }
       delete digicard.digicard_image;
     }
 
-    digicardList = await helper.removeDuplicatesFromArrayOfObj(digicardList, constant.messages.DIGI_CARD_ID);
+    digicardList = await helper.removeDuplicatesFromArrayOfObj(digicardList, messages.DIGI_CARD_ID);
 
     const finalResponse = await exports.splitActiveAndArchivedDigicards(request, digicardList);
 
     return finalResponse;
   } catch (error) {
-    return { status: error.status || 500, message: error.message || constant.messages.INTERNAL_SERVER_ERROR };
+    return { status: error.status || 500, message: error.message || messages.INTERNAL_SERVER_ERROR };
   }
 };
 
@@ -172,9 +172,9 @@ exports.splitActiveAndArchivedDigicards = async (request, digicardList) => {
       : [];
 
     let prePostData = !helper.isEmptyArray(chapterData)
-      ? chapterData[0][reqData.learningType === constant.prePostConstans.preLearningVal
-        ? constant.prePostConstans.preLearning
-        : constant.prePostConstans.postLearning]
+      ? chapterData[0][reqData.learningType === prePostConstans.preLearningVal
+        ? prePostConstans.preLearning
+        : prePostConstans.postLearning]
       : [];
 
     let topicData = !helper.isEmptyArray(prePostData)
@@ -214,10 +214,10 @@ exports.splitActiveAndArchivedDigicards = async (request, digicardList) => {
 exports.getTopicsBasedonChapters = async (request) => {
   try {
     if (!Array.isArray(request.data.chapter_array) || helper.isEmptyArray(request.data.chapter_array)) {
-      throw helper.formatErrorResponse(constant.messages.INVALID_REQUEST_FORMAT, 400);
+      throw helper.formatErrorResponse(messages.INVALID_REQUEST_FORMAT, 400);
     }
     const chapter_array = request.data.chapter_array.map((val) => ({ chapter_id: val }));
-    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: constant.common.OR });
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
     if (helper.isEmptyArray(chapter_response.Items)) {
       return chapter_response.Items;
     }
@@ -228,10 +228,10 @@ exports.getTopicsBasedonChapters = async (request) => {
     }, []);
 
     const formatted_topic_array = topic_array.map((val) => ({ topic_id: val }));
-    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: formatted_topic_array, condition: constant.common.OR });
+    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: formatted_topic_array, condition: common.OR });
     return topic_response.Items;
 
   } catch (error) {
-    throw helper.formatErrorResponse(error.message || constant.messages.INVALID_REQUEST_FORMAT, 400);
+    throw helper.formatErrorResponse(error.message || messages.INVALID_REQUEST_FORMAT, 400);
   }
 };

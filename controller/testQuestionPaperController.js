@@ -1,5 +1,5 @@
 const { testQuestionPaperServices } = require("../services");
-const constants = require("../constants/constant");
+const { messages } = require("../constants/constant");
 const { formatResponse } = require("../helper/helper");
 
 exports.fetchTestQuestionPapersBasedonStatus = async (req, res, next) => {
@@ -51,7 +51,7 @@ exports.toggleQuestionPaper = async (req, res, next) => {
         if (toggleQuestionPaperResponse.statusCode == 200) {
             formatResponse(res, toggleQuestionPaperResponse);
         } else {
-            formatResponse(res, constants.messages.CANNOT_DELETE_QUESTION_PAPER, toggleQuestionPaperResponse.statusCode);
+            formatResponse(res, messages.CANNOT_DELETE_QUESTION_PAPER, toggleQuestionPaperResponse.statusCode);
         }
     } catch (error) {
         next(error);

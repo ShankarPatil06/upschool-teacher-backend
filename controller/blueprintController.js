@@ -1,6 +1,6 @@
 const { blueprintServices } = require("../services");
 const { formatResponse } = require("../helper/helper");
-const { constant } = require("../constants");
+const { messages } = require("../constants");
 
 exports.fetchBlueprintById = async (req, res) => {
     try {
@@ -30,7 +30,7 @@ exports.fetchQuestionBasedOnBlueprint = async (req, res) => {
 
         res.json(blueQuestions_response);
     } catch (error) {
-        res.status(error.status || 500).json({ message: error.message || constant.messages.INTERNAL_SERVER_ERROR });
+        res.status(error.status || 500).json({ message: error.message || messages.INTERNAL_SERVER_ERROR });
     }
 };
 
