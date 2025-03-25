@@ -21,7 +21,11 @@ exports.messages = {
     INCORRECT_OLDPASSWORD: "Invalid Current Password!",
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
-    AUTHORIZATION:"Authorization",
+    AUTHORIZATION: "Authorization",
+    TOKEN:'token',
+    INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
+    TOPIC_NOT_FOUND:"Topic Not Found",
+    DIGICARDS_NOT_FOUND:"DigiCards Not Found",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -374,8 +378,40 @@ exports.signedUrlConstants = {
     uploads: "uploads/"
 }
 
-exports.requestData={
-    scannerSessionId:"scanner_session_id",
-    userResetOtp:"user_reset_otp",
-    userJwt:"user_jwt"
+exports.requestData = {
+    scannerSessionId: "scanner_session_id",
+    userResetOtp: "user_reset_otp",
+    userJwt: "user_jwt",
+    categoryId: "category_id",
+    categoryName: "category_name",
+    cognitiveId: "cognitive_id",
+    cognitiveName: "cognitive_name",
+    chapterId: "chapter_id",
+    chapterStatus: "chapter_status",
+    postLearningTopicId: "postlearning_topic_id",
+    preLearningTopicId: "prelearning_topic_id",
+    topicId: "topic_id",
+    topicStatus: "topic_status",
+    topicConceptId: "topic_concept_id",
+    conceptId: "concept_id",
+    conceptQuestionId: "concept_question_id",
+    conceptStatus: "concept_status",
+    questionId: "question_id",
+    answersOfQuestion: "answers_of_question",
+    appearsIn: "appears_in",
+    cognitiveSkill: "cognitive_skill",
+    difficultyLevel: "difficulty_level",
+    marks: "marks",
+    questionActiveStatus: "question_active_status",
+    questionCategory: "question_category",
+    questionContent: "question_content",
+    questionSource: "question_source",
+    questionStatus: "question_status",
+    questionType: "question_type",
+    publish:"Publish",
+    teacherId:"teacher_id",
+    reset:"reset",
+    create:"create",
+    sendOTP:"Send OTP",
+    userOTP:"user_otp"
 }
