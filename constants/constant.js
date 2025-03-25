@@ -21,7 +21,10 @@ exports.messages = {
     INCORRECT_OLDPASSWORD: "Invalid Current Password!",
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
+    INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
     AUTHORIZATION:"Authorization",
+    TOPIC_NOT_FOUND:"Topic Not Found",
+    DIGICARDS_NOT_FOUND:"DigiCards Not Found",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -208,8 +211,8 @@ exports.commonConditionValue = {
     a: "a",
     b: "b",
     c: "c",
-    classTest:"classTest",
-    quiz:"quiz"
+    classTest: "classTest",
+    quiz: "quiz"
 }
 
 exports.constValues = {
@@ -366,8 +369,8 @@ exports.signedUrlConstants = {
     uploads:"uploads/"
 }
 
-exports.requestData={
-    scannerSessionId:"scanner_session_id",
-    userResetOtp:"user_reset_otp",
-    userJwt:"user_jwt"
+exports.requestData = {
+    scannerSessionId: "scanner_session_id",
+    userResetOtp: "user_reset_otp",
+    userJwt: "user_jwt"
 }

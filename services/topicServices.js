@@ -121,7 +121,7 @@ exports.getDigicardsBasedonTopic = async function (request) {
 
     const defaultOrderData = await teacherServices.sortDigiCardsBasedonTopic(
       singleTopicResponse,
-      topicRelatedConceptResponse,
+      topicRelatedConceptResponse?.Items,
       digicardResponse
     );
 
