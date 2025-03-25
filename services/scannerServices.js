@@ -375,7 +375,7 @@ exports.uploadQuizAnswerSheetsNew = async function (request) {
                 return (constant.messages.COULDNOT_READ_QUIZ_ID);
             }
             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-            
+
             if (fetchStudentDataResponse.Items.length > 0) {
                 request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
 
@@ -474,7 +474,7 @@ exports.uploadAnswerSheets2New = async (request) => {
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-            
+
             if (studentData.Items.length > 0) {
                 request.data.student_id = studentData.Items[0].student_id;
                 const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
@@ -483,8 +483,8 @@ exports.uploadAnswerSheets2New = async (request) => {
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
                     if (insertResponse === 200) {
                         return (constant.messages.IMAGE_UPLOADED_SUCCESSFULLY)
-                    } else { 
-                        return (constant.messages.NEW_STUDENT_RECORD_NOT_ADDED) 
+                    } else {
+                        return (constant.messages.NEW_STUDENT_RECORD_NOT_ADDED)
                     }
                 } else {
 
@@ -508,9 +508,9 @@ exports.uploadAnswerSheets2New = async (request) => {
                             answer_metadata: testResultData.Items[0].answer_metadata,
                         }
                     };
-                    
+
                     const updateResponse = await testResultRepository.updateTestDataOfStudent2(updateRequest);
-                    
+
                     if (updateResponse) {
                         return constant.messages.IMAGE_SUCCESSFULLY_UPDATED
                     } else {
@@ -748,7 +748,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
             request.data.quiz_id = quizId;
             request.data.quiz_set = set;
             request.data.answer_metadata = quizPageMetadata.answer_metadata;
-            
+
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
 
             if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
@@ -824,7 +824,7 @@ exports.uploadQuizAnswerSheets2 = async function (request) {
 exports.removeUploadedAnswerData = async function (request) {
 
     const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
-    
+
     if (studentData.Items.length > 0) {
         request.data.student_id = studentData.Items[0].student_id;
 

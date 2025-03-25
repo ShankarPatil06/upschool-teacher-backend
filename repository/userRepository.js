@@ -35,19 +35,19 @@ exports.fetchUserDataByEmail = function (request, callback) {
 
 exports.fetchUserDataByEmail2 = async (request) => {
 
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_email = :user_email",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_email": request.data.user_email.toLowerCase()
-            },
-        };
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_email = :user_email",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_email": request.data.user_email.toLowerCase()
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 
 };
 
@@ -86,19 +86,19 @@ exports.fetchUserDataByPhoneNo = function (request, callback) {
 
 exports.fetchUserDataByPhoneNo2 = async (request) => {
 
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_phone_no = :user_phone_no",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_phone_no": request.data.user_email 
-            },
-        };
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_phone_no = :user_phone_no",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_phone_no": request.data.user_email
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 };
 
 
@@ -137,19 +137,19 @@ exports.fetchUserDataByUserName = function (request, callback) {
 
 exports.fetchUserDataByUserName2 = async (request) => {
 
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_name = :user_name",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_name": request.data.user_email 
-            },
-        };
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_name = :user_name",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_name": request.data.user_email
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 };
 
 
@@ -219,20 +219,20 @@ exports.updateJwtToken = function (request, callback) {
 }
 
 exports.updateJwtToken2 = async (request) => {
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: {
-                "teacher_id": request.teacher_id
-            },
-            UpdateExpression: "set user_jwt = :user_jwt, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_jwt": request.user_jwt,
-                ":updated_ts": helper.getCurrentTimestamp(),
-            },
-        };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            "teacher_id": request.teacher_id
+        },
+        UpdateExpression: "set user_jwt = :user_jwt, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_jwt": request.user_jwt,
+            ":updated_ts": helper.getCurrentTimestamp(),
+        },
+    };
 
-        const result = await DATABASE_TABLE2.updateService(params);
-        return result;
+    const result = await DATABASE_TABLE2.updateService(params);
+    return result;
 };
 
 
@@ -265,20 +265,20 @@ exports.updateUserOtp = function (request, callback) {
 
 exports.updateUserOtp2 = async (request) => {
 
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: {
-                "teacher_id": request.data.teacher_id,
-            },
-            UpdateExpression: "set user_otp = :user_otp, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_otp": request.data.user_otp,
-                ":updated_ts": helper.getCurrentTimestamp(),
-            },
-        };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            "teacher_id": request.data.teacher_id,
+        },
+        UpdateExpression: "set user_otp = :user_otp, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_otp": request.data.user_otp,
+            ":updated_ts": helper.getCurrentTimestamp(),
+        },
+    };
 
-        await DATABASE_TABLE2.updateService(params);
-        return { statusCode: 200, body: "OTP updated successfully." };
+    await DATABASE_TABLE2.updateService(params);
+    return { statusCode: 200, body: "OTP updated successfully." };
 };
 
 
@@ -322,7 +322,7 @@ exports.resetUserOtp2 = async (request) => {
         },
     };
 
-    await DATABASE_TABLE2.updateService(params); 
+    await DATABASE_TABLE2.updateService(params);
     return { statusCode: 200, message: "OTP updated successfully" };
 
 };
@@ -358,21 +358,21 @@ exports.resetPassword = function (request, callback) {
 }
 
 exports.resetPassword2 = async (request) => {
- 
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: { "teacher_id": request.data.teacher_id },
-            UpdateExpression: "set user_jwt = :user_jwt, user_salt = :user_salt, user_pwd = :user_pwd, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_jwt": request.data.user_jwt,
-                ":user_salt": request.data.user_salt,
-                ":user_pwd": request.data.user_pwd,
-                ":updated_ts": helper.getCurrentTimestamp()
-            },
-        };
 
-        await DATABASE_TABLE2.updateService(params);
-        return { statusCode: 200, message: "Password reset successfully" };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: { "teacher_id": request.data.teacher_id },
+        UpdateExpression: "set user_jwt = :user_jwt, user_salt = :user_salt, user_pwd = :user_pwd, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_jwt": request.data.user_jwt,
+            ":user_salt": request.data.user_salt,
+            ":user_pwd": request.data.user_pwd,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    };
+
+    await DATABASE_TABLE2.updateService(params);
+    return { statusCode: 200, message: "Password reset successfully" };
 };
 
 
@@ -401,6 +401,24 @@ exports.fetchTeacherEmailById = function (request, callback) {
         }
     });
 }
+
+exports.fetchTeacherEmailById2 = async (request) => {
+    try {
+        const params = {
+            TableName: TABLE_NAMES.upschool_teacher_info,
+            KeyConditionExpression: "teacher_id = :teacher_id",
+            ExpressionAttributeValues: {
+                ":teacher_id": request.data.teacher_id,
+            },
+            ProjectionExpression: "teacher_id, user_email",
+        };
+        return await DATABASE_TABLE2.query(params);
+    } catch (error) {
+        console.error("Error fetching teacher email:", error);
+        throw new Error("Failed to fetch teacher email");
+    }
+};
+
 
 exports.changeUserStatus = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
