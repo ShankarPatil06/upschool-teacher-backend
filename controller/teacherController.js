@@ -11,6 +11,7 @@ exports.fetchTeacherClasses = async (req, res, next) => {
         next(error)
     }
 };
+
 exports.fetchTeacherSectionsBasedonClass = async (req, res, next) => {
     try {
         const request = req.body;
@@ -20,6 +21,7 @@ exports.fetchTeacherSectionsBasedonClass = async (req, res, next) => {
         next(error)
     }
 };
+
 exports.fetchTeacherSubjectsBasedonSection = async (req, res, next) => {
     try {
         const request = req.body;
@@ -29,19 +31,6 @@ exports.fetchTeacherSubjectsBasedonSection = async (req, res, next) => {
         next(error)
     }
 };
-// exports.fetchDigicardsBasedonTopic = (req, res, next) => {
-//     let request = req.body;
-//     request["token"] = req.header('Authorization');
-
-//     teacherServices.getDigicardsBasedonTopic(request, function (individual_topic_err, individual_topic_response) {
-//         if (individual_topic_err) {
-//             res.status(individual_topic_err).json(individual_topic_response);
-//         } else {
-//             console.log("Topic related Concepts Fetched Successfully");
-//             res.json(individual_topic_response);
-//         }
-//     });
-// };
 
 exports.archivedActiveTopicsInChapter = async (req, res, next) => {
     try {
@@ -52,7 +41,6 @@ exports.archivedActiveTopicsInChapter = async (req, res, next) => {
         next(error)
     }
 };
-
 
 exports.getPreGrantedTeacherPermissions = async (req, res, next) => {
     try {
@@ -120,30 +108,25 @@ exports.toggleDigicardsInTopic = async (req, res, next) => {
         next(error)
     }
 };
-exports.fetchDigiCardstoReorder = (req, res, next) => {
-    console.log("fetchDigiCardstoReorder : ");
-    let request = req.body;
-    teacherServices.getDigiCardstoReorder(request, function (permission_err, permission_response) {
-        if (permission_err) {
-            res.status(permission_err).json(permission_response);
-        } else {
-            console.log("DigiCards Fetched Successfully");
-            res.json(permission_response);
-        }
-    });
-};
-exports.fetchQuestionSourceandChapters = (req, res, next) => {
-    console.log("fetchQuestionSourceandChapters : ");
-    let request = req.body;
-    request.data.source_type = constant.contentType.question;
-    request.data.source_status = "Active";
 
-    teacherServices.getQuestionSourceandChapters(request, function (question_source_and_chapters_err, question_source_and_chapters_response) {
-        if (question_source_and_chapters_err) {
-            res.status(question_source_and_chapters_err).json(question_source_and_chapters_response);
-        } else {
-            console.log("QuestionSource and Chapters Fetched Successfully");
-            res.json(question_source_and_chapters_response);
-        }
-    });
+exports.fetchDigiCardstoReorder = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const digiCardsResponse = await teacherServices.getDigiCardstoReorder(request);
+        return formatResponse(res, digiCardsResponse);
+    } catch (error) {
+        next(error)
+    }
+};
+
+exports.fetchQuestionSourceandChapters = async (req, res, next) => {
+    try {
+        let request = req.body;
+        request.data.source_type = constant.contentType.question;
+        request.data.source_status = "Active";
+        const response = await teacherServices.getQuestionSourceandChapters(request);
+        return formatResponse(res, response);
+    } catch (error) {
+        next(error)
+    }
 };

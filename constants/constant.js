@@ -23,6 +23,8 @@ exports.messages = {
     ACCESS_DENIED: "Access Denied!",
     INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
     AUTHORIZATION:"Authorization",
+    TOPIC_NOT_FOUND:"Topic Not Found",
+    DIGICARDS_NOT_FOUND:"DigiCards Not Found",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
