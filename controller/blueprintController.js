@@ -1,7 +1,8 @@
 const { blueprintServices } = require("../services");
 const { formatResponse } = require("../helper/helper");
+const { constant } = require("../constants");
 
-exports.fetchBlueprintById = async (req, res, next) => {
+exports.fetchBlueprintById = async (req, res) => {
     try {
         const request = req.body;
         const fetch_blueprint_response = await blueprintServices.getBlueprintByItsId(request);
@@ -21,7 +22,7 @@ exports.fetchBlueprintDetailsBasedonId = async (req, res, next) => {
     }
 };
 
-exports.fetchQuestionBasedOnBlueprint = async (req, res, next) => {
+exports.fetchQuestionBasedOnBlueprint = async (req, res) => {
     try {
         let request = req.body;
 
@@ -29,7 +30,7 @@ exports.fetchQuestionBasedOnBlueprint = async (req, res, next) => {
 
         res.json(blueQuestions_response);
     } catch (error) {
-        res.status(error.status || 500).json({ message: error.message || "Internal Server Error" });
+        res.status(error.status || 500).json({ message: error.message || constant.messages.INTERNAL_SERVER_ERROR });
     }
 };
 

@@ -21,10 +21,7 @@ exports.messages = {
     INCORRECT_OLDPASSWORD: "Invalid Current Password!",
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     ACCESS_DENIED: "Access Denied!",
-    INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
     AUTHORIZATION:"Authorization",
-    TOPIC_NOT_FOUND:"Topic Not Found",
-    DIGICARDS_NOT_FOUND:"DigiCards Not Found",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -55,9 +52,9 @@ exports.messages = {
     UNABLE_TO_UNLOCK_DIGICARDS: "Unable to unlock Digicards for **REPLACE** as they are unlocked",
     DIDNT_UNLOCK_DIGICARD: "Digicards haven't been unlocked for the selected Topics!",
     DIGICARDS_FETCHED_FOR_REORDERING: "DigiCard Fetched for Reordering",
-    NO_DIGICARDS_FOUND:"No digicards found",
-    NO_SORTED_DIGICARDS_FOUND:"No sorted digicards found",
-    DIGI_CARD_ID:"digi_card_id",
+    NO_DIGICARDS_FOUND: "No digicards found",
+    NO_SORTED_DIGICARDS_FOUND: "No sorted digicards found",
+    DIGI_CARD_ID: "digi_card_id",
 
     // Quiz : 
     PRE_QUIZ_ALREADY_GENERATED: "Pre learning quiz has been generated already!",
@@ -86,7 +83,7 @@ exports.messages = {
     NO_TOPICS_SELECTED: "No Topics Selected",
     NO_TOPIC_IS_SELECTED: "No topic has been selected!",
     TOPICS_ALREADY_UNLOCKED: "**REPLACE** topics's digicards have already been unlocked!",
-    TOPICS_NOT_FOUND:"Topic not found",
+    TOPICS_NOT_FOUND: "Topic not found",
 
     // Chapter :
     CHAPTER_DATABASE_ERROR: "Chapter Database Error",
@@ -97,7 +94,7 @@ exports.messages = {
     CHAPTER_NAME_ALREADY_EXISTS: "Chapter Name Already Exists",
     UNABLE_TO_DELETE_THE_CHAPTER: "Unable to delete the chapter as it is mapped with the units: **REPLACE**",
     INVALID_REQUEST: "Invalid Request",
-    
+
 
     // Unit :
     UNIT_DATABASE_ERROR: "Unit Database Error",
@@ -124,7 +121,7 @@ exports.messages = {
     // Concept : 
     CONCEPT_TITLE_ALREADY_EXIST: "Concept Title Already Exist!",
     UNABLE_TO_DELETE_THE_CONCEPT: "Unable to delete the concept as it is mapped with the topics: **REPLACE**",
-    NO_RELATED_CONCEPTS_FOUND:"No related concepts found",
+    NO_RELATED_CONCEPTS_FOUND: "No related concepts found",
 
     // Subject : 
     SUBJECT_TITLE_ALREADY_EXIST: "Subject Title Already Exist!",
@@ -183,20 +180,28 @@ exports.messages = {
     QUERY_FAILED: "Query failed with status: **status**",
     QUERY_EXECUTION_FAILED: "Error executing query: **error**",
 
-    INVALID_SUBJECT_ID: "INVALID SUBJECT ID"
+    INVALID_SUBJECT_ID: "INVALID SUBJECT ID",
+    BLUEPRINT_QUESTIONS_FETCH_FAILED: "Error fetching blueprint questions.",
+
+    OTP_SENT_SUCCESS: "OTP sent successfully.",
+    USER_EMAIL_NOT_EXIST: "User email does not exist.",
+    PASSWORD_RESET_SUCCESS: "Password reset successfully.",
+    PASSWORD_CHANGED_SUCCESS: "Password changed successfully."
+
+
 }
 
 exports.common = {
     NA: "N.A.",
-    OR:"OR",
+    OR: "OR",
     No: "No",
     Yes: "Yes",
     AND: "AND",
     Active: "Active",
-    Archived:"Archived",
-    MasterAdmin:"MasterAdmin",
-    YYYY_MM_DD:"yyyy_mm_dd",
-    DD_MM_YYYY:"dd_mm_yyyy"
+    Archived: "Archived",
+    MasterAdmin: "MasterAdmin",
+    YYYY_MM_DD: "yyyy_mm_dd",
+    DD_MM_YYYY: "dd_mm_yyyy"
 }
 exports.commonConditionValue = {
     pageNo: "pageNo",
@@ -365,12 +370,12 @@ exports.awsConstants = {
 }
 
 exports.signedUrlConstants = {
-    replace:"**REPLACE**",
-    uploads:"uploads/"
+    replace: "**REPLACE**",
+    uploads: "uploads/"
 }
 
-exports.requestData = {
-    scannerSessionId: "scanner_session_id",
-    userResetOtp: "user_reset_otp",
-    userJwt: "user_jwt"
+exports.requestData={
+    scannerSessionId:"scanner_session_id",
+    userResetOtp:"user_reset_otp",
+    userJwt:"user_jwt"
 }
