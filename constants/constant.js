@@ -7,6 +7,7 @@ exports.messages = {
     DATABASE_ERROR: "DB Error",
     USER_DOESNOT_EXISTS: "User Doesn't Exist",
     TEACHER_DOESNOT_EXISTS: "Teacher Doesn't Exist",
+    TEACHER_EMAIL_DOESNOT_EXISTS: "Teacher email not found",
     CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST: "No Comination of this Class, Section, Subject Exists for the Teacher",
     INVALID_PASSWORD: "Invalid Password",
     FIRST_LOGIN: "Password doesn't exist, please login with OTP or create a password!",
@@ -24,6 +25,7 @@ exports.messages = {
     AUTHORIZATION: "Authorization",
     TOKEN: 'token',
     INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
+    SCHOOL_NOT_FOUND: "School details not found",
     CHAPTER_NOT_FOUND: "Chapter not found",
     CONCEPT_NOT_FOUND: "Concepts not found",
     TOPIC_NOT_FOUND: "Topic Not Found",
@@ -198,7 +200,6 @@ exports.messages = {
     PASSWORD_CHANGED_SUCCESS: "Password changed successfully.",
     QUESTIONS_NOT_FOUND: "Questions not found."
 
-
 }
 
 exports.common = {
@@ -211,6 +212,7 @@ exports.common = {
     AND: "AND",
     Active: "Active",
     Archived: "Archived",
+    delete: "delete",
     MasterAdmin: "MasterAdmin",
     YYYY_MM_DD: "yyyy_mm_dd",
     DD_MM_YYYY: "dd_mm_yyyy",
@@ -224,6 +226,7 @@ exports.common = {
     customActive: "customActive",
     customWorksheet: "customWorksheet",
     Enabled: "Enabled",
+    quizGeneration: "quizGeneration",
     Test: "Test",
     Upschool: "Upschool",
     unknownConcept: "Unknown Concept",
@@ -232,7 +235,9 @@ exports.common = {
     unknownLearningType: "Unknown Learning Type",
     unknownStudent: "Unknown Student",
 }
+
 exports.commonConditionValue = {
+    active: "active",
     automated: "Automated",
     express: "express",
     manual: "manual",
@@ -241,6 +246,7 @@ exports.commonConditionValue = {
     testID: "Test ID",
     quizID: "Quiz ID",
     test_id: "testid",
+    toggle: "toggle",
     rollNo: "Roll No",
     roll_no: "rollno",
     quiz_id: "quizid",
@@ -326,7 +332,10 @@ exports.questionKeys = {
 }
 
 exports.contentType = {
-    question: "question"
+    question: "question",
+    topics: "topics",
+    concepts: "concepts",
+    digiCardExtension: "digicard_extension",
 }
 
 exports.status = {
