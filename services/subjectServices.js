@@ -1,30 +1,30 @@
 const { subjectRepository, unitRepository, teacherRepository, chapterRepository, commonRepository } = require("../repository")
-const constant = require('../constants/constant');
+const { common, messages, requestData } = require('../constants/constant');
 const { TABLE_NAMES } = require('../constants/tables');
 
 exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
     const teacherInfoRes = await teacherRepository.fetchTeacherByID2(request);
 
     if (teacherInfoRes.Items.length === 0) {
-        return { statusCode: 400, message: constant.messages.INVALID_TEACHER };
+        return { statusCode: 400, message: messages.INVALID_TEACHER };
     }
 
     const allocationCheck = teacherInfoRes.Items[0].teacher_info.filter((e) =>
         e.client_class_id === request.data.client_class_id &&
         e.section_id === request.data.section_id &&
         e.subject_id === request.data.subject_id &&
-        e.info_status === "Active"
+        e.info_status === common.Active
     );
 
     if (allocationCheck.length === 0) {
-        return { statusCode: 400, message: constant.messages.SUBJECT_ISNOT_ALLOCATE_TO_TEACHER };
+        return { statusCode: 400, message: messages.SUBJECT_ISNOT_ALLOCATE_TO_TEACHER };
     }
 
     const teacherActivityDetailsRes = await teacherRepository.fetchTeacherActivityDetails2(request);
     const subjectFetchRes = await subjectRepository.getSubjetById2(request);
 
     if (subjectFetchRes.Items.length === 0) {
-        return { statusCode: 400, message: constant.messages.INVALID_SUBJECT_ID };
+        return { statusCode: 400, message: messages.INVALID_SUBJECT_ID };
     }
 
     if (subjectFetchRes.Items[0].subject_unit_id.length === 0) {
@@ -44,7 +44,7 @@ exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
         const chapterLockStatus = teacherActivityDetailsRes.Items[0]?.chapter_data?.find(
             (item) => item.chapter_id === chapter.chapter_id
         );
-        chapter.chapter_locked = chapterLockStatus && chapterLockStatus.chapter_locked === "No" ? "No" : "Yes";
+        chapter.chapter_locked = chapterLockStatus && chapterLockStatus.chapter_locked === common.No ? common.No : common.Yes;
     });
 
     unitFetchRes.forEach((unit) => {
@@ -58,11 +58,11 @@ exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
 };
 
 exports.getExpressTopicsAndQuestionCount2 = async (request) => {
-    
+
     const chapterDataRes = await chapterRepository.fetchChapterByID2(request);
 
     if (!chapterDataRes.Items || chapterDataRes.Items.length === 0) {
-        return { statusCode: 404, message: "Chapter not found" };
+        return { statusCode: 404, message: messages.CHAPTER_NOT_FOUND };
     }
 
     const prelearningTopicIds = chapterDataRes.Items[0].prelearning_topic_id;
@@ -73,16 +73,16 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const fetchBulkReq = {
         IdArray: prelearningTopicIds,
-        fetchIdName: "topic_id",
-        isActiveFieldName: "topic_status",
-        isActive: "Active",
+        fetchIdName: requestData.topicId,
+        isActiveFieldName: requestData.topicStatus,
+        isActive: common.Active,
         TableName: TABLE_NAMES.upschool_topic_table,
     };
 
     const topicDataRes = await commonRepository.getBulkDataUsingIndexWithActiveStatus2(fetchBulkReq);
 
     if (!topicDataRes.Items || topicDataRes.Items.length === 0) {
-        return { statusCode: 404, message: "Topics not found" };
+        return { statusCode: 404, message: messages.TOPIC_NOT_FOUND };
     }
 
     const topicConceptsIds = [...new Set(topicDataRes.Items.flatMap(item => item.topic_concept_id))];
@@ -93,14 +93,14 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const fetchBulkConceptReq = {
         IdArray: topicConceptsIds,
-        fetchIdName: "concept_id",
+        fetchIdName: requestData.conceptId,
         TableName: TABLE_NAMES.upschool_concept_blocks_table,
     };
 
     const conceptDataRes = await commonRepository.fetchBulkData2(fetchBulkConceptReq);
 
     if (!conceptDataRes.Items || conceptDataRes.Items.length === 0) {
-        return { statusCode: 404, message: "Concepts not found" };
+        return { statusCode: 404, message: messages.CONCEPT_NOT_FOUND };
     }
     return { statusCode: 200, data: conceptDataRes.Items };
 };

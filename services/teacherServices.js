@@ -1,28 +1,28 @@
-const dynamoDbCon = require('../awsConfig');
+const dynamoDbCon = require("../awsConfig");
 const questionServices = require("./questionServices");
 const { digicardExtension, userRepository, chapterRepository, topicRepository, subjectRepository, teacherRepository, schoolRepository, unitRepository, quizRepository, conceptRepository, digicardRepository, settingsRepository, groupRepository, teachingActivityRepository } = require("../repository")
 const constant = require("../constants/constant");
 const helper = require("../helper/helper");
-const qs = require('qs');
-const axios = require('axios');
+const qs = require("qs");
+const axios = require("axios");
 let sendMail = require("./emailService");
 
 exports.getTeacherClasses = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
-  request.data['school_id'] = individual_teacher_response?.Items[0]?.school_id;
+  request.data[constant.requestData.schoolId] = individual_teacher_response?.Items[0]?.school_id;
   const schoolDetails = await schoolRepository.getSchoolDetailsById2(request)
-  if (schoolDetails.Items[0].school_logo && schoolDetails.Items[0].school_logo !== "" && schoolDetails.Items[0].school_logo !== "N.A." && schoolDetails.Items[0].school_logo.includes("uploads/")) {
+  if (schoolDetails.Items[0].school_logo && schoolDetails.Items[0].school_logo !== "" && schoolDetails.Items[0].school_logo !== constant.common.NA && schoolDetails.Items[0].school_logo.includes(constant.signedUrlConstants.uploads)) {
     let Key = schoolDetails.Items[0].school_logo;
     let s3Params = {
       Bucket: process.env.BUCKET_NAME,
       Key,
     }
-    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise('getObject', s3Params)
+    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise(constant.requestData.getObject, s3Params)
     schoolDetails.Items[0].school_logoURL = uploadURL;
   }
-  const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ "client_class_id": val.client_class_id }));
-  const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: "OR" })
-  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === 'Upschool' ? false : schoolDetails.Items[0]?.school_logoURL }
+  const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ client_class_id: val.client_class_id }));
+  const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: constant.common.OR })
+  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === constant.common.Upschool ? false : schoolDetails.Items[0]?.school_logoURL }
   return teacherResponse2;
 };
 
@@ -30,19 +30,19 @@ exports.getTeacherSectionsBasedonClass = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
   let section_ids = (individual_teacher_response.Items[0].teacher_section_allocation.filter((e) => e.client_class_id == request.data.client_class_id)).map(({ section_id }) => ({ section_id }));
 
-  return await teacherRepository.fetchTeacherSectionData2({ items: section_ids, condition: "OR" })
+  return await teacherRepository.fetchTeacherSectionData2({ items: section_ids, condition: constant.common.OR })
 };
 
 exports.getTeacherSubjectsBasedonSection = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
-  let subject_ids = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === "Active").map(({ subject_id }) => ({ subject_id }));
+  let subject_ids = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === constant.common.Active).map(({ subject_id }) => ({ subject_id }));
 
-  return await teacherRepository.fetchTeacherSubjectData2({ items: subject_ids, condition: "OR" })
+  return await teacherRepository.fetchTeacherSubjectData2({ items: subject_ids, condition: constant.common.OR })
 };
 
 exports.archiveAndActivateTopicInChapter = async (request) => {
-  const preOrPost = request.data.learningType === constant.prePostConstans.preLearningVal ? constant.prePostConstans.preLearning : request.data.learningType === constant.prePostConstans.postLearningVal ? constant.prePostConstans.postLearning : "N.A.";
-  if (preOrPost === "N.A.") {
+  const preOrPost = request.data.learningType === constant.prePostConstans.preLearningVal ? constant.prePostConstans.preLearning : request.data.learningType === constant.prePostConstans.postLearningVal ? constant.prePostConstans.postLearning : constant.common.NA;
+  if (preOrPost === constant.common.NA) {
     throw helper.formatErrorResponse(constant.messages.INVALID_DATA, 400);
   }
 
@@ -53,7 +53,7 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
     let chapterIndex = allChapter.findIndex(Chap => Chap.chapter_id === request.data.chapter_id);
 
     if (chapterIndex >= 0) {
-      if (request.data.isArchived === "Yes") {
+      if (request.data.isArchived === constant.common.Yes) {
         allChapter[chapterIndex][preOrPost].archivedTopics.push(request.data.topic_id);
       } else {
         let archIndex = allChapter[chapterIndex][preOrPost].archivedTopics.findIndex(arTop => arTop === request.data.topic_id);
@@ -65,7 +65,7 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
     } else {
       const newChapterData = {
         chapter_id: request.data.chapter_id,
-        chapter_locked: "Yes",
+        chapter_locked: constant.common.Yes,
         pre_learning: {
           unlocked_digicard: {},
           archivedTopics: request.data.learningType === constant.prePostConstans.preLearningVal ? [request.data.topic_id] : []
@@ -118,7 +118,7 @@ exports.getTeacherPreLearningPermissions = async (request) => {
       throw new Error(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
     }
 
-    if (preQuizConfig.unlock_digicard_mandatory === "Yes" && unlockTopicDigicard.length <= 0) {
+    if (preQuizConfig.unlock_digicard_mandatory === constant.common.Yes && unlockTopicDigicard.length <= 0) {
       throw new Error(constant.messages.DIGICARD_UNLOCK_MANDATORY);
     }
 
@@ -134,31 +134,29 @@ exports.getTeacherPreLearningPermissions = async (request) => {
     };
 
     const preQuizType = [
-      preQuizConfig.automated_type === "Enabled" ? constant.prePostConstans.automatedType : "N.A.",
-      preQuizConfig.express_type === "Enabled" ? constant.prePostConstans.expressType : "N.A.",
-      preQuizConfig.manual_type === "Enabled" ? constant.prePostConstans.manualType : "N.A."
-    ].filter(type => type !== "N.A.");
+      preQuizConfig.automated_type === constant.common.Enabled ? constant.prePostConstans.automatedType : constant.common.NA,
+      preQuizConfig.express_type === constant.common.Enabled ? constant.prePostConstans.expressType : constant.common.NA,
+      preQuizConfig.manual_type === constant.common.Enabled ? constant.prePostConstans.manualType : constant.common.NA
+    ].filter(type => type !== constant.common.NA);
 
     const preQuizMode = [
-      preQuizConfig.offline_mode === "Enabled" ? constant.prePostConstans.offlineMode : "N.A.",
-      preQuizConfig.online_mode === "Enabled" ? constant.prePostConstans.onlineMode : "N.A."
-    ].filter(mode => mode !== "N.A.");
+      preQuizConfig.offline_mode === constant.common.Enabled ? constant.prePostConstans.offlineMode : constant.common.NA,
+      preQuizConfig.online_mode === constant.common.Enabled ? constant.prePostConstans.onlineMode : constant.common.NA
+    ].filter(mode => mode !== constant.common.NA);
 
     const preQuizVarient = [
-      preQuizConfig.randomized_order_varient === "Enabled" ? constant.prePostConstans.randomOrder : "N.A.",
-      preQuizConfig.randomized_questions_varient === "Enabled" ? constant.prePostConstans.randomQuestion : "N.A."
-    ].filter(varient => varient !== "N.A.");
+      preQuizConfig.randomized_order_varient === constant.common.Enabled ? constant.prePostConstans.randomOrder : constant.common.NA,
+      preQuizConfig.randomized_questions_varient === constant.common.Enabled ? constant.prePostConstans.randomQuestion : constant.common.NA
+    ].filter(varient => varient !== constant.common.NA);
 
     response.preLearning.quizModes = preQuizMode;
     response.preLearning.quizType = preQuizType;
     response.preLearning.quizVarient = preQuizVarient;
 
-    console.log("PERMISSIONS : ", JSON.stringify(response));
     return response;
 
   } catch (error) {
-    console.error(error);
-    throw error; // or handle the error as per your application's error handling strategy
+    throw error;
   }
 };
 
@@ -201,7 +199,7 @@ exports.generateQuizForPreLearning = async (request) => {
 
         let selectedTopics = activeTopics.map(topicId => ({
           topic_id: topicId,
-          noOfQuestions: "N.A."
+          noOfQuestions: constant.common.NA
         }));
 
         request.data.selectedTopics = selectedTopics;
@@ -210,7 +208,7 @@ exports.generateQuizForPreLearning = async (request) => {
         const add_quiz_basedon_varient_response = await this.addAutomatedQuizBasedonVarient(request);
 
         if (add_quiz_basedon_varient_response === 200) {
-          if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+          if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
             await exports.sendMailtoTeacher2(request);
             return await exports.createPDFandUpdateTemplateDetails2(request);
           } else {
@@ -231,7 +229,7 @@ exports.generateQuizForPreLearning = async (request) => {
           // Express : 
           const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
           if (add_express_quiz_basedon_varient_response === 200) {
-            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+            if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
               await exports.sendMailtoTeacher2(request);
               return await exports.createPDFandUpdateTemplateDetails2(request);
             } else {
@@ -248,7 +246,7 @@ exports.generateQuizForPreLearning = async (request) => {
               throw new Error(addQuizResponse);
             }
 
-            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+            if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
               await exports.sendMailtoTeacher2(request);
               return await exports.createPDFandUpdateTemplateDetails2(request);
             }
@@ -358,7 +356,7 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
           );
 
           non_considered_topic_data = res_non_considered_topic_data;
-          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, "question_id");
 
           request.data.question_track_details = {
             qp_set_a: res_questionTrackData,
@@ -423,7 +421,7 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
             data.group_list
           );
 
-          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, "question_id");
 
           if (setIndex === 1) {
             request.data.quiz_question_details.qp_set_a = questions_list;
@@ -617,7 +615,7 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
     } else {
       if (request.data.varient === "randomOrder") {
 
-        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
+        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, "question_id");
 
         // // Formatting Topic-Concept-Group-Question level DS 
         request.data.question_track_details.qp_set_a = questionTrackData
@@ -644,9 +642,9 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       } else if (request.data.varient === "randomQuestions") {
 
         // get Questions track based on Set of Diff. questions 
-        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');
+        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, "question_id");
+        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, "question_id");
+        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, "question_id");
 
         request.data.quiz_question_details.qp_set_a = setAQuestions;
         request.data.quiz_question_details.qp_set_b = setBQuestions;
@@ -836,7 +834,7 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
       // After Topic Loop is Over : 
       if (request.data.varient === "randomOrder") {
 
-        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
+        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, "question_id");
 
         // // // Formatting Topic-Concept-Group-Question level DS 
         request.data.question_track_details.qp_set_a = questionTrackData
@@ -859,9 +857,9 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
       } else if (request.data.varient === "randomQuestions") {
 
         // // get Questions track based on Set of Diff. questions 
-        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');;
-        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');;
+        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, "question_id");
+        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, "question_id");;
+        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, "question_id");;
 
         request.data.quiz_question_details.qp_set_a = setAQuestions;
         request.data.quiz_question_details.qp_set_b = setBQuestions;
@@ -902,7 +900,7 @@ exports.generateQuizForPostLearning = async (request) => {
           let selectedTop = [];
           if (request.data.topicList.length > 0) {
             await request.data.topicList.map(reqTop => {
-              selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
+              selectedTop.push({ topic_id: reqTop, noOfQuestions: constant.common.NA });
             })
 
             request.data.selectedTopics = selectedTop;
@@ -911,7 +909,7 @@ exports.generateQuizForPostLearning = async (request) => {
             const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
 
             if (add_quiz_basedon_varient_response === 200) {
-              if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+              if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
                 await exports.sendMailtoTeacher2(request);
                 return await exports.createPDFandUpdateTemplateDetails2(request);
               } else {
@@ -934,7 +932,7 @@ exports.generateQuizForPostLearning = async (request) => {
 
               if (AcitveTopics.length > 0) {
                 await AcitveTopics.forEach(actTop => {
-                  selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
+                  selectedTop.push({ topic_id: actTop, noOfQuestions: constant.common.NA });
                 })
 
                 request.data.selectedTopics = selectedTop;
@@ -943,7 +941,7 @@ exports.generateQuizForPostLearning = async (request) => {
                 const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
 
                 if (add_quiz_basedon_varient_response === 200) {
-                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                  if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
                     await exports.sendMailtoTeacher2(request);
                     return await exports.createPDFandUpdateTemplateDetails2(request);
                   } else {
@@ -973,7 +971,7 @@ exports.generateQuizForPostLearning = async (request) => {
               // Express : 
               const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
               if (add_express_quiz_basedon_varient_response === 200) {
-                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
                   await exports.sendMailtoTeacher2(request);
                   return await exports.createPDFandUpdateTemplateDetails2(request);
                 } else {
@@ -989,7 +987,7 @@ exports.generateQuizForPostLearning = async (request) => {
                 if (addQuizResponse !== 200) {
                   throw new Error(addQuizResponse);
                 }
-                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                if (request.data.quizMode === constant.prePostConstans.offlineMode || request.data.quizMode === constant.prePostConstans.onlineMode) {
                   await exports.sendMailtoTeacher2(request);
                   return await exports.createPDFandUpdateTemplateDetails2(request);
                 }
@@ -1020,7 +1018,7 @@ exports.addteacherDigicardExtension = async (request) => {
     for (let i = 0; i < digiExtension.length; i++) {
       let extFile = digiExtension[i].ext_file;
 
-      if (!(JSON.stringify(extFile).includes("digicard_extension/")) && extFile && extFile !== "N.A.") {
+      if (!(JSON.stringify(extFile).includes("digicard_extension/")) && extFile && extFile !== constant.common.NA) {
         let extFilesS3 = await helper.PutObjectS3SigneUdrl(extFile, "digicard_extension");
 
         request.data.extensions[i].ext_file = extFilesS3.Key;
@@ -1071,28 +1069,22 @@ exports.getTeacherPostLearningPermissions = async (request) => {
 
       const quizData_res = await quizRepository.fetchQuizData2(request);
 
-      if (postQuizConfig.choose_topic === "Yes") {
+      if (postQuizConfig.choose_topic === constant.common.Yes) {
 
-        // requestTopics shouldn't be empty
-        // Check if they are archived or not and filter unarchived topics 
-        // check if requestTopics which are unlocked or not if unlock digicard is mandatory ,  if not, intimate user that, digicard is not unlocked 
-        // requestTopics shouldn't be empty , if yes, throw error 
-        // check quiz table, if there is data, check if the requestTopics id's are there in selectedTopics columns or not 
-        // If yes, throw error, that its already generated 
         let quizGenerated = "No";
 
         await quizData_res.Items.length > 0 && quizData_res.Items.forEach((e) => {
           e.selectedTopics.length > 0 && e.selectedTopics.forEach((a) =>
-            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = "Yes"))
+            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = constant.common.Yes))
         })
-        if (quizData_res.Items.length > 0 && quizGenerated === "Yes") {
+        if (quizData_res.Items.length > 0 && quizGenerated === constant.common.Yes) {
           throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
         } else {
           if (requestTopics.length === 0) {
             console.log(constant.messages.NO_TOPICS_SELECTED);
             return { status: 400, message: constant.messages.NO_TOPICS_SELECTED };
           }
-          if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
+          if (postQuizConfig.unlock_digicard_mandatory === constant.common.Yes) {
             const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(requestTopics, UnlockedTopicIDs);
             if (!unlockAllTopicsCheck) {
               return { status: 400, message: constant.messages.DIDNT_UNLOCK_DIGICARD };
@@ -1124,7 +1116,7 @@ exports.getTeacherPostLearningPermissions = async (request) => {
 
             let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
 
-            if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
+            if (postQuizConfig.unlock_digicard_mandatory === constant.common.Yes) {
               let unlockCheck = [];
 
               AcitveTopics.forEach((e) => UnlockedTopicIDs.filter((a) => e === a).length > 0 && unlockCheck.push(e));
@@ -1179,19 +1171,19 @@ exports.generateResponse = (postQuizConfig) => {
   let preQuizType = [];
   let preQuizVarient = [];
 
-  preQuizType.push(postQuizConfig.automated_type === "Enabled" ? constant.prePostConstans.automatedType : "N.A.");
-  preQuizType.push(postQuizConfig.express_type === "Enabled" ? constant.prePostConstans.expressType : "N.A.");
-  preQuizType.push(postQuizConfig.manual_type === "Enabled" ? constant.prePostConstans.manualType : "N.A.");
+  preQuizType.push(postQuizConfig.automated_type === constant.common.Enabled ? constant.prePostConstans.automatedType : constant.common.NA);
+  preQuizType.push(postQuizConfig.express_type === constant.common.Enabled ? constant.prePostConstans.expressType : constant.common.NA);
+  preQuizType.push(postQuizConfig.manual_type === constant.common.Enabled ? constant.prePostConstans.manualType : constant.common.NA);
 
-  preQuizMode.push(postQuizConfig.offline_mode === "Enabled" ? constant.prePostConstans.offlineMode : "N.A.");
-  preQuizMode.push(postQuizConfig.online_mode === "Enabled" ? constant.prePostConstans.onlineMode : "N.A.");
+  preQuizMode.push(postQuizConfig.offline_mode === constant.common.Enabled ? constant.prePostConstans.offlineMode : constant.common.NA);
+  preQuizMode.push(postQuizConfig.online_mode === constant.common.Enabled ? constant.prePostConstans.onlineMode : constant.common.NA);
 
-  preQuizVarient.push(postQuizConfig.randomized_order_varient === "Enabled" ? constant.prePostConstans.randomOrder : "N.A.");
-  preQuizVarient.push(postQuizConfig.randomized_questions_varient === "Enabled" ? constant.prePostConstans.randomQuestion : "N.A.");
+  preQuizVarient.push(postQuizConfig.randomized_order_varient === constant.common.Enabled ? constant.prePostConstans.randomOrder : constant.common.NA);
+  preQuizVarient.push(postQuizConfig.randomized_questions_varient === constant.common.Enabled ? constant.prePostConstans.randomQuestion : constant.common.NA);
 
-  response.postLearning.quizModes = preQuizMode.filter(qMode => qMode !== "N.A.");
-  response.postLearning.quizType = preQuizType.filter(qType => qType !== "N.A.");
-  response.postLearning.quizVarient = preQuizVarient.filter(qVar => qVar !== "N.A.");
+  response.postLearning.quizModes = preQuizMode.filter(qMode => qMode !== constant.common.NA);
+  response.postLearning.quizType = preQuizType.filter(qType => qType !== constant.common.NA);
+  response.postLearning.quizVarient = preQuizVarient.filter(qVar => qVar !== constant.common.NA);
 
   response.postLearning.concept_mandatory = postQuizConfig.concept_mandatory;
   response.postLearning.min_qn_at_topic_level = postQuizConfig.min_qn_at_topic_level;
@@ -1516,10 +1508,10 @@ exports.createPDFandUpdateTemplateDetails2 = async (request) => {
   try {
     // Call API in EC2 Service and get Question and Answer Paper Paths
     const options = {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
       data: qs.stringify(request),
-      url: process.env.PDF_GENERATION_URL + '/createQuizQuestionAndAnswerPapers',
+      url: process.env.PDF_GENERATION_URL + "/createQuizQuestionAndAnswerPapers",
     };
 
     await axios(options);

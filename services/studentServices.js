@@ -1,9 +1,9 @@
 const { studentRepository, quizRepository, quizResultRepository, questionRepository, classTestRepository, chapterRepository, classRepository, testQuestionPaperRepository, testResultRepository, topicRepository, conceptRepository, schoolRepository } = require("../repository");
-const constant = require('../constants/constant');
-const helper = require('../helper/helper');
+const { common, messages, prePostConstans, question, requestData, testFolder } = require("../constants/constant");
+const { getRandomString } = require("../helper/helper");
 const { fetchStudentresultMetadata3 } = require("../repository/testResultRepository");
-const qs = require('qs');
-const axios = require('axios');
+const qs = require("qs");
+const axios = require("axios");
 const s3Services = require("./s3Service");
 let sendMail = require("./emailService");
 
@@ -22,7 +22,7 @@ exports.topAndBottomPerformers = async (request) => {
         const studentMap = new Map();
         const studentData = await studentRepository.getStudentsData2(request);
         const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
-        request["unit_Quiz_id"] = quiz_Ids;
+        request[requestData.unitQuizID] = quiz_Ids;
 
         let questionDetails = [];
         let quiz_question_ids = [];
@@ -49,7 +49,7 @@ exports.topAndBottomPerformers = async (request) => {
         const allTests = allTestResponse;
         let testResults;
         const test_Ids = allTests.map(test => test.class_test_id);
-        request["class_test_id"] = test_Ids;
+        request[requestData.classTestId] = test_Ids;
         let recentTest;
         if (allTests?.length) {
             if (request.data.isRecent) {
@@ -78,10 +78,10 @@ exports.topAndBottomPerformers = async (request) => {
 
         const processQuizResults = async () => {
             for (const qResult of quiz_results) {
-                if (qResult.evaluated !== "Yes") continue;
+                if (qResult.evaluated !== common.Yes) continue;
                 for (const mark_details of qResult.marks_details) {
                     const questionIds = mark_details.qa_details.map(q => q.question_id);
-                    request["question_id"] = questionIds;
+                    request[requestData.questionId] = questionIds;
 
                     const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
                     const filteredQuestions = questionDetails.filter(q => questionIdsSet.has(q.question_id));
@@ -184,7 +184,7 @@ exports.needAttention = async (request) => {
             const quizDate = recentQuiz?.created_ts ? new Date(recentQuiz.created_ts) : new Date("1900-12-18T10:56:11.143Z");
             const testDate = recentTest?.created_ts ? new Date(recentTest.created_ts) : new Date("1900-12-18T10:56:11.143Z");//new Date(recentTest.created_ts)
             if (quizDate > testDate) {
-                request.data['chapter_id'] = recentQuiz.chapter_id
+                request.data[requestData.chapterId] = recentQuiz.chapter_id
                 const chapter = await chapterRepository.fetchChapterByID2(request)
                 const chapterDetails = chapter.Items[0];
 
@@ -206,7 +206,7 @@ exports.needAttention = async (request) => {
                     postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(topicDetailsPost);
                 }
                 const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: recentQuiz.quiz_id });
-                if (recentQuiz.learningType === 'postLearning') {
+                if (recentQuiz.learningType === prePostConstans.postLearningVal) {
                     for (const quizResult of quizResults) {
                         const singleStudentDetails = studentData.Items.filter(student => student.student_id == quizResult.student_id);
                         if (singleStudentDetails.length === 0) continue;
@@ -224,7 +224,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0].concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -262,7 +262,7 @@ exports.needAttention = async (request) => {
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.display_name],
-                                            recentExam: 'postQuiz',
+                                            recentExam: common.PostQuiz,
                                         });
                                         break;
                                     }
@@ -287,7 +287,7 @@ exports.needAttention = async (request) => {
 
                                     let existingConcept = matchedConcepts.find(concept => concept.concept_id === conceptDetails[0]?.concept_id);
 
-                                    const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -326,7 +326,7 @@ exports.needAttention = async (request) => {
                                             quiz_id: quizResult.quiz_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.display_name],
-                                            recentExam: 'preQuiz',
+                                            recentExam: common.PreQuiz,
                                         });
                                         break;
                                     }
@@ -336,12 +336,12 @@ exports.needAttention = async (request) => {
                     }
                 }
             } else {
-                request.data['question_paper_id'] = recentTest.question_paper_id
+                request.data[question.question_paper_id] = recentTest.question_paper_id
                 const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById2(request);
                 const testResults = await testResultRepository.fetchTestResultOfAllStudent(recentTest)
 
                 for (const chapterId of questionPaper.data[0].chapter_id) {
-                    request.data['chapter_id'] = chapterId
+                    request.data[requestData.chapterId] = chapterId
                     const chapter = await chapterRepository.fetchChapterByID2(request)
                     const chapterDetails = chapter.Items[0]
 
@@ -373,7 +373,7 @@ exports.needAttention = async (request) => {
                                 if (concept.concept_question_id.includes(mark.question_id)) {
                                     const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
 
-                                    const markValue = mark.modified_marks !== 'N.A.' ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== ' N.A.' ? parseFloat(mark.obtained_marks) : 0);
+                                    const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
 
                                     if (existingConcept) {
                                         existingConcept.question_id.push(mark.question_id);
@@ -412,7 +412,7 @@ exports.needAttention = async (request) => {
                                             class_test_id: testResult.class_test_id,
                                             chapter_id: [chapterDetails.chapter_id],
                                             chapter_name: [chapterDetails.display_name],
-                                            recentExam: 'Test'
+                                            recentExam: common.Test
                                         });
                                     }
                                     break;
@@ -485,7 +485,7 @@ exports.studentChaptersPerformance = async (request) => {
         const test_config = schoolDetails.Items[0].test_config
         const requestStudentChapter = { data: {} };
 
-        if (request.data.recentExam === 'Test') {
+        if (request.data.recentExam === common.Test) {
             let testResult = await classRepository.getResult2(request);
             const questionIds = testResult.Items[0].marks_details[0].qa_details.map((qa) => qa.question_id);
             const questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
@@ -493,7 +493,7 @@ exports.studentChaptersPerformance = async (request) => {
             });
 
             for (const chapter of request.data.chapter_id) {
-                requestStudentChapter.data['chapter_id'] = chapter
+                requestStudentChapter.data[requestData.chapterId] = chapter
                 const chapterItem = await chapterRepository.fetchChapterByID2(requestStudentChapter)
                 const chapterDetails = chapterItem.Items[0]
                 let allTopics = [];
@@ -522,7 +522,7 @@ exports.studentChaptersPerformance = async (request) => {
                     for (const concept of allConcept) {
                         if (concept.concept_question_id.includes(mark.question_id)) {
                             const existingConcept = matchedConcepts.find(item => item.concept_id === concept.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
 
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
@@ -604,7 +604,7 @@ exports.studentChaptersPerformance = async (request) => {
             let quizDetails = await quizRepository.fetchQuizDataById2(request);
             const questionIds = quizResult.Items[0].marks_details[0].qa_details.map((qa) => qa.question_id);
             const questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: [...new Set(questionIds)] });
-            requestStudentChapter.data['chapter_id'] = request.data.chapter_id[0]
+            requestStudentChapter.data[requestData.chapterId] = request.data.chapter_id[0]
             const chapterItem = await chapterRepository.fetchChapterByID2(requestStudentChapter)
             const chapterDetails = chapterItem.Items[0]
 
@@ -628,14 +628,14 @@ exports.studentChaptersPerformance = async (request) => {
             const questionTrackDetails = quizDetails.Item.question_track_details;
             const quizConceptQuestionDetails = questionTrackDetails[`qp_set_${quizSet}`];
 
-            if (request.data.recentExam === 'preQuiz') {
+            if (request.data.recentExam === common.PreQuiz) {
                 let matchedConcepts = [];
                 for (const mark of quizResult.Items[0].marks_details[0].qa_details) {
                     for (const type of quizConceptQuestionDetails) {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = preConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -717,7 +717,7 @@ exports.studentChaptersPerformance = async (request) => {
                         if (type.question_id === mark.question_id) {
                             let conceptDetails = postConceptDetails.filter(concept => concept.concept_id === type.concept_id);
                             const existingConcept = matchedConcepts.find(item => item.concept_id === type.concept_id);
-                            const markValue = mark.modified_marks !== "N.A." ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== "N.A." ? parseFloat(mark.obtained_marks) : 0);
+                            const markValue = mark.modified_marks !== common.NA ? parseFloat(mark.modified_marks) : (mark.obtained_marks !== common.NA ? parseFloat(mark.obtained_marks) : 0);
                             if (existingConcept) {
                                 existingConcept.question_id.push(mark.question_id);
                                 existingConcept.marks.push(markValue);
@@ -805,7 +805,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const allquizs = await quizRepository.getQuizBasedonStatus2(request);
 
     const quiz_Ids = allquizs.map(quiz => quiz.quiz_id);
-    request["unit_Quiz_id"] = quiz_Ids;
+    request[requestData.unitQuizID] = quiz_Ids;
 
     const chapterMap = allquizs.reduce((acc, quiz) => {
         if (!acc[quiz.chapter_id]) {
@@ -829,8 +829,8 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const question_paper_ids = testDetails.map(test => test.question_paper_id);
     const test_ids = testDetails.map(test => test.class_test_id);
 
-    request['class_test_id'] = test_ids
-    request['question_paper_ids'] = question_paper_ids;
+    request[requestData.classTestId] = test_ids
+    request[requestData.questionPaperId] = question_paper_ids;
 
     let testResult = [];
     if (test_ids.length > 0) {
@@ -842,7 +842,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
     let chapter_Ids = [...new Set([...quiz_chapter_ids, ...test_chapter_ids])];
     chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
-    request["unit_chapter_id"] = chapter_Ids;
+    request[requestData.unitChapterId] = chapter_Ids;
 
     const testChapterMap = {};
     if (questionPaper?.data?.length > 0) {
@@ -890,7 +890,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     if (chapter_Ids.length > 0) {
         chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
         const chapter_array = chapter_details.map(val => ({ chapter_id: val.chapter_id }));
-        const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+        const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
 
         if (chapter_response.Items.length > 0) {
             for (const chapter of chapter_response.Items) {
@@ -904,7 +904,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
         let topicMap = { ...testChapterMap };
         if (topic_array.length > 0) {
-            const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+            const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: common.OR });
 
             if (topic_response?.Items?.length > 0) {
                 const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
@@ -951,7 +951,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         const current_chapter = chapter_details.find(chapter => chapter.chapter_id === uniqueChapter.chapter_id);
 
         for (const qResult of quiz_results) {
-            if (qResult.evaluated !== "Yes") continue;
+            if (qResult.evaluated !== common.Yes) continue;
             if (uniqueChapter.quiz_ids.includes(qResult.quiz_id)) {
                 for (const mark_details of qResult.marks_details) {
                     const questionIdsSet = new Set(mark_details.qa_details.map(q => q.question_id));
@@ -988,7 +988,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         }
         chapterResults.push({
             chapter_id: uniqueChapter.chapter_id,
-            chapter_name: current_chapter?.display_name || '',
+            chapter_name: current_chapter?.display_name || "",
             total_marks,
             total_obtained_marks,
             class_average: ((total_obtained_marks / total_marks) * 100).toFixed(2),
@@ -1012,7 +1012,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                             const quest = questionDetails.find(q => q.question_id === questionId);
                             if (quest) {
                                 let total_student_marks = quest?.marks || 0;
-                                let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+                                let total_student_obtained_marks = question?.modified_marks !== common.NA ? question?.modified_marks : question?.obtained_marks;
 
                                 total_marks += parseFloat(total_student_marks);
                                 total_obtained_marks += parseFloat(total_student_obtained_marks);
@@ -1044,7 +1044,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
         }
         chapterTestResults.push({
             chapter_id: chapter.chapter_id,
-            chapter_name: current_chapter?.display_name || '',
+            chapter_name: current_chapter?.display_name || "",
             total_marks,
             total_obtained_marks,
             class_average: ((total_obtained_marks / total_marks) * 100).toFixed(2),
@@ -1112,12 +1112,14 @@ exports.customWorksheetGenerated = async (request) => {
             if (inValidChapters.length === 1) {
                 throw new Error(`There is not enough questions for the chapter: ${inValidChapters[0].chapter_name}.`);
             } else {
-                throw new Error(`There are not enough questions for the following chapters: ${inValidChapters.map(i => i.chapter_name).join(', ')}.`);
+                throw new Error(`There are not enough questions for the following chapters: ${inValidChapters.map(i => i.chapter_name).join(", ")}.`);
             }
         }
+
         if (allQuestions.length < request.data.numberOfQuestionWorksheet) {
-            throw new Error(`There are not enough questions to generate for worksheets.`);
+            throw new Error(messages.NOWORKSHEET_AVAILABLE);
         }
+
         const studentCustomWorksheet = await testQuestionPaperRepository.fetchStudentWorksheetBasedOnTestId(request)
         if (studentCustomWorksheet?.Items?.[0]) throw new Error(`Already Worksheet Generated for this student`);
         let numberOfQuestionsForWorksheet = request.data.numberOfQuestionWorksheet;
@@ -1164,23 +1166,23 @@ exports.customWorksheetGenerated = async (request) => {
 
         const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheet(request)
         if (questions.length > 0) {
-            const studentFirstName = request.data.student_name.split(' ')[0];
+            const studentFirstName = request.data.student_name.split(" ")[0];
             const existingName = studentWorksheet.Items[0]?.question_paper_name || `${studentFirstName}_worksheet_0`;
             const nameParts = existingName.match(/^(.*?)(_(\d+))?$/);
             const baseName = nameParts[1];
             const currentNumber = nameParts[3] ? parseFloat(nameParts[3], 10) : 0;
             const question_paper_name = `${baseName}_${currentNumber + 1}`;
 
-            request.data["questions"] = questions
-            request.data["question_paper_status"] = "customActive"
-            request.data["question_paper_name"] = question_paper_name
-            request.data["blueprint_type"] = "customWorksheet"
+            request.data[question.questions] = questions
+            request.data[question.question_paper_status] = common.customActive
+            request.data[question.question_paper_name] = question_paper_name
+            request.data[question.blueprint_type] = common.customWorksheet
 
             if (studentWorksheet.Items.length > 0 && studentWorksheet.Items) {
-                request.data["question_paper_id"] = studentWorksheet.Items[0].question_paper_id
+                request.data[question.question_paper_id] = studentWorksheet.Items[0].question_paper_id
                 await testQuestionPaperRepository.updateCustomWorkSheetQuestionPaper(request)
             } else {
-                request.data["question_paper_id"] = await helper.getRandomString();
+                request.data[question.question_paper_id] = await getRandomString();
                 await testQuestionPaperRepository.insertCustomWorkSheetQuestionPaper(request)
             }
 
@@ -1188,8 +1190,8 @@ exports.customWorksheetGenerated = async (request) => {
 
             let resultPdf = await createPDFandUpdateTemplateDetails(request);
 
-            request.data["question_paper_template"] = resultPdf.data?.pdf_response
-            request.data["key_answer_template"] = resultPdf.data?.answer_pdf_response
+            request.data[question.question_paper_template] = resultPdf.data?.pdf_response
+            request.data[question.key_answer_template] = resultPdf.data?.answer_pdf_response
 
             await testQuestionPaperRepository.updateTemplateDetails(request)
             return 200
@@ -1202,10 +1204,10 @@ exports.customWorksheetGenerated = async (request) => {
 const createPDFandUpdateTemplateDetails = async (request) => {
     try {
         const options = {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            method: "POST",
+            headers: { "content-type": "application/x-www-form-urlencoded" },
             data: qs.stringify(request),
-            url: process.env.PDF_GENERATION_URL + '/createCustomWorksheet',
+            url: process.env.PDF_GENERATION_URL + "/createCustomWorksheet",
         };
 
         const pdfData = await axios(options);
@@ -1219,19 +1221,19 @@ exports.fetchCustomWorksheet = async (request) => {
     try {
         const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheetBasedOnTestId(request)
         if (studentWorksheet?.Items?.[0]) {
-            let questionPaperTEmp = studentWorksheet.Items[0]?.question_paper_template || 'N.A.';
-            let answerPaperTEmp = studentWorksheet.Items[0]?.key_answer_template || 'N.A.';
-            let questionUrlCheck = constant.testFolder.customQuestionPapers.split("/")[0];
+            let questionPaperTEmp = studentWorksheet.Items[0]?.question_paper_template || common.NA;
+            let answerPaperTEmp = studentWorksheet.Items[0]?.key_answer_template || common.NA;
+            let questionUrlCheck = testFolder.customQuestionPapers.split("/")[0];
 
             studentWorksheet.Items[0].worksheet_template_url = questionPaperTEmp.includes(questionUrlCheck)
                 ? await s3Services.getS3SignedUrl(questionPaperTEmp)
-                : "N.A.";
+                : common.NA;
             studentWorksheet.Items[0].key_answer_template_url = answerPaperTEmp.includes(questionUrlCheck)
                 ? await s3Services.getS3SignedUrl(answerPaperTEmp)
-                : "N.A.";
+                : common.NA;
             return studentWorksheet.Items[0];
         }
-        return { status: 404, message: "There is no worksheet available for this student" };
+        return { status: 404, message: messages.NOWORKSHEET_AVAILABLE };
     } catch (error) {
         throw error;
     }
@@ -1246,17 +1248,17 @@ exports.sendEmailToParent = async (request) => {
         if (worksheet?.worksheet_template_url) {
             const studentDetails = await studentRepository.getAllStudents2(student_id);
             if (studentDetails?.Items?.[0]) {
-                request.data['parent_id'] = studentDetails.Items[0].parent_id;
+                request.data[requestData.parentId] = studentDetails.Items[0].parent_id;
                 const parentDetails = await studentRepository.getParentDetailsById(request)
-                if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
+                if (!parentDetails?.user_email) throw new Error(messages.NOPARENT_ASSOCIATED_TO_STUDENT);
                 let fileKey = worksheet.question_paper_template
                 const fileLink = await s3Services.getFileBufferFromS3(fileKey);
                 let answerFileKey = worksheet.key_answer_template
                 const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
 
-                const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
+                const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(",")}`
                 const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
-                const chapterNames = request?.data.chapter_name?.join(',')
+                const chapterNames = request?.data.chapter_name?.join(",")
                 const toMail = parentDetails?.user_email
                 const mailPayload = {
                     subject: subject,
@@ -1272,7 +1274,7 @@ exports.sendEmailToParent = async (request) => {
                 return dataEmail.httpStatusCode
             };
         }
-        throw new Error('There is no worksheet available for this student');
+        throw new Error(messages.NOWORKSHEET_AVAILABLE);
     } catch (error) {
         throw error;
     }
