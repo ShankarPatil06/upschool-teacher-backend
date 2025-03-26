@@ -48,7 +48,7 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
 
   try {
     const teachActivityResponse = await teachingActivityRepository.fetchTeachingActivity2(request);
-    let allChapter = teachActivityResponse.Items.length > 0 ? teachActivityResponse.Items[0].chapter_data : [];
+    let allChapter = !isEmptyArray(teachActivityResponse.Items) ? teachActivityResponse.Items[0].chapter_data : [];
 
     let chapterIndex = allChapter.findIndex(Chap => Chap.chapter_id === request.data.chapter_id);
 
@@ -78,10 +78,10 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
       allChapter.push(newChapterData);
     }
 
-    request.data.activity_id = teachActivityResponse.Items.length > 0 ? teachActivityResponse.Items[0].activity_id : undefined;
+    request.data.activity_id = !isEmptyArray(teachActivityResponse.Items) ? teachActivityResponse.Items[0].activity_id : undefined;
     request.data.chapter_data = allChapter;
 
-    if (teachActivityResponse.Items.length > 0) {
+    if (!isEmptyArray(teachActivityResponse.Items)) {
       await teachingActivityRepository.updateTeachingActivity2(request);
     } else {
       request.data.digicard_activities = [];
@@ -106,19 +106,19 @@ exports.getTeacherPreLearningPermissions = async (request) => {
 
     const preQuizConfig = schoolDataRes.Items[0].pre_quiz_config;
     const teachActivityResponse = await teachingActivityRepository.fetchTeachingActivity2(request);
-    const chapterActivity = teachActivityResponse.Items.length > 0
+    const chapterActivity = !isEmptyArray(teachActivityResponse.Items)
       ? teachActivityResponse.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
       : [];
-    const unlockDigicards = chapterActivity.length > 0 ? chapterActivity[0].pre_learning.unlocked_digicard : {};
+    const unlockDigicards = !isEmptyArray(chapterActivity) ? chapterActivity[0].pre_learning.unlocked_digicard : {};
     const unlockTopicDigicard = unlockDigicards.topics || [];
 
     request.data.learningType = prePostConstans.preLearningVal;
     const quizDataRes = await quizRepository.fetchQuizData2(request);
-    if (quizDataRes.Items.length > 0) {
+    if (!isEmptyArray(quizDataRes.Items)) {
       throw new Error(messages.PRE_QUIZ_ALREADY_GENERATED);
     }
 
-    if (preQuizConfig.unlock_digicard_mandatory === common.Yes && unlockTopicDigicard.length <= 0) {
+    if (preQuizConfig.unlock_digicard_mandatory === common.Yes && !isEmptyArray(unlockTopicDigicard)) {
       throw new Error(messages.DIGICARD_UNLOCK_MANDATORY);
     }
 
@@ -179,21 +179,17 @@ exports.generateQuizForPreLearning = async (request) => {
 
         const teachActivityRes = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-        let chapterActivity = teachActivityRes.Items.length > 0
-          ? teachActivityRes.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
-          : [];
+        let chapterActivity = !isEmptyArray(teachActivityRes.Items) ? teachActivityRes.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
 
-        let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].pre_learning.archivedTopics : [];
+        let archivedTopics = !isEmptyArray(chapterActivity) ? chapterActivity[0].pre_learning.archivedTopics : [];
 
         const chapterDataRes = await chapterRepository.fetchChapterByID2(request);
 
-        let preLearningTopicIds = chapterDataRes.Items.length > 0
-          ? chapterDataRes.Items[0].prelearning_topic_id
-          : [];
+        let preLearningTopicIds = !isEmptyArray(chapterDataRes.Items) ? chapterDataRes.Items[0].prelearning_topic_id : [];
 
         let activeTopics = await getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
 
-        if (activeTopics.length === 0) {
+        if (isEmptyArray(activeTopics)) {
           return { status: 400, message: messages.NO_ACTIVE_TOPICS };
         }
 
@@ -545,7 +541,7 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                 if (ind < data.group_list.length) {
 
                   if (indheck.length < Number(topicData.noOfQuestions)) {
-                    if (data.group_list[ind].group_question_id.length > 0) {
+                    if (!isEmptyArray(data.group_list[ind].group_question_id)) {
 
                       // Pick Random Questions out of each group : 
                       const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
@@ -554,7 +550,7 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
 
                       !indheck.includes(randomIndex) && indheck.push(randomIndex);
 
-                      if (dupCheck.length > 0) {
+                      if (!isEmptyArray(dupCheck)) {
                         qtnLoop(ind);
                       } else {
                         questions_list.push(qtn_id);
@@ -773,7 +769,7 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
 
                         !indheck.includes(randomIndex) && indheck.push(randomIndex);
 
-                        if (dupCheck.length > 0) {
+                        if (!isEmptyArray(dupCheck)) {
                           qtnLoop(ind);
                         } else {
                           questions_list.push(qtn_id);
@@ -887,7 +883,7 @@ exports.generateQuizForPostLearning = async (request) => {
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
     if (schoolDataRes.Items[0].post_quiz_config) {
       let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
-      if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === common.No) {
+      if (!isEmptyArray(postQuizData_res.Items) && postQuizConfig.choose_topic === common.No) {
         throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
       }
       else {
@@ -897,7 +893,7 @@ exports.generateQuizForPostLearning = async (request) => {
 
         if (request.data.quizType === prePostConstans.automatedType) {
           let selectedTop = [];
-          if (request.data.topicList.length > 0) {
+          if (!isEmptyArray(request.data.topicList)) {
             await request.data.topicList.map(reqTop => {
               selectedTop.push({ topic_id: reqTop, noOfQuestions: common.NA });
             })
@@ -921,15 +917,15 @@ exports.generateQuizForPostLearning = async (request) => {
             try {
               const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-              let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
-              let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
+              let chapterActivity = !isEmptyArray(teachActivity_response.Items) ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
+              let archivedTopics = !isEmptyArray(chapterActivity) ? chapterActivity[0].post_learning.archivedTopics : [];
 
               /** FETCH CHAPTER DATA **/
               const chapterData_response = await chapterRepository.fetchChapterByID2(request);
-              let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
+              let postLearningTopicIds = !isEmptyArray(chapterData_response.Items) ? chapterData_response.Items[0].postlearning_topic_id : [];
               let AcitveTopics = await getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
 
-              if (AcitveTopics.length > 0) {
+              if (!isEmptyArray(AcitveTopics)) {
                 await AcitveTopics.forEach(actTop => {
                   selectedTop.push({ topic_id: actTop, noOfQuestions: common.NA });
                 })
@@ -1025,7 +1021,7 @@ exports.addteacherDigicardExtension = async (request) => {
       }
     }
 
-    if (digiExtensionResponse.Items.length > 0) {
+    if (!isEmptyArray(digiExtensionResponse.Items)) {
       request.data.extension_id = digiExtensionResponse.Items[0].extension_id;
       await digicardExtension.updateDigiExtension2(request);
     } else {
@@ -1046,7 +1042,7 @@ exports.getTeacherPostLearningPermissions = async (request) => {
 
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-    if (!schoolDataRes.Items || schoolDataRes.Items.length === 0) {
+    if (!schoolDataRes.Items || isEmptyArray(schoolDataRes.Items)) {
       throw { status: 400, message: messages.SCHOOL_NOT_FOUND };
     }
 
@@ -1056,12 +1052,12 @@ exports.getTeacherPostLearningPermissions = async (request) => {
       const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
 
       let requestTopics = request.data.topics.map((e) => e.topic_id);
-      let chapterActivity = teachActivity_response.Items.length > 0 ? await teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
+      let chapterActivity = !isEmptyArray(teachActivity_response.Items) ? await teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
 
-      let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
-      let unlockDigicards = chapterActivity.length > 0 ? chapterActivity[0].post_learning.unlocked_digicard : [];
+      let archivedTopics = !isEmptyArray(chapterActivity) ? chapterActivity[0].post_learning.archivedTopics : [];
+      let unlockDigicards = !isEmptyArray(chapterActivity) ? chapterActivity[0].post_learning.unlocked_digicard : [];
 
-      let unlockTopicDigicard = unlockDigicards.length > 0 ? unlockDigicards : [];
+      let unlockTopicDigicard = !isEmptyArray(unlockDigicards) ? unlockDigicards : [];
       let UnlockedTopicIDs = [];
       await unlockTopicDigicard.map((e) => UnlockedTopicIDs.push(...e.topics.map((j) => j.topic_id)));
       request.data.learningType = prePostConstans.postLearningVal;
@@ -1072,14 +1068,14 @@ exports.getTeacherPostLearningPermissions = async (request) => {
 
         let quizGenerated = common.No;
 
-        await quizData_res.Items.length > 0 && quizData_res.Items.forEach((e) => {
-          e.selectedTopics.length > 0 && e.selectedTopics.forEach((a) =>
-            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = common.Yes))
+        await !isEmptyArray(quizData_res.Items) && quizData_res.Items.forEach((e) => {
+          !isEmptyArray(e.selectedTopics) && e.selectedTopics.forEach((a) =>
+            !isEmptyArray(requestTopics.filter((k) => k === a.topic_id)) && (quizGenerated = common.Yes))
         })
-        if (quizData_res.Items.length > 0 && quizGenerated === common.Yes) {
+        if (!isEmptyArray(quizData_res.Items) && quizGenerated === common.Yes) {
           throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
         } else {
-          if (requestTopics.length === 0) {
+          if (isEmptyArray(requestTopics)) {
             console.log(messages.NO_TOPICS_SELECTED);
             return { status: 400, message: messages.NO_TOPICS_SELECTED };
           }
@@ -1100,17 +1096,17 @@ exports.getTeacherPostLearningPermissions = async (request) => {
         // if request.data.topics is [], fetch all post topics and removed archived topics 
         // check digicads are unlocked for those topics or not if its mandatory
         // check quiz table, if the there is data, throw error, that quiz already generated 
-        if (quizData_res.Items.length === 0) {
+        if (isEmptyArray(quizData_res.Items)) {
 
           const singleChapterResponse = await chapterRepository.fetchChapterByID2(request);
 
-          if (!singleChapterResponse.Items || singleChapterResponse.Items.length === 0) {
+          if (!singleChapterResponse.Items || isEmptyArray(singleChapterResponse.Items)) {
             return { status: 400, message: messages.CHAPTER_NOT_FOUND };
           }
 
           const post_topic_response = await topicRepository.fetchPostTopicData2(singleChapterResponse.Items[0]);
 
-          if (requestTopics.length === 0) {
+          if (isEmptyArray(requestTopics)) {
             let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
 
             let AcitveTopics = await getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
@@ -1118,7 +1114,7 @@ exports.getTeacherPostLearningPermissions = async (request) => {
             if (postQuizConfig.unlock_digicard_mandatory === common.Yes) {
               let unlockCheck = [];
 
-              AcitveTopics.forEach((e) => UnlockedTopicIDs.filter((a) => e === a).length > 0 && unlockCheck.push(e));
+              AcitveTopics.forEach((e) => !isEmptyArray(UnlockedTopicIDs.filter((a) => e === a)) && unlockCheck.push(e));
 
               const unlockAllTopicsCheck = await checkOneArrayElementsinAnother(AcitveTopics, unlockCheck);
 
@@ -1201,14 +1197,14 @@ exports.changeDigiCardOrder = async (request) => {
     const allDigicardActivity = teachActivity_response.Items[0]?.digicard_activities || [];
     const digicardActivity = allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
-    let PrePOstActivity = digicardActivity.length > 0 ? (request.data.learningType === common.Pre ? [...digicardActivity[0].pre_learning] : [...digicardActivity[0].post_learning]) : [];
+    let PrePOstActivity = !isEmptyArray(digicardActivity) ? (request.data.learningType === common.Pre ? [...digicardActivity[0].pre_learning] : [...digicardActivity[0].post_learning]) : [];
     let reordered_data = {
       topic_id: request.data.topic_id,
       digicardOrder: request.data.digicardOrder,
       archivedDigicard: []
     };
 
-    if (PrePOstActivity.length > 0) {
+    if (!isEmptyArray(PrePOstActivity)) {
       const existingTopicIndex = PrePOstActivity.findIndex(e => e.topic_id === request.data.topic_id);
       if (existingTopicIndex > -1) {
         reordered_data.archivedDigicard = PrePOstActivity[existingTopicIndex].archivedDigicard;
@@ -1220,7 +1216,7 @@ exports.changeDigiCardOrder = async (request) => {
       PrePOstActivity.push(reordered_data);
     }
 
-    if (digicardActivity.length > 0) {
+    if (!isEmptyArray(digicardActivity)) {
       request.data.learningType === common.Pre ? digicardActivity[0].pre_learning = PrePOstActivity : digicardActivity[0].post_learning = PrePOstActivity;
       allDigicardActivity.forEach((e, i) => e.chapter_id === request.data.chapter_id && (allDigicardActivity[i] = digicardActivity[0]));
       request.data.digicard_activities = allDigicardActivity;
@@ -1280,7 +1276,7 @@ exports.activeAndArchiveDigicardsInTopic = async (request) => {
     request.data.key = commonConditionValue.toggle;
 
     const digicardActivityData = await exports.createDigicardActivityData2(request);
-    let allDigicardActivity = teachActivityResponse.Items.length > 0 ? teachActivityResponse.Items[0].digicard_activities || [] : [];
+    let allDigicardActivity = !isEmptyArray(teachActivityResponse.Items) ? teachActivityResponse.Items[0].digicard_activities || [] : [];
     let digicardActivity = allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
     let archivedData = { topic_id: request.data.topic_id, digicardOrder: [], archivedDigicard: [] };
@@ -1312,7 +1308,7 @@ exports.activeAndArchiveDigicardsInTopic = async (request) => {
       digicardActivity[0][prePostConstans.postLearning] = prePostActivity;
     }
 
-    if (digicardActivity.length > 0) {
+    if (!isEmptyArray(digicardActivity)) {
       allDigicardActivity = allDigicardActivity.map(e => e.chapter_id === request.data.chapter_id ? digicardActivity[0] : e);
       request.data.digicard_activities = allDigicardActivity;
       request.data.activity_id = teachActivityResponse.Items[0].activity_id;
@@ -1343,18 +1339,18 @@ exports.getDigiCardstoReorder = async (request) => {
 
       let myPromise = new Promise(async function (myResolve, myReject) {
 
-        if (teachActivity_response.Items.length > 0) {
+        if (!isEmptyArray(teachActivity_response.Items)) {
           let allDigicardActivity = teachActivity_response.Items[0].digicard_activities;
 
           allDigicardActivity = allDigicardActivity === undefined ? [] : allDigicardActivity;
           let digicardActivity = await allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
-          if (digicardActivity.length > 0) {
+          if (!isEmptyArray(digicardActivity)) {
             let PrePOstActivity = request.data.learningType === common.Pre ? JSON.parse(JSON.stringify(digicardActivity[0].pre_learning)) : JSON.parse(JSON.stringify(digicardActivity[0].post_learning));
             PrePOstActivity = PrePOstActivity === undefined ? [] : PrePOstActivity;
 
-            if (PrePOstActivity.length > 0) {
-              if (PrePOstActivity.filter((e) => e.topic_id === request.data.topic_id).length > 0) {
+            if (!isEmptyArray(PrePOstActivity)) {
+              if (!isEmptyArray(PrePOstActivity.filter((e) => e.topic_id === request.data.topic_id))) {
 
                 PrePOstActivity.forEach((e, i) => {
                   if (e.topic_id === request.data.topic_id) {
@@ -1379,8 +1375,8 @@ exports.getDigiCardstoReorder = async (request) => {
 
       await myPromise.then(
         async function (value) {
-          if (changedDigiCardOrder.length > 0) {
-            if (archivedDigiCardList.length > 0) {
+          if (!isEmptyArray(changedDigiCardOrder)) {
+            if (!isEmptyArray(archivedDigiCardList)) {
               let archivedDigiCardSet = new Set(archivedDigiCardList);
               let FinalDigiCardList = changedDigiCardOrder.filter((e) => { return !archivedDigiCardSet.has(e) });
 
@@ -1395,7 +1391,7 @@ exports.getDigiCardstoReorder = async (request) => {
               return get_digicard_res;
             }
           } else {
-            request.data.archivedDigiCardList = archivedDigiCardList.length > 0 ? archivedDigiCardList : [];
+            request.data.archivedDigiCardList = !isEmptyArray(archivedDigiCardList) ? archivedDigiCardList : [];
             const digicard_list_response = await getAllDigicardsBasedonTopic(request);
             return { status: 200, data: digicard_list_response };
           }
@@ -1417,11 +1413,11 @@ exports.getAllDigicardsBasedonTopic = async (request) => {
     }
 
     const single_topic_response = await topicRepository.fetchTopicByID2(request);
-    if (!single_topic_response?.Items?.length) {
+    if (!isEmptyArray(single_topic_response?.Items)) {
       return { status: 404, message: messages.TOPIC_NOT_FOUND };
     }
     const topic_related_concept_response = await conceptRepository.fetchConceptData3(single_topic_response.Items[0]);
-    if (!topic_related_concept_response?.Items?.length) {
+    if (!isEmptyArray(topic_related_concept_response?.Items)) {
       return { status: 404, message: messages.CONCEPTS_NOT_FOUND };
     }
     let concept_digicard_id = [];
@@ -1429,7 +1425,7 @@ exports.getAllDigicardsBasedonTopic = async (request) => {
     topic_related_concept_response.map((e) => { concept_digicard_id.push(...e.concept_digicard_id) });
 
     const get_digicard_res = await digicardRepository.fetchDigiCardDisplayTitleID2(concept_digicard_id);
-    if (!get_digicard_res?.Items?.length) {
+    if (!isEmptyArray(get_digicard_res?.Items)) {
       return { status: 404, message: messages.DIGICARDS_NOT_FOUND };
     }
 
@@ -1437,7 +1433,7 @@ exports.getAllDigicardsBasedonTopic = async (request) => {
     let { archivedDigiCardList } = request.data;
     let response = {};
 
-    if (archivedDigiCardList.length > 0) {
+    if (!isEmptyArray(archivedDigiCardList)) {
       let archivedDigiCardSet = new Set(archivedDigiCardList);
       response.Items = sorted_data_response.Items.filter((e) => !archivedDigiCardSet.has(e.digi_card_id));
     } else {
@@ -1481,14 +1477,14 @@ exports.getQuestionSourceandChapters = async (request) => {
     const response = { question_sources: source_res.Items };
 
     const subject_res = await subjectRepository.getSubjetById2(request);
-    if (!subject_res?.Items?.length) {
+    if (!isEmptyArray(subject_res?.Items)) {
       response.chapters = subject_res.Items;
       return { status: 200, data: response };
     }
     const subject_unit_id = subject_res.Items[0].subject_unit_id;
     const unit_res = await unitRepository.fetchUnitData2({ subject_unit_id });
 
-    if (!unit_res?.Items?.length) {
+    if (!isEmptyArray(unit_res?.Items)) {
       response.chapters = unit_res.Items;
       return { status: 200, data: response };
     }
@@ -1522,7 +1518,7 @@ exports.createPDFandUpdateTemplateDetails2 = async (request) => {
 exports.sendMailtoTeacher2 = async (request) => {
   try {
     const fetchTeacherEmailRes = await userRepository.fetchTeacherEmailById2(request);
-    if (!fetchTeacherEmailRes.Items || fetchTeacherEmailRes.Items.length === 0) {
+    if (!fetchTeacherEmailRes.Items || isEmptyArray(fetchTeacherEmailRes.Items)) {
       throw new Error(messages.TEACHER_EMAIL_DOESNOT_EXISTS);
     }
 
