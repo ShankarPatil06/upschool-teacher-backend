@@ -1,12 +1,12 @@
 const { chapterRepository, digicardRepository, digicardExtension, teachingActivityRepository, topicRepository, presetRepository, schoolRepository, commonRepository } = require("../repository")
-const constant = require('../constants/constant');
-const helper = require('../helper/helper');
+const { common, messages, requestData, signedUrlConstants } = require('../constants/constant');
+const { change_dd_mm_yyyy, getDifferenceValueFromTwoArray, removeDuplicates, isEmptyArray } = require('../helper/helper');
 const { TABLE_NAMES } = require('../constants/tables');
 const s3Services = require("./s3Service");
 
 exports.fetchIndividualDigiCard = async (request) => {
     const singleDigicardResponse = await digicardRepository.fetchDigiCardByID2(request);
-    if (!singleDigicardResponse.Items || singleDigicardResponse.Items.length === 0) {
+    if (!singleDigicardResponse.Items || isEmptyArray(singleDigicardResponse.Items)) {
         return singleDigicardResponse;
     }
 
@@ -25,13 +25,13 @@ exports.fetchIndividualDigiCard = async (request) => {
     singleDigicardResponse.Items[0].preview_content = digiContent;
     const { digicard_image, digicard_voice_note, digicard_document } = singleDigicardResponse.Items[0];
 
-    if (digicard_image && digicard_image.includes("uploads/")) {
+    if (digicard_image && digicard_image.includes(signedUrlConstants.uploads)) {
         singleDigicardResponse.Items[0].digicard_imageURL = await s3Services.getS3SignedUrl(digicard_image);
     }
-    if (digicard_voice_note && digicard_voice_note.includes("uploads/")) {
+    if (digicard_voice_note && digicard_voice_note.includes(signedUrlConstants.uploads)) {
         singleDigicardResponse.Items[0].digicard_voice_noteURL = await s3Services.getS3SignedUrl(digicard_voice_note);
     }
-    if (digicard_document && digicard_document.includes("uploads/")) {
+    if (digicard_document && digicard_document.includes(signedUrlConstants.uploads)) {
         singleDigicardResponse.Items[0].digicard_documentURL = await s3Services.getS3SignedUrl(digicard_document);
     }
 
@@ -53,21 +53,21 @@ exports.fetchRelatedDigiCards = async (request) => {
     let response = { data: [], statusCode: 400 };
     const singleDigiCardResponse = await digicardRepository.fetchDigiCardByID2(request);
 
-    if (singleDigiCardResponse.Items.length > 0) {
+    if (!isEmptyArray(singleDigiCardResponse.Items)) {
         const relatedDigiCards = singleDigiCardResponse.Items[0].related_digi_cards;
-        if (relatedDigiCards && relatedDigiCards.length > 0) {
+        if (relatedDigiCards && !isEmptyArray(relatedDigiCards)) {
             const relatedDigiCardResponse = await digicardRepository.fetchRelatedDigiCardData2({ related_digi_cards: relatedDigiCards });
 
             response.data = relatedDigiCardResponse.Items;
-            response.message = constant.messages.RELATED_DIGICARDS;
+            response.message = messages.RELATED_DIGICARDS;
             response.statusCode = 200;
             return response;
         } else {
-            response.message = constant.messages.NO_RELATED_DIGICARDS;
+            response.message = messages.NO_RELATED_DIGICARDS;
             return response;
         }
     } else {
-        response.message = constant.messages.INVALID_DIGICARD;
+        response.message = messages.INVALID_DIGICARD;
         response.statusCode = 401;
         return response;
     }
@@ -78,39 +78,39 @@ exports.fetchAllPreTopicsAndItsDigicards = async (request) => {
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
         if (!schoolDataRes.Items[0]?.pre_quiz_config) {
-            throw { status: 400, message: constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG };
+            throw { status: 400, message: messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG };
         }
 
         const teachActivityResponse = await teachingActivityRepository.fetchTeachingActivity2(request);
 
-        let chapterActivity = teachActivityResponse.Items.length > 0
+        let chapterActivity = !isEmptyArray(teachActivityResponse.Items)
             ? teachActivityResponse.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
             : [];
 
-        let archivedTopics = chapterActivity.length > 0 && chapterActivity[0].pre_learning.archivedTopics
+        let archivedTopics = !isEmptyArray(chapterActivity) && chapterActivity[0].pre_learning.archivedTopics
             ? chapterActivity[0].pre_learning.archivedTopics
             : [];
 
-        let isUnlocked = chapterActivity.length > 0 && chapterActivity[0].pre_learning.unlocked_digicard.topics
+        let isUnlocked = !isEmptyArray(chapterActivity) && chapterActivity[0].pre_learning.unlocked_digicard.topics
             ? chapterActivity[0].pre_learning.unlocked_digicard.topics
             : [];
 
-        if (isUnlocked.length > 0) {
-            throw { status: 400, message: constant.messages.DIGICARD_UNLOCKED_ALREADY };
+        if (!isEmptyArray(isUnlocked)) {
+            throw { status: 400, message: messages.DIGICARD_UNLOCKED_ALREADY };
         }
 
         const chapterDataResponse = await chapterRepository.fetchChapterByID2(request);
-        let preLearningTopicIds = chapterDataResponse.Items.length > 0 ? chapterDataResponse.Items[0].prelearning_topic_id : [];
+        let preLearningTopicIds = !isEmptyArray(chapterDataResponse.Items) ? chapterDataResponse.Items[0].prelearning_topic_id : [];
 
-        let activeTopics = await helper.getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
+        let activeTopics = await getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
 
-        if (activeTopics.length === 0) {
-            throw { status: 400, message: constant.messages.NO_ACTIVE_TOPICS };
+        if (isEmptyArray(activeTopics)) {
+            throw { status: 400, message: messages.NO_ACTIVE_TOPICS };
         }
 
         let fetchBulkTopicReq = {
             IdArray: activeTopics,
-            fetchIdName: "topic_id",
+            fetchIdName: requestData.topicId,
             TableName: TABLE_NAMES.upschool_topic_table
         };
 
@@ -118,7 +118,7 @@ exports.fetchAllPreTopicsAndItsDigicards = async (request) => {
         return await exports.getPrePostTopicsAndItsDigicards(topicDataRes);
 
     } catch (error) {
-        return { status: error.status || 500, message: error.message || "An error occurred" };
+        return { status: error.status || 500, message: error.message || messages.ERROR };
     }
 };
 
@@ -133,7 +133,7 @@ exports.createTopicsAndItsCardsList = async (topicList, conceptList, DigicardLis
                     .filter(cBlock => cBlock.concept_id === conId)
                     .flatMap(cBlock => cBlock.concept_digicard_id)
             );
-            digiCardIds = helper.removeDuplicates(digiCardIds);
+            digiCardIds = removeDuplicates(digiCardIds);
 
             let digicardDetails = digiCardIds.map(dId => {
                 let dList = DigicardList.find(dList => dList.digi_card_id === dId);
@@ -153,35 +153,35 @@ exports.createTopicsAndItsCardsList = async (topicList, conceptList, DigicardLis
         }
         return finalTopicAndCards;
     } catch (error) {
-        return { status: error.status || 500, message: error.message || "An error occurred" };
+        return { status: error.status || 500, message: error.message || messages.ERROR };
     }
 };
 
 exports.changeDigicardLockStatus = async (request) => {
     if (!request?.data?.client_class_id || !request?.data?.section_id || !request?.data?.subject_id ||
         !request?.data?.chapter_id || !request?.data?.digicard_stage || !request?.data?.topics || !request?.data?.due_date) {
-        throw { status: 400, message: constant.messages.INVALID_REQUEST_FORMAT };
+        throw { status: 400, message: messages.INVALID_REQUEST_FORMAT };
     }
 
-    if (!["Pre", "Post"].includes(request.data.digicard_stage)) {
-        throw { status: 400, message: constant.messages.INVALID_REQUEST_FORMAT };
+    if (![common.Pre, common.Post].includes(request.data.digicard_stage)) {
+        throw { status: 400, message: messages.INVALID_REQUEST_FORMAT };
     }
 
     try {
         const teacherActivityDetails = await teachingActivityRepository.fetchTeachingActivity2(request);
         let individualChapterData = [{
             chapter_id: request.data.chapter_id,
-            chapter_locked: "No",
+            chapter_locked: common.No,
             pre_learning: { archivedTopics: [], unlocked_digicard: {} },
             post_learning: { archivedTopics: [], unlocked_digicard: [] }
         }];
 
-        if (request.data.digicard_stage === "Pre") {
+        if (request.data.digicard_stage === common.Pre) {
             individualChapterData[0].pre_learning.unlocked_digicard = {
                 topics: request.data.topics,
                 due_date: {
                     yyyy_mm_dd: request.data.due_date,
-                    dd_mm_yyyy: helper.change_dd_mm_yyyy(request.data.due_date)
+                    dd_mm_yyyy: change_dd_mm_yyyy(request.data.due_date)
                 }
             };
         } else {
@@ -189,28 +189,28 @@ exports.changeDigicardLockStatus = async (request) => {
                 topics: request.data.topics,
                 due_date: {
                     yyyy_mm_dd: request.data.due_date,
-                    dd_mm_yyyy: helper.change_dd_mm_yyyy(request.data.due_date)
+                    dd_mm_yyyy: change_dd_mm_yyyy(request.data.due_date)
                 }
             });
         }
 
-        if (teacherActivityDetails.Items.length > 0) {
+        if (!isEmptyArray(teacherActivityDetails.Items)) {
             let allChapterData = teacherActivityDetails.Items[0].chapter_data;
             let chapterData = allChapterData.find(e => e.chapter_id === request.data.chapter_id);
 
             if (chapterData) {
-                if (request.data.digicard_stage === "Pre" && chapterData.pre_learning?.unlocked_digicard?.topics) {
-                    throw { status: 400, message: constant.messages.DIGICARD_UNLOCKED_ALREADY };
+                if (request.data.digicard_stage === common.Pre && chapterData.pre_learning?.unlocked_digicard?.topics) {
+                    throw { status: 400, message: messages.DIGICARD_UNLOCKED_ALREADY };
                 }
 
-                if (request.data.digicard_stage === "Post" && chapterData.post_learning?.unlocked_digicard?.length > 0) {
+                if (request.data.digicard_stage === common.Post && !isEmptyArray(chapterData.post_learning?.unlocked_digicard)) {
                     let topics = chapterData.post_learning.unlocked_digicard.flatMap(e => e.topics);
                     let existingTopics = topics.filter(e => request.data.topics.some(a => a.topic_id === e.topic_id));
 
-                    if (existingTopics.length > 0) {
+                    if (!isEmptyArray(existingTopics)) {
                         const postTopicResponse = await topicRepository.fetchPostTopicData2({ postlearning_topic_id: existingTopics.map(e => e.topic_id) });
                         let topicNames = postTopicResponse.Items.map(e => e.topic_title).join(", ");
-                        throw { status: 400, message: constant.messages.UNABLE_TO_UNLOCK_DIGICARDS.replace("**REPLACE**", topicNames) };
+                        throw { status: 400, message: messages.UNABLE_TO_UNLOCK_DIGICARDS.replace(signedUrlConstants.replace, topicNames) };
                     }
                     chapterData.post_learning.unlocked_digicard.push({ topics: request.data.topics, due_date: request.data.due_date });
                 } else {
@@ -226,9 +226,9 @@ exports.changeDigicardLockStatus = async (request) => {
             request.data.chapter_data = individualChapterData;
             await teachingActivityRepository.addTeachingActivity2(request);
         }
-        return { status: 200, message: request.data.digicard_stage === "Pre" ? constant.messages.PRE_DIGICARDS_UNLOCKED : constant.messages.POST_DIGICARDS_UNLOCKED };
+        return { status: 200, message: request.data.digicard_stage === common.Pre ? messages.PRE_DIGICARDS_UNLOCKED : messages.POST_DIGICARDS_UNLOCKED };
     } catch (error) {
-        throw error.status ? error : { status: 400, message: constant.messages.ERROR };
+        throw error.status ? error : { status: 400, message: messages.ERROR };
     }
 };
 
@@ -237,24 +237,24 @@ exports.fetchAllPostTopicsAndItsDigicards = async (request) => {
     try {
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
         if (!schoolDataRes.Items[0]?.post_quiz_config) {
-            throw { status: 400, message: constant.messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG };
+            throw { status: 400, message: messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG };
         }
 
         const activityTeachRes = await teachingActivityRepository.fetchTeachingActivity2(request);
-        let chapterActivity = activityTeachRes.Items.length > 0
+        let chapterActivity = !isEmptyArray(activityTeachRes.Items)
             ? activityTeachRes.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
             : [];
 
-        let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
-        let unlockedDetails = (chapterActivity.length > 0 && chapterActivity[0].post_learning.unlocked_digicard)
+        let archivedTopics = !isEmptyArray(chapterActivity) ? chapterActivity[0].post_learning.archivedTopics : [];
+        let unlockedDetails = (!isEmptyArray(chapterActivity) && chapterActivity[0].post_learning.unlocked_digicard)
             ? chapterActivity[0].post_learning.unlocked_digicard
             : [];
 
-        let activeTopics = await helper.getDifferenceValueFromTwoArray(request.data.topicList, archivedTopics);
+        let activeTopics = await getDifferenceValueFromTwoArray(request.data.topicList, archivedTopics);
 
-        if (request.data.topicList.length > 0) {
-            if (schoolDataRes.Items[0].post_quiz_config.choose_topic === "Yes") {
-                if (activeTopics.length > 0) {
+        if (!isEmptyArray(request.data.topicList)) {
+            if (schoolDataRes.Items[0].post_quiz_config.choose_topic === common.Yes) {
+                if (!isEmptyArray(activeTopics)) {
                     let unlockedTopicCards = [];
 
                     for (const unDetails of unlockedDetails) {
@@ -265,61 +265,61 @@ exports.fetchAllPostTopicsAndItsDigicards = async (request) => {
                         }
                     }
 
-                    let toFetchTopicsIds = unlockedTopicCards.length > 0 ? unlockedTopicCards : activeTopics;
+                    let toFetchTopicsIds = !isEmptyArray(unlockedTopicCards) ? unlockedTopicCards : activeTopics;
                     let fetchBulkTopicReq = {
                         IdArray: toFetchTopicsIds,
-                        fetchIdName: "topic_id",
+                        fetchIdName: requestData.topicId,
                         TableName: TABLE_NAMES.upschool_topic_table
                     };
 
                     const topicDataRes = await commonRepository.fetchBulkData2(fetchBulkTopicReq);
 
-                    if (unlockedTopicCards.length > 0) {
+                    if (!isEmptyArray(unlockedTopicCards)) {
                         let unlockedTopicNames = topicDataRes.data.map(errTop =>
                             errTop.display_name || errTop.topic_title
                         ).join(", ");
 
-                        throw { status: 400, message: constant.messages.TOPICS_ALREADY_UNLOCKED.replace("**REPLACE**", unlockedTopicNames) };
+                        throw { status: 400, message: messages.TOPICS_ALREADY_UNLOCKED.replace(signedUrlConstants.replace, unlockedTopicNames) };
                     } else {
                         return await exports.getPrePostTopicsAndItsDigicards(topicDataRes);
                     }
                 } else {
-                    throw { status: 400, message: constant.messages.NO_ACTIVE_TOPICS };
+                    throw { status: 400, message: messages.NO_ACTIVE_TOPICS };
                 }
             } else {
-                throw { status: 400, message: constant.messages.PERMISSION_DENIED };
+                throw { status: 400, message: messages.PERMISSION_DENIED };
             }
         } else {
-            if (schoolDataRes.Items[0].post_quiz_config.choose_topic === "No") {
-                if (unlockedDetails.length > 0) {
-                    throw { status: 400, message: constant.messages.DIGICARD_UNLOCKED_ALREADY };
+            if (schoolDataRes.Items[0].post_quiz_config.choose_topic === common.No) {
+                if (!isEmptyArray(unlockedDetails)) {
+                    throw { status: 400, message: messages.DIGICARD_UNLOCKED_ALREADY };
                 } else {
                     const chapterDataResponse = await chapterRepository.fetchChapterByID2(request);
-                    let postLearningTopicIds = chapterDataResponse.Items.length > 0
+                    let postLearningTopicIds = !isEmptyArray(chapterDataResponse.Items)
                         ? chapterDataResponse.Items[0].postlearning_topic_id
                         : [];
 
-                    let topicsActive = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
+                    let topicsActive = await getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
 
-                    if (topicsActive.length > 0) {
+                    if (!isEmptyArray(topicsActive)) {
                         let fetchBulkTopicReq = {
                             IdArray: topicsActive,
-                            fetchIdName: "topic_id",
+                            fetchIdName: requestData.topicId,
                             TableName: TABLE_NAMES.upschool_topic_table
                         };
 
                         const topicDataRes = await commonRepository.fetchBulkData2(fetchBulkTopicReq);
                         return await exports.getPrePostTopicsAndItsDigicards(topicDataRes);
                     } else {
-                        throw { status: 400, message: constant.messages.NO_ACTIVE_TOPICS };
+                        throw { status: 400, message: messages.NO_ACTIVE_TOPICS };
                     }
                 }
             } else {
-                throw { status: 400, message: constant.messages.NO_TOPIC_IS_SELECTED };
+                throw { status: 400, message: messages.NO_TOPIC_IS_SELECTED };
             }
         }
     } catch (error) {
-        throw error.status ? error : { status: 500, message: "Internal Server Error" };
+        throw error.status ? error : { status: 500, message: messages.INTERNAL_SERVER_ERROR };
     }
 };
 
@@ -329,7 +329,7 @@ exports.getPrePostTopicsAndItsDigicards = async (topicData_res) => {
         topicConceptsIds = [...new Set(topicConceptsIds)];
         let fetchBulkConceptReq = {
             IdArray: topicConceptsIds,
-            fetchIdName: "concept_id",
+            fetchIdName: requestData.conceptId,
             TableName: TABLE_NAMES.upschool_concept_blocks_table
         };
         const conceptDataRes = await commonRepository.fetchBulkData2(fetchBulkConceptReq);
@@ -338,14 +338,14 @@ exports.getPrePostTopicsAndItsDigicards = async (topicData_res) => {
 
         let fetchBulkDigiReq = {
             IdArray: digicardsIds,
-            fetchIdName: "digi_card_id",
+            fetchIdName: messages.DIGI_CARD_ID,
             TableName: TABLE_NAMES.upschool_digi_card_table,
-            projectionExp: ["digi_card_id", "digi_card_title", "display_name"]
+            projectionExp: [messages.DIGI_CARD_ID, requestData.digiCardTitle, requestData.displayName]
         };
         const digiDataRes = await commonRepository.fetchBulkDataWithProjection5(fetchBulkDigiReq);
         return await exports.createTopicsAndItsCardsList(topicData_res.data, conceptDataRes.data, digiDataRes);
     } catch (error) {
-        return { status: error.status || 500, message: error.message || "An error occurred" };
+        return { status: error.status || 500, message: error.message || messages.ERROR };
     }
 };
 
@@ -353,16 +353,16 @@ exports.getExtensionOfDigicard = async (request) => {
     try {
         const digiExtensionResponse = await digicardExtension.getExtensionDetails2(request);
 
-        if (digiExtensionResponse.Items.length === 0) {
+        if (isEmptyArray(digiExtensionResponse.Items)) {
             return digiExtensionResponse;
         }
 
         const extensions = digiExtensionResponse.Items[0].extensions;
         for (let i = 0; i < extensions.length; i++) {
             const extFile = extensions[i].ext_file;
-            extensions[i].ext_file_url = extFile.includes("digicard_extension/")
+            extensions[i].ext_file_url = extFile.includes(signedUrlConstants.digicardExtension)
                 ? await s3Services.getS3SignedUrl(extFile)
-                : "N.A.";
+                : common.NA;
         }
         return digiExtensionResponse;
     } catch (error) {
