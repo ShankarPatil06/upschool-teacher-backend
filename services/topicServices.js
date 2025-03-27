@@ -1,14 +1,14 @@
 const { topicRepository, chapterRepository, teacherRepository, conceptRepository, digicardRepository, teachingActivityRepository } = require("../repository")
 const teacherServices = require("../services/teacherServices");
-const { messages , common ,prePostConstans ,signedUrlConstants } = require("../constants/constant");
-const helper = require("../helper/helper");
+const { messages, common, prePostConstans, signedUrlConstants } = require("../constants/constant");
+const { isEmptyArray, change_dd_mm_yyyy, removeDuplicatesFromArrayOfObj, formatErrorResponse, getDifferenceValueFromTwoArray } = require("../helper/helper");
 const s3Services = require("./s3Service");
 
-exports.topicUnlockService = async (request) =>{
+exports.topicUnlockService = async (request) => {
   try {
     const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request);
 
-    if (helper.isEmptyArray(individual_teacher_response?.Items)) {
+    if (isEmptyArray(individual_teacher_response?.Items)) {
       throw { status: 400, message: messages.TEACHER_DOESNOT_EXISTS };
     }
 
@@ -19,7 +19,7 @@ exports.topicUnlockService = async (request) =>{
         e.subject_id == request.data.subject_id
     );
 
-    if (helper.isEmptyArray(teacher_info)) {
+    if (isEmptyArray(teacher_info)) {
       throw { status: 400, message: messages.CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST };
     }
 
@@ -27,7 +27,7 @@ exports.topicUnlockService = async (request) =>{
       (e) => e.chapter_id == request.data.chapter_id
     );
 
-    if (helper.isEmptyArray(chapter_data)) {
+    if (isEmptyArray(chapter_data)) {
       throw { status: 400, message: messages.CHAPTER_COMBO_DOESNT_EXISTS };
     }
 
@@ -36,17 +36,17 @@ exports.topicUnlockService = async (request) =>{
     );
 
     let tempObj;
-    if (helper.isEmptyArray(topic_data)) {
+    if (isEmptyArray(topic_data)) {
       tempObj = {
         topic_id: request.data.topic_id,
         topic_locked: request.data.topic_locked,
         due_date: {
           yyyy_mm_dd:
-            request.data.topic_locked == common.Yes ? common.YYYY_MM_DD: request.data.due_date,
+            request.data.topic_locked == common.Yes ? common.YYYY_MM_DD : request.data.due_date,
           dd_mm_yyyy:
             request.data.topic_locked == common.Yes
               ? common.DD_MM_YYYY
-              : helper.change_dd_mm_yyyy(request.data.due_date),
+              : change_dd_mm_yyyy(request.data.due_date),
         },
       };
       chapter_data[0].post_learning.topic_details.push(tempObj);
@@ -58,11 +58,11 @@ exports.topicUnlockService = async (request) =>{
             topic_locked: request.data.topic_locked,
             due_date: {
               yyyy_mm_dd:
-                request.data.topic_locked == common.Yes ? common.YYYY_MM_DD: request.data.due_date,
+                request.data.topic_locked == common.Yes ? common.YYYY_MM_DD : request.data.due_date,
               dd_mm_yyyy:
                 request.data.topic_locked == common.Yes
                   ? common.DD_MM_YYYY
-                  : helper.change_dd_mm_yyyy(request.data.due_date),
+                  : change_dd_mm_yyyy(request.data.due_date),
             },
           };
         }
@@ -103,19 +103,19 @@ exports.getDigicardsBasedonTopic = async function (request) {
     }
 
     const singleTopicResponse = await topicRepository.fetchTopicByID2(request);
-    if (helper.isEmptyArray(singleTopicResponse?.Items)) {
+    if (isEmptyArray(singleTopicResponse?.Items)) {
       throw { status: 404, message: messages.TOPICS_NOT_FOUND };
     }
 
     const topicRelatedConceptResponse = await conceptRepository.fetchConceptData3(singleTopicResponse.Items[0]);
-    if (helper.isEmptyArray(topicRelatedConceptResponse?.Items)) {
+    if (isEmptyArray(topicRelatedConceptResponse?.Items)) {
       throw { status: 404, message: messages.NO_RELATED_CONCEPTS_FOUND };
     }
 
     const conceptDigicardIds = topicRelatedConceptResponse.Items.flatMap(e => e.concept_digicard_id);
 
     const digicardResponse = await digicardRepository.fetchDigiCardData2(conceptDigicardIds);
-    if (helper.isEmptyArray(digicardResponse?.Items)) {
+    if (isEmptyArray(digicardResponse?.Items)) {
       throw { status: 404, message: messages.NO_DIGICARDS_FOUND };
     }
 
@@ -125,7 +125,7 @@ exports.getDigicardsBasedonTopic = async function (request) {
       digicardResponse
     );
 
-    if (helper.isEmptyArray(defaultOrderData?.Items)) {
+    if (isEmptyArray(defaultOrderData?.Items)) {
       throw { status: 404, message: messages.NO_SORTED_DIGICARDS_FOUND };
     }
 
@@ -143,7 +143,7 @@ exports.getDigicardsBasedonTopic = async function (request) {
       delete digicard.digicard_image;
     }
 
-    digicardList = await helper.removeDuplicatesFromArrayOfObj(digicardList, messages.DIGI_CARD_ID);
+    digicardList = await removeDuplicatesFromArrayOfObj(digicardList, messages.DIGI_CARD_ID);
 
     const finalResponse = await exports.splitActiveAndArchivedDigicards(request, digicardList);
 
@@ -163,33 +163,33 @@ exports.splitActiveAndArchivedDigicards = async (request, digicardList) => {
       archivedDigicards: []
     };
 
-    let digicardActivities = !helper.isEmptyArray(teachActivity_response.Items) && teachActivity_response.Items[0].digicard_activities
+    let digicardActivities = !isEmptyArray(teachActivity_response.Items) && teachActivity_response.Items[0].digicard_activities
       ? teachActivity_response.Items[0].digicard_activities
       : [];
 
-    let chapterData = !helper.isEmptyArray(digicardActivities)
+    let chapterData = !isEmptyArray(digicardActivities)
       ? digicardActivities.filter(chap => chap.chapter_id === reqData.chapter_id)
       : [];
 
-    let prePostData = !helper.isEmptyArray(chapterData)
+    let prePostData = !isEmptyArray(chapterData)
       ? chapterData[0][reqData.learningType === prePostConstans.preLearningVal
         ? prePostConstans.preLearning
         : prePostConstans.postLearning]
       : [];
 
-    let topicData = !helper.isEmptyArray(prePostData)
+    let topicData = !isEmptyArray(prePostData)
       ? prePostData.filter(prePost => prePost.topic_id === reqData.topic_id)
       : [];
 
-    if (!helper.isEmptyArray(topicData)) {
-      if (helper.isEmptyArray(topicData[0].digicardOrder)) {
+    if (!isEmptyArray(topicData)) {
+      if (isEmptyArray(topicData[0].digicardOrder)) {
         topicData[0].digicardOrder = digicardList.map(defaultOrder => defaultOrder.digi_card_id);
       }
 
-      topicData[0].digicardOrder = await helper.removeDuplicates(topicData[0].digicardOrder);
-      topicData[0].archivedDigicard = await helper.removeDuplicates(topicData[0].archivedDigicard);
+      topicData[0].digicardOrder = await removeDuplicates(topicData[0].digicardOrder);
+      topicData[0].archivedDigicard = await removeDuplicates(topicData[0].archivedDigicard);
 
-      let activeCardOrder = await helper.getDifferenceValueFromTwoArray(
+      let activeCardOrder = await getDifferenceValueFromTwoArray(
         topicData[0].digicardOrder,
         topicData[0].archivedDigicard
       );
@@ -213,12 +213,12 @@ exports.splitActiveAndArchivedDigicards = async (request, digicardList) => {
 
 exports.getTopicsBasedonChapters = async (request) => {
   try {
-    if (!Array.isArray(request.data.chapter_array) || helper.isEmptyArray(request.data.chapter_array)) {
-      throw helper.formatErrorResponse(messages.INVALID_REQUEST_FORMAT, 400);
+    if (!Array.isArray(request.data.chapter_array) || isEmptyArray(request.data.chapter_array)) {
+      throw formatErrorResponse(messages.INVALID_REQUEST_FORMAT, 400);
     }
     const chapter_array = request.data.chapter_array.map((val) => ({ chapter_id: val }));
     const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
-    if (helper.isEmptyArray(chapter_response.Items)) {
+    if (isEmptyArray(chapter_response.Items)) {
       return chapter_response.Items;
     }
 
@@ -232,6 +232,6 @@ exports.getTopicsBasedonChapters = async (request) => {
     return topic_response.Items;
 
   } catch (error) {
-    throw helper.formatErrorResponse(error.message || messages.INVALID_REQUEST_FORMAT, 400);
+    throw formatErrorResponse(error.message || messages.INVALID_REQUEST_FORMAT, 400);
   }
 };

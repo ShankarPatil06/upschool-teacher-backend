@@ -1,19 +1,19 @@
 
 const { userRepository, schoolRepository } = require("../repository")
-const { requestData , common , messages ,mailSubject} = require('../constants/constant');
-const helper = require('../helper/helper');
+const { requestData, common, messages, mailSubject } = require('../constants/constant');
+const { isEmptyArray , getJwtToken , decodeJwtToken , hashingPassword , getRandomOtp} = require('../helper/helper');
 let sendMail = require("./emailService");
 
 exports.userLogin = async (request) => {
     try {
         const user_data_by_email_response = await userRepository.fetchUserDataByEmail2(request);
-        if (helper.isEmptyArray(user_data_by_email_response.Items)) {
+        if (isEmptyArray(user_data_by_email_response.Items)) {
             const user_data_by_phNo_response = await userRepository.fetchUserDataByPhoneNo2(request);
 
-            if (helper.isEmptyArray(user_data_by_phNo_response.Items)) {
+            if (isEmptyArray(user_data_by_phNo_response.Items)) {
                 const user_data_by_name_response = await userRepository.fetchUserDataByUserName2(request);
 
-                if (helper.isEmptyArray(user_data_by_name_response.Items)) {
+                if (isEmptyArray(user_data_by_name_response.Items)) {
                     throw { status: 400, message: messages.TEACHER_DOESNOT_EXISTS };
                 }
                 return await handleUserDataResponse(user_data_by_name_response, request);
@@ -41,11 +41,11 @@ const handleUserDataResponse = async (userResponse, request) => {
     if (!user.user_pwd) throw { status: 400, message: messages.FIRST_LOGIN };
 
     const hashReq = { salt: user.user_salt, password: request.data.user_password };
-    if (user.user_pwd !== helper.hashingPassword(hashReq)) {
+    if (user.user_pwd !== hashingPassword(hashReq)) {
         throw { status: 400, message: messages.INVALID_PASSWORD };
     }
 
-    const jwtToken = helper.getJwtToken(user);
+    const jwtToken = getJwtToken(user);
     request.user_jwt = jwtToken;
     request.teacher_id = user.teacher_id;
     await userRepository.updateJwtToken2(request);
@@ -60,7 +60,7 @@ const handleUserDataResponse = async (userResponse, request) => {
 
 exports.userLogout = async (request) => {
 
-    let decode_token = helper.decodeJwtToken(request.token);
+    let decode_token = decodeJwtToken(request.token);
 
     request[requestData.userJwt] = "";
     request[requestData.teacherId] = decode_token.teacher_id;
@@ -73,13 +73,13 @@ exports.LoginWithoutPassword2 = async (request) => {
 
     const fetch_user_data_response = await userRepository.fetchUserDataByEmail2(request);
 
-    if (!helper.isEmptyArray(fetch_user_data_response.Items) && fetch_user_data_response.Items[0].user_status === common.Active) {
+    if (!isEmptyArray(fetch_user_data_response.Items) && fetch_user_data_response.Items[0].user_status === common.Active) {
 
         request.data.school_id = fetch_user_data_response.Items[0].school_id;
         const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-        if (!helper.isEmptyArray(schoolDataRes.Items) && schoolDataRes.Items[0].school_status === common.Active && schoolDataRes.Items[0].subscription_active === common.Yes) {
-            const user_otp = helper.getRandomOtp().toString();
+        if (!isEmptyArray(schoolDataRes.Items) && schoolDataRes.Items[0].school_status === common.Active && schoolDataRes.Items[0].subscription_active === common.Yes) {
+            const user_otp = getRandomOtp().toString();
 
             const mailPayload = {
                 user_otp: user_otp,
@@ -113,7 +113,7 @@ exports.LoginWithoutPassword2 = async (request) => {
 
 exports.validateOtpForLogin2 = async (request) => {
     const fetchUserDataResponse = await userRepository.fetchUserDataByEmail2(request);
-    if (helper.isEmptyArray(fetchUserDataResponse.Items)) {
+    if (isEmptyArray(fetchUserDataResponse.Items)) {
         return { statusCode: 400, message: messages.USER_EMAIL_NOT_EXIST };
     }
 
@@ -124,19 +124,19 @@ exports.validateOtpForLogin2 = async (request) => {
     request.data.school_id = fetchUserDataResponse.Items[0].school_id;
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-    if (helper.isEmptyArray(schoolDataRes.Items) ||
+    if (isEmptyArray(schoolDataRes.Items) ||
         schoolDataRes.Items[0].school_status !== common.Active ||
         schoolDataRes.Items[0].subscription_active !== common.Yes) {
         return { statusCode: 400, message: messages.SCHOOL_IS_INACTIVE };
     }
 
-    const userResetOtp = helper.getRandomOtp().toString();
+    const userResetOtp = getRandomOtp().toString();
     request.data.teacher_id = fetchUserDataResponse.Items[0].teacher_id;
     request.data.user_reset_otp = userResetOtp;
 
     await userRepository.resetUserOtp2(request);
 
-    const jwtToken = helper.getJwtToken(fetchUserDataResponse.Items[0]);
+    const jwtToken = getJwtToken(fetchUserDataResponse.Items[0]);
     request.user_jwt = jwtToken;
     request.teacher_id = fetchUserDataResponse.Items[0].teacher_id;
 
@@ -156,7 +156,7 @@ exports.validateOtpForLogin2 = async (request) => {
 exports.passwordCreateOrReset = async (request) => {
     const fetchUserDataResponse = await userRepository.fetchUserDataByEmail2(request);
 
-    if (helper.isEmptyArray(fetchUserDataResponse.Items)) {
+    if (isEmptyArray(fetchUserDataResponse.Items)) {
         return { statusCode: 402, message: messages.USER_EMAIL_DOESNOT_EXISTS };
     }
 
@@ -164,8 +164,8 @@ exports.passwordCreateOrReset = async (request) => {
         return { statusCode: 403, message: messages.PASSWORD_MISSMATCH };
     }
 
-    const userSalt = helper.getRandomString();
-    const userPwd = helper.hashingPassword({ salt: userSalt, password: request.data.new_password });
+    const userSalt = getRandomString();
+    const userPwd = hashingPassword({ salt: userSalt, password: request.data.new_password });
 
     request.data.user_salt = userSalt;
     request.data.user_pwd = userPwd;
@@ -183,7 +183,7 @@ exports.updatePassword = async (request) => {
         request.teacher_id = request.data.teacher_id;
         const teacherDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-        if (helper.isEmptyArray(teacherDataResponse.Items)) {
+        if (isEmptyArray(teacherDataResponse.Items)) {
             return { statusCode: 402, message: messages.USER_DOESNOT_EXISTS };
         }
 
@@ -193,7 +193,7 @@ exports.updatePassword = async (request) => {
             return { statusCode: 400, message: messages.FIRST_LOGIN };
         }
 
-        const oldHashPassword = helper.hashingPassword({
+        const oldHashPassword = hashingPassword({
             salt: teacherData.user_salt,
             password: request.data.oldPassword
         });
@@ -206,8 +206,8 @@ exports.updatePassword = async (request) => {
             return { statusCode: 403, message: messages.PASSWORD_MISSMATCH };
         }
 
-        const newSalt = helper.getRandomString();
-        const newHashedPassword = helper.hashingPassword({
+        const newSalt = getRandomString();
+        const newHashedPassword = hashingPassword({
             salt: newSalt,
             password: request.data.newPassword
         });

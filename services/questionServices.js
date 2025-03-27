@@ -1,7 +1,7 @@
 const chapterServices = require("../services/chapterServices");
 const { schoolRepository, chapterRepository, topicRepository, teachingActivityRepository, conceptRepository, groupRepository } = require("../repository")
 const { prePostConstans, messages, common, commonConditionValue } = require('../constants/constant');
-const helper = require('../helper/helper');
+const { isEmptyArray, removeDuplicates } = require('../helper/helper');
 
 exports.fetchAvailableQuestions = async function (request) {
     try {
@@ -9,7 +9,7 @@ exports.fetchAvailableQuestions = async function (request) {
         const teacherActivityDetails = await teachingActivityRepository.fetchTeachingActivity2(request);
         const chapterResponse = await chapterRepository.fetchChapterByID2(request);
 
-        if (helper.isEmptyArray(chapterResponse.Items)) {
+        if (isEmptyArray(chapterResponse.Items)) {
             throw new Error(messages.CHAPTER_COMBO_DOESNT_EXISTS);
         }
 
@@ -34,7 +34,7 @@ exports.fetchAvailableQuestions = async function (request) {
         }
 
         if (request.data.test_stage === common.Post) {
-            if (helper.isEmptyArray(request.data.topics)) {
+            if (isEmptyArray(request.data.topics)) {
                 throw new Error(messages.NO_TOPICS_SELECTED);
             }
 
@@ -193,9 +193,9 @@ exports.fetchCountofQuestions2 = async (request, finalPreTopicData, pre_post_qui
 };
 
 exports.processGroups = async (groupArray) => {
-    groupArray = helper.removeDuplicates(groupArray);
+    groupArray = removeDuplicates(groupArray);
 
-    if (helper.isEmptyArray(groupArray)) return [];
+    if (isEmptyArray(groupArray)) return [];
 
     const groupDetails = await groupRepository.fetchGroupsData2({ group_array: groupArray });
 

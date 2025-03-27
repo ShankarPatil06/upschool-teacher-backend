@@ -1,6 +1,6 @@
 const { userRepository, classTestRepository, scannerRepository, schoolRepository, testResultRepository, studentRepository, quizRepository, quizResultRepository } = require("../repository")
 const { messages, common, mailFor, mailSubject, commonConditionValue, requestData, signedUrlConstants, testFolder, quizSetDetails, quizFolder } = require('../constants/constant');
-const helper = require('../helper/helper');
+const { isEmptyObject, isEmptyArray, getRandomOtp, PutObjectS3SigneUdrl, getCurrentTimestamp, getJwtTokenForScanner, extractValuesFromInputNew, extractAnswersFromInputNew } = require('../helper/helper');
 const ocrServices = require('./ocrServices');
 let sendMail = require("./emailService");
 
@@ -9,7 +9,7 @@ exports.sendScannerLink = async (request) => {
 
     const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-    if (helper.isEmptyArray(userDataResponse.Items) || userDataResponse.Items[0].user_status !== common.Active) {
+    if (isEmptyArray(userDataResponse.Items) || userDataResponse.Items[0].user_status !== common.Active) {
         return { statusCode: 400, message: messages.TEACHER_DOESNOT_EXISTS };
     }
 
@@ -17,7 +17,7 @@ exports.sendScannerLink = async (request) => {
 
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
-    if (helper.isEmptyArray(schoolDataRes.Items) ||
+    if (isEmptyArray(schoolDataRes.Items) ||
         schoolDataRes.Items[0].school_status !== common.Active ||
         schoolDataRes.Items[0].subscription_active !== common.Yes) {
         return { statusCode: 400, message: messages.SCHOOL_IS_INACTIVE };
@@ -45,11 +45,11 @@ exports.sendOTPForScanning = async (request) => {
 
     const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-    if (helper.isEmptyArray(userDataResponse.Items) || userDataResponse.Items[0].user_status !== common.Active) {
+    if (isEmptyArray(userDataResponse.Items) || userDataResponse.Items[0].user_status !== common.Active) {
         return { statusCode: 400, message: messages.TEACHER_DOESNOT_EXISTS };
     }
 
-    const user_otp = helper.getRandomOtp().toString();
+    const user_otp = getRandomOtp().toString();
     const mailPayload = {
         user_otp,
         toMail: userDataResponse.Items[0].user_email,
@@ -66,7 +66,7 @@ exports.sendOTPForScanning = async (request) => {
 
     request.data.user_otp = user_otp;
 
-    if (!helper.isEmptyArray(scannerSessionResponse.Items)) {
+    if (!isEmptyArray(scannerSessionResponse.Items)) {
         request.data.scanner_session_id = scannerSessionResponse.Items[0].scanner_session_id;
         const updateResponse = await scannerRepository.updateUserOtpScannerData2(request);
         return { statusCode: updateResponse ? 200 : 500, response: updateResponse };
@@ -82,26 +82,26 @@ exports.validateOTPForScanning = async (request) => {
 
     const fetchScannerSessionDataResponse = await scannerRepository.fetchScannerSessionData2(request);
 
-    if (helper.isEmptyArray(fetchScannerSessionDataResponse.Items)) {
+    if (isEmptyArray(fetchScannerSessionDataResponse.Items)) {
         throw new Error(messages.SESSION_NOT_FOUND);
     }
 
     const { user_otp, otp_ts, scanner_session_id } = fetchScannerSessionDataResponse.Items[0];
 
     if (user_otp === request.data.entered_otp) {
-        const currentTime = new Date(helper.getCurrentTimestamp());
+        const currentTime = new Date(getCurrentTimestamp());
         const otpGeneratedTime = new Date(otp_ts);
 
         const calculateTime = (currentTime - otpGeneratedTime) / (1000 * 60);
 
         if (calculateTime <= 10) {
-            const user_reset_otp = helper.getRandomOtp().toString();
+            const user_reset_otp = getRandomOtp().toString();
             request.data[requestData.scannerSessionId] = scanner_session_id;
             request.data[requestData.userResetOtp] = user_reset_otp;
 
             await scannerRepository.resetUserOtpScannerData2(request);
 
-            const jwtToken = helper.getJwtTokenForScanner(fetchScannerSessionDataResponse.Items[0]);
+            const jwtToken = getJwtTokenForScanner(fetchScannerSessionDataResponse.Items[0]);
             request[requestData.userJwt] = jwtToken;
             request[requestData.scannerSessionId] = scanner_session_id;
 
@@ -118,7 +118,7 @@ exports.validateOTPForScanning = async (request) => {
 exports.fetchSignedURLForAnswers = async (request) => {
     const folderPath = testFolder.studAnswerSheets.replace(signedUrlConstants.replace, request.data.test_id);
 
-    const extFilesS3 = await helper.PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
+    const extFilesS3 = await PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
 
     return [{
         file_name: request.data.ext_file,
@@ -132,8 +132,8 @@ exports.uploadQuizAnswerSheetsNew = async (request) => {
     const scannedRes = await ocrServices.readOpenAiPage(request);
 
     if (scannedRes?.content) {
-        let pageDetailsRes = await helper.extractValuesFromInputNew(scannedRes.content);
-        const answers = await helper.extractAnswersFromInputNew(scannedRes.content);
+        let pageDetailsRes = await extractValuesFromInputNew(scannedRes.content);
+        const answers = await extractAnswersFromInputNew(scannedRes.content);
 
         const pageNo = pageDetailsRes.find(item => item.label === commonConditionValue.pageNo)?.value;
         const quizId = request.data?.exam_id;
@@ -159,17 +159,17 @@ exports.uploadQuizAnswerSheetsNew = async (request) => {
 
             const fetchQuizDataResponse = await quizRepository.fetchQuizDataById2(request);
 
-            if (helper.isEmptyObject(fetchQuizDataResponse.Item)) {
+            if (isEmptyObject(fetchQuizDataResponse.Item)) {
                 return (messages.COULDNOT_READ_QUIZ_ID);
             }
             const fetchStudentDataResponse = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
 
-            if (!helper.isEmptyArray(fetchStudentDataResponse.Items)) {
+            if (!isEmptyArray(fetchStudentDataResponse.Items)) {
                 request.data.student_id = fetchStudentDataResponse.Items[0].student_id;
 
                 const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-                if (helper.isEmptyArray(fetchQuizResultResponse.Items)) {
+                if (isEmptyArray(fetchQuizResultResponse.Items)) {
                     const insertQuizDataResponse = await quizResultRepository.insertQuizDataOfStudent2(request);
 
                     if (insertQuizDataResponse === 200) {
@@ -182,7 +182,7 @@ exports.uploadQuizAnswerSheetsNew = async (request) => {
 
                     let pageExists = await fetchQuizResultResponse.Items[0].answer_metadata.filter(value => value.page_no === quizPageMetadata.answer_metadata[0].page_no);
 
-                    if (helper.isEmptyArray(pageExists)) {
+                    if (isEmptyArray(pageExists)) {
                         fetchQuizResultResponse.Items[0].answer_metadata.push({
                             page_no: quizPageMetadata.answer_metadata[0].page_no,
                             url: quizPageMetadata.answer_metadata[0].url,
@@ -234,8 +234,8 @@ exports.uploadAnswerSheets2New = async (request) => {
 
     const scannedRes = await ocrServices.readOpenAiPage(request);
     if (scannedRes?.content) {
-        let pageDetailsRes = await helper.extractValuesFromInputNew(scannedRes.content);
-        const answers = await helper.extractAnswersFromInputNew(scannedRes.content);
+        let pageDetailsRes = await extractValuesFromInputNew(scannedRes.content);
+        const answers = await extractAnswersFromInputNew(scannedRes.content);
 
         const pageNo = pageDetailsRes.find(item => item.label === commonConditionValue.pageNo)?.value;
         const testId = request.data?.exam_id;
@@ -257,17 +257,17 @@ exports.uploadAnswerSheets2New = async (request) => {
 
             const classTestData = await classTestRepository.fetchClassTestDataById2(request);
 
-            if (helper.isEmptyObject(classTestData.Item)) {
+            if (isEmptyObject(classTestData.Item)) {
                 return (messages.COULDNT_READ_TEST_ID);
             }
 
             const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
 
-            if (!helper.isEmptyArray(studentData.Items)) {
+            if (!isEmptyArray(studentData.Items)) {
                 request.data.student_id = studentData.Items[0].student_id;
                 const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
 
-                if (helper.isEmptyArray(testResultData.Items)) {
+                if (isEmptyArray(testResultData.Items)) {
                     const insertResponse = await testResultRepository.insertTestDataOfStudent2(request);
                     if (insertResponse === 200) {
                         return (messages.IMAGE_UPLOADED_SUCCESSFULLY)
@@ -320,7 +320,7 @@ exports.uploadAnswerSheets2New = async (request) => {
 exports.fetchSignedURLForQuizAnswers = async (request) => {
     const folderPath = quizFolder.studAnswerSheets.replace(signedUrlConstants.replace, request.data.quiz_id);
 
-    const extFilesS3 = await helper.PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
+    const extFilesS3 = await PutObjectS3SigneUdrl(request.data.ext_file, folderPath);
 
     return [{
         file_name: request.data.ext_file,
@@ -333,14 +333,14 @@ exports.removeUploadedAnswerData = async (request) => {
 
     const studentData = await studentRepository.fetchStudentDataByRollNoClassSection2(request);
 
-    if (!helper.isEmptyArray(studentData.Items)) {
+    if (!isEmptyArray(studentData.Items)) {
         request.data.student_id = studentData.Items[0].student_id;
 
         if (request.data.test_type === commonConditionValue.classTest) {
             request.data.class_test_id = request.data.exam_id;
 
             const testResultData = await testResultRepository.fetchTestDataOfStudent2(request);
-            if (!helper.isEmptyArray(testResultData.Items)) {
+            if (!isEmptyArray(testResultData.Items)) {
 
                 let pageDataExists = testResultData.Items[0].answer_metadata.find(value => value.url === request.data.Key[0]);
 
@@ -371,7 +371,7 @@ exports.removeUploadedAnswerData = async (request) => {
 
             const fetchQuizResultResponse = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-            if (!helper.isEmptyArray(fetchQuizResultResponse.Items)) {
+            if (!isEmptyArray(fetchQuizResultResponse.Items)) {
 
                 let pageDataExists = fetchQuizResultResponse.Items[0].answer_metadata.find(value => value.url === request.data.Key[0]);
 
