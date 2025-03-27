@@ -1,4 +1,3 @@
-const answerController = require('./answerController')
 const baseController = require('./baseController')
 const blueprintController = require('./blueprintController')
 const chapterController = require('./chapterController')
@@ -23,7 +22,6 @@ const topicController = require('./topicController')
 
 
 module.exports = {
-    answerController,
     baseController,
     blueprintController,
     chapterController,
@@ -44,5 +42,4 @@ module.exports = {
     teacherController,
     testQuestionPaperController,
     topicController
-    
 }

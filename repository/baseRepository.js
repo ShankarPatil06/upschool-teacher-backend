@@ -10,15 +10,6 @@ const scanData = (docClient, params, callback) => {
 };
 
 const queryData = (docClient, params, callback) => {
-    // docClient.query(params, (err, data) => {
-    //     if (err) {
-    //         console.log(err);
-    //         callback(err, data);
-    //     } else {
-    //         callback(err, data);
-    //     }
-    // });
-
     queryWithPagination(docClient, params, (err, data) => {
         if (err) {
             console.log(err);
@@ -66,7 +57,7 @@ const deleteMultiData = (docClient, params, callback) => {
             console.log(err);
             callback(err, data);
         } else {
-            // callback(0, 200);
+            callback(0, 200);
         }
     });
 };
@@ -76,7 +67,7 @@ const batchReadData = (docClient, params, callback) => {
             console.log(err);
             callback(err, data);
         } else {
-            // callback(0, 200);
+            callback(0, 200);
         }
     });
 };

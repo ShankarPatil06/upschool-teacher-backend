@@ -37,7 +37,7 @@ exports.messages = {
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
     SCHOOL_IS_ACTIVE: "Unable to delete the school as subscription status is active!",
     SCHOOL_IS_INACTIVE: "School is not active",
-    INVALID_REQUEST_FORMAT: "Invaid Request Format",
+    INVALID_REQUEST_FORMAT: "Invalid Request Format",
     ERROR: "Error",
     DIDNT_SET_CONFIG: "Post Configuration is not set by School",
     PERMISSION_DENIED: "Permission denied!",
@@ -198,7 +198,13 @@ exports.messages = {
     USER_EMAIL_NOT_EXIST: "User email does not exist.",
     PASSWORD_RESET_SUCCESS: "Password reset successfully.",
     PASSWORD_CHANGED_SUCCESS: "Password changed successfully.",
-    QUESTIONS_NOT_FOUND: "Questions not found."
+    QUESTIONS_NOT_FOUND: "Questions not found.",
+    SESSION_NOT_FOUND: "Session not found.",
+    ID_ARRAY_REQUIRED: "IdArray must be a non-empty array.",
+    NO_QUESTION_IDS_PROVIDED: "No question IDs provided.",
+    BULK_DATA_FETCH_FAILED: "Failed to fetch bulk data.",
+    INVALID_INPUT_TOPIC_CONCEPT_ID: "Invalid input: topic_concept_id must be a non-empty array.",
+    GROUPS_FETCH_FAILED: "Error fetching groups from database."
 
 }
 
