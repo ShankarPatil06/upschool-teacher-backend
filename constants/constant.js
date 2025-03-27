@@ -128,6 +128,7 @@ exports.messages = {
     EMAIL_ALREADY_IN_USE: "Email Id Already In Use",
     PARENT_DOESNT_EXIST: "Parent Doesn't Exist For This Phone Number",
     INVALID_USER_STATUS: "Invalid User Status to toggle",
+    OTP_UPDATED_SUCCESSFULLY: "OTP Updated Successfully.",
 
     // Concept : 
     CONCEPT_TITLE_ALREADY_EXIST: "Concept Title Already Exist!",
@@ -152,6 +153,7 @@ exports.messages = {
     NO_SUBJECTS_FOR_TEACHER: "No Subjects allocated for Teacher",
     INVALID_TEACHER: "Invalid Teacher Input",
     TEACHER_ACTIVITY_ERROR: "Error in Unlocking Digicards",
+    FAILED_TO_FETCH_TEACHER_EMAIL: "Failed to Fetch Teacher Email",
 
     // Test Question Paper : 
     TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS: "Question Paper Name Already Exists",

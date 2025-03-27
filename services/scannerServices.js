@@ -385,8 +385,8 @@ exports.removeUploadedAnswerData = async (request) => {
                             quiz_set: request.data.set
                         }
                     };
+                    
                     const updateQuizDataResponse = await quizResultRepository.updateQuizDataOfStudent2(updateRequest);
-
 
                     if (updateQuizDataResponse) {
                         return (messages.UPLOADED_ANSWER_REMOVED);
@@ -400,9 +400,7 @@ exports.removeUploadedAnswerData = async (request) => {
                 return (messages.TEST_DATA_NOT_FOUND);
             }
         }
-
     } else {
         return (messages.STUDENT_DATA_NOT_FOUND);
     }
 }
-
