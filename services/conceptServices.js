@@ -1,9 +1,9 @@
 const { conceptRepository, topicRepository } = require("../repository")
 const { messages } = require('../constants/constant');
-const { helper } = require("../helper");
+const { isEmptyArray } = require("../helper/helper");
 
 exports.getConceptsBasedonTopicsNew = async (request) => {
-    if (helper.isEmptyArray(request.data.topic_array)) {
+    if (isEmptyArray(request.data.topic_array)) {
         return {
             statusCode: 400,
             body: messages.INVALID_REQUEST,
@@ -12,7 +12,7 @@ exports.getConceptsBasedonTopicsNew = async (request) => {
 
     const topic_res = await topicRepository.fetchTopicIDandTopicConceptID2({ topic_array: request.data.topic_array });
 
-    if (helper.isEmptyArray(topic_res)) {
+    if (isEmptyArray(topic_res)) {
         return {
             statusCode: 200,
             body: topic_res,

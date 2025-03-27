@@ -1,13 +1,13 @@
 const { blueprintRepository, questionRepository, commonRepository, testQuestionPaperRepository, groupRepository, subjectRepository, unitRepository, chapterRepository, topicRepository, conceptRepository } = require("../repository")
 const { TABLE_NAMES } = require('../constants/tables');
-const { messages , common  , questionKeys , requestData ,status } = require('../constants/constant');
-const helper = require('../helper/helper');
+const { messages, common, questionKeys, requestData, status } = require('../constants/constant');
+const { isEmptyArray, removeDuplicates, getAnswerContentFileUrl, removeExistObject } = require('../helper/helper');
 
 exports.getBlueprintByItsId = async (request) => {
     try {
         const singleBlueprint_res = await blueprintRepository.fetchBlueprintById2(request);
 
-        if (helper.isEmptyArray(singleBlueprint_res.Items)) {
+        if (isEmptyArray(singleBlueprint_res.Items)) {
             throw new Error(messages.NO_DATA);
         }
 
@@ -20,8 +20,8 @@ exports.getBlueprintByItsId = async (request) => {
             skillIds.push(...section.questions.map(ques => ques.cognitive_id));
         }
 
-        catIds = helper.removeDuplicates(catIds);
-        skillIds = helper.removeDuplicates(skillIds);
+        catIds = removeDuplicates(catIds);
+        skillIds = removeDuplicates(skillIds);
 
         const [cateData_res, cognData_res] = await Promise.all([
             commonRepository.fetchBulkDataWithProjection5({
@@ -138,7 +138,7 @@ exports.setBlueprintFinalData = async (questionSection, catData, skillData) => {
 exports.fetchBlueprintQuestions = async (request) => {
     try {
         const blueprint_res = await blueprintRepository.fetchBlueprintById2(request);
-        if (helper.isEmptyArray(blueprint_res?.Items)) {
+        if (isEmptyArray(blueprint_res?.Items)) {
             return null;
         }
 
@@ -160,7 +160,7 @@ exports.fetchBlueprintQuestions = async (request) => {
             }
         });
 
-        topicIds = await helper.removeDuplicates(topicIds);
+        topicIds = await removeDuplicates(topicIds);
 
         /** FETCH TOPIC DATA **/
         const fetchBulkTopReq = {
@@ -179,8 +179,7 @@ exports.fetchBlueprintQuestions = async (request) => {
             }
         });
 
-        conceptIds = await helper.removeDuplicates(conceptIds);
-
+        conceptIds = await removeDuplicates(conceptIds);
 
         const fetchBulkConReq = {
             IdArray: conceptIds,
@@ -198,7 +197,7 @@ exports.fetchBlueprintQuestions = async (request) => {
             }
         });
 
-        workQuesIds = await helper.removeDuplicates(workQuesIds);
+        workQuesIds = await removeDuplicates(workQuesIds);
 
         const fetchBulkquesReq = {
             IdArray: workQuesIds,
@@ -217,7 +216,7 @@ exports.fetchBlueprintQuestions = async (request) => {
 
         const filteredQuestionData = questionsData_res.Items.filter(qtn => request.data.source_ids.includes(qtn.question_source));
 
-        const priorities = await helper.checkPriorityQuestions(request.data.question_details);
+        const priorities = await checkPriorityQuestions(request.data.question_details);
 
         const questionPaper = await exports.createQuestionPaper(
             priorities,
@@ -297,7 +296,7 @@ exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas)
     for (const concept of conceptId) {
         let conceptBlock = conceptData.filter(con => con.concept_id === concept.value);
 
-        if (!helper.isEmptyArray(conceptBlock) && conceptBlock[0].concept_question_id) {
+        if (!isEmptyArray(conceptBlock) && conceptBlock[0].concept_question_id) {
             for (const cq of conceptBlock[0].concept_question_id) {
                 let singleQues = questionDatas.find(ques => ques.question_id === cq);
                 if (singleQues !== undefined) {
@@ -316,7 +315,7 @@ exports.getTopicsAvailQuestions = async (topicId, topicData, conceptData, questi
 
     for (const topic of topicId) {
         const foundTopic = topicData.filter(con => con.topic_id === topic.value);
-        if (!helper.isEmptyArray(foundTopic)) {
+        if (!isEmptyArray(foundTopic)) {
             for (const tc of foundTopic[0].topic_concept_id) {
                 const singleCon = conceptData.find(cons => cons.concept_id === tc);
                 if (singleCon) {
@@ -347,14 +346,14 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId) => 
             Number(Qs.marks) === Number(blueQues.marks) &&
             Qs.question_type === blueQues.question_type);
 
-    getQuestion = await helper.removeExistObject(questionExistId, getQuestion, requestData.questionId);
+    getQuestion = await removeExistObject(questionExistId, getQuestion, requestData.questionId);
 
-    if ( !helper.isEmptyArray(getQuestion) && (!questionExistId.includes(getQuestion[0].question_id))) {
+    if (!isEmptyArray(getQuestion) && (!questionExistId.includes(getQuestion[0].question_id))) {
         let contUrl = common.NA;
 
         if (blueQues.question_type === questionKeys.objective) {
             try {
-                contUrl = await helper.getAnswerContentFileUrl(getQuestion[0].answers_of_question);
+                contUrl = await getAnswerContentFileUrl(getQuestion[0].answers_of_question);
             } catch (curlErr) {
                 console.log(curlErr);
             }

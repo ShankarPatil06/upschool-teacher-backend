@@ -1,7 +1,6 @@
 const { client } = require('../awsConfig');
 const { QueryCommand, UpdateCommand, BatchWriteCommand, DynamoDBDocumentClient, DeleteCommand, PutCommand, GetCommand, BatchGetCommand} = require('@aws-sdk/lib-dynamodb');
 
-// Configure the AWS SDK to use the local DynamoDB instance
 
 const ddbDocClient = DynamoDBDocumentClient.from(client);
 
