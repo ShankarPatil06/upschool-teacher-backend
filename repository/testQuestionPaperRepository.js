@@ -1,47 +1,7 @@
-const dynamoDbCon = require('../awsConfig');
-const { DATABASE_TABLE } = require('./baseRepository');
-const helper = require('../helper/helper');
-const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
-const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
-
-exports.getTestQuestionPapersBasedonStatus = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("DB ERROR : TEACHING ACTIVITY");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR);
-        } else {
-
-            let docClient = dynamoDBCall;
-
-            let filterExpression = "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND question_paper_status = :question_paper_status";
-            let expressionAttributeValues = {
-                ":common_id": constant.constValues.common_id,
-                ":client_class_id": request.data.client_class_id,
-                ":section_id": request.data.section_id,
-                ":subject_id": request.data.subject_id,
-                ":question_paper_status": request.data.question_paper_status
-            };
-
-            if (request.data.blueprint_type) {
-                filterExpression += " AND blueprint_type = :blueprint_type";
-                expressionAttributeValues[":blueprint_type"] = request.data.blueprint_type;
-            }
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: filterExpression,
-                ExpressionAttributeValues: expressionAttributeValues,
-                ProjectionExpression: ["question_paper_id", "question_paper_name", "blueprint_id", "blueprint_type"]
-            };
-
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
-};
+const { getCurrentTimestamp, getRandomString } = require("../helper/helper");
+const { DATABASE_TABLE2 } = require("./baseRepositoryNew");
+const { indexes: { Indexes }, tables: { TABLE_NAMES } } = require("../constants");
+const { common, constValues, messages } = require("../constants/constant");
 
 exports.getTestQuestionPapersBasedonStatus2 = async (request) => {
     const params = {
@@ -50,7 +10,7 @@ exports.getTestQuestionPapersBasedonStatus2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND question_paper_status = :question_paper_status",
         ExpressionAttributeValues: {
-            ":common_id": constant.constValues.common_id,
+            ":common_id": constValues.common_id,
             ":client_class_id": request.data.client_class_id,
             ":section_id": request.data.section_id,
             ":subject_id": request.data.subject_id,
@@ -62,33 +22,6 @@ exports.getTestQuestionPapersBasedonStatus2 = async (request) => {
     return data.Items;
 };
 
-exports.fetchTestQuestionPaperbyName = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("Group Data Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "lc_question_paper_name = :lc_question_paper_name",
-                ExpressionAttributeValues: {
-                    ":lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
-                    ":common_id": constant.constValues.common_id,
-                }
-            }
-
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
-}
-
 exports.fetchTestQuestionPaperbyName2 = async (request) => {
 
     const readParams = {
@@ -97,100 +30,42 @@ exports.fetchTestQuestionPaperbyName2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: "lc_question_paper_name = :lc_question_paper_name",
         ExpressionAttributeValues: {
-            ":lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
-            ":common_id": constant.constValues.common_id,
+            ":lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ""),
+            ":common_id": constValues.common_id,
         }
     };
 
     return await DATABASE_TABLE2.query(readParams);
 };
 
-
-exports.insertTestQuestionPaper = function (request, callback) {
-
-    console.log("request : ", request);
-    dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log(constant.messages.DATABASE_ERROR);
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-            let docClient = dynamoDBCall;
-
-            let insert_question_paper_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-                Item: {
-                    "question_paper_id": await helper.getRandomString(),
-                    "blueprint_id": request.data.blueprint_id,
-                    "client_class_id": request.data.client_class_id,
-                    "subject_id": request.data.subject_id,
-                    "section_id": request.data.section_id,
-                    "source_id": request.data.source_id,
-                    "lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
-                    "question_paper_name": request.data.question_paper_name,
-                    "question_paper_status": "Active",
-                    "chapter_id": request.data.chapter_ids,
-                    "questions": request.data.questions,
-                    "common_id": constant.constValues.common_id,
-                    "created_ts": helper.getCurrentTimestamp(),
-                    "updated_ts": helper.getCurrentTimestamp(),
-                    "blueprint_type": request.data.blueprint_type,
-                },
-            }
-            DATABASE_TABLE.putRecord(docClient, insert_question_paper_params, callback);
-        }
-    });
-}
-
 exports.insertTestQuestionPaper2 = async (request) => {
 
     const insertQuestionPaperParams = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
         Item: {
-            "question_paper_id": await helper.getRandomString(),
-            "blueprint_id": request.data.blueprint_id,
-            "client_class_id": request.data.client_class_id,
-            "subject_id": request.data.subject_id,
-            "section_id": request.data.section_id,
-            "source_id": request.data.source_id,
-            "lc_question_paper_name": request.data.question_paper_name.toLowerCase().replace(/ /g, ''),
-            "question_paper_name": request.data.question_paper_name,
-            "question_paper_status": "Active",
-            "chapter_id": request.data.chapter_ids,
-            "questions": request.data.questions,
-            "common_id": constant.constValues.common_id,
-            "created_ts": helper.getCurrentTimestamp(),
-            "updated_ts": helper.getCurrentTimestamp(),
-            "blueprint_type": request.data.blueprint_type,
+            question_paper_id: await getRandomString(),
+            blueprint_id: request.data.blueprint_id,
+            client_class_id: request.data.client_class_id,
+            subject_id: request.data.subject_id,
+            section_id: request.data.section_id,
+            source_id: request.data.source_id,
+            lc_question_paper_name: request.data.question_paper_name.toLowerCase().replace(/ /g, ""),
+            question_paper_name: request.data.question_paper_name,
+            question_paper_status: common.Active,
+            chapter_id: request.data.chapter_ids,
+            questions: request.data.questions,
+            common_id: constValues.common_id,
+            created_ts: getCurrentTimestamp(),
+            updated_ts: getCurrentTimestamp(),
+            blueprint_type: request.data.blueprint_type,
         }
     };
 
     await DATABASE_TABLE2.putItem(insertQuestionPaperParams);
-    return { statusCode: 200, message: constant.messages.INSERT_SUCCESS };
+    return { statusCode: 200, message: messages.INSERT_SUCCESS };
 
 };
 
-exports.fetchTestQuestionPaperByID = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log(constant.messages.DATABASE_ERROR);
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-                KeyConditionExpression: "question_paper_id = :question_paper_id",
-                ExpressionAttributeValues: {
-                    ":question_paper_id": request.data.question_paper_id
-                }
-            }
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
-}
 exports.fetchTestQuestionPaperByID2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
@@ -203,30 +78,6 @@ exports.fetchTestQuestionPaperByID2 = async (request) => {
     console.log(params);
     const data = await DATABASE_TABLE2.query(params);
     return data;
-}
-
-exports.getTestQuestionPaperById = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log(constant.messages.DATABASE_ERROR);
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-                KeyConditionExpression: "question_paper_id = :question_paper_id",
-                ExpressionAttributeValues: {
-                    ":question_paper_id": request.data.question_paper_id
-                }
-            }
-
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
 }
 
 exports.getTestQuestionPaperById2 = async (request) => {
@@ -244,7 +95,7 @@ exports.getTestQuestionPaperById2 = async (request) => {
     if (result.Items && result.Items.length > 0) {
         return { statusCode: 200, data: result.Items };
     } else {
-        return { statusCode: 404, message: "Question paper not found" };
+        return { statusCode: 404, message: messages.QUESTION_PAPER_NOT_FOUND };
     }
 };
 
@@ -252,7 +103,7 @@ exports.getTestQuestionPaperById3 = async (request) => {
     const question_paper_ids = [...new Set(request.question_paper_ids)]; // Remove duplicates
 
     if (question_paper_ids.length === 0) {
-        return { statusCode: 400, message: "No question paper IDs provided" };
+        return { statusCode: 400, message: messages.NO_QUESTION_PAPER_IDS_PROVIDED };
     }
 
     if (question_paper_ids.length === 1) {
@@ -265,7 +116,7 @@ exports.getTestQuestionPaperById3 = async (request) => {
             }
         };
 
-        const results =  await DATABASE_TABLE2.query(readParams);
+        const results = await DATABASE_TABLE2.query(readParams);
         return { statusCode: 200, data: results.Items };
     } else {
         const queryPromises = question_paper_ids.map((id) => {
@@ -286,34 +137,6 @@ exports.getTestQuestionPaperById3 = async (request) => {
     }
 };
 
-exports.getClassTestsBasedonIds = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("getClassTestsBasedonIds Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_class_test_table,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "class_test_status = :class_test_status AND question_paper_id = :question_paper_id",
-                ExpressionAttributeValues: {
-                    ":common_id": constant.constValues.common_id,
-                    ":class_test_status": "Active",
-                    ":question_paper_id": request.data.question_paper_id,
-                },
-                ProjectionExpression: ["class_test_name", "question_paper_id"],
-            }
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
-}
-
 exports.getClassTestsBasedonIds2 = async (request) => {
 
     const readParams = {
@@ -322,72 +145,38 @@ exports.getClassTestsBasedonIds2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: "class_test_status = :class_test_status AND question_paper_id = :question_paper_id",
         ExpressionAttributeValues: {
-            ":common_id": constant.constValues.common_id,
-            ":class_test_status": "Active",
+            ":common_id": constValues.common_id,
+            ":class_test_status": common.Active,
             ":question_paper_id": request.data.question_paper_id
         },
         ProjectionExpression: "class_test_name, question_paper_id",
     };
 
     return await DATABASE_TABLE2.query(readParams);
-
-    // return result.Items;
-    // if (result.Items && result.Items.length > 0) {
-    //     return { statusCode: 200, data: result.Items };
-    // } else {
-    //     return { statusCode: 404, message: "No active class tests found" };
-    // }
 };
-
-
-exports.updateQuestionPaperStatus = function (request, callback) {
-    console.log("updateQuestionPaperStatus", request);
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("updateQuestionPaperStatus Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR)
-        } else {
-
-            let docClient = dynamoDBCall;
-            let updated_params = {
-                TableName: TABLE_NAMES.upschool_test_question_paper,
-                Key: { "question_paper_id": request.data.question_paper_id },
-                UpdateExpression: "set question_paper_status = :question_paper_status, updated_ts = :updated_ts",
-                ExpressionAttributeValues: {
-                    ":question_paper_status": request.data.question_paper_status,
-                    ":updated_ts": helper.getCurrentTimestamp()
-                },
-            }
-            DATABASE_TABLE.updateRecord(docClient, updated_params, callback);
-        }
-    });
-}
 
 exports.updateQuestionPaperStatus2 = async function (request) {
 
     const updatedParams = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
-        Key: { "question_paper_id": request.data.question_paper_id },
+        Key: { question_paper_id: request.data.question_paper_id },
         UpdateExpression: "set question_paper_status = :question_paper_status, updated_ts = :updated_ts",
         ExpressionAttributeValues: {
             ":question_paper_status": request.data.question_paper_status,
-            ":updated_ts": helper.getCurrentTimestamp()
+            ":updated_ts": getCurrentTimestamp()
         }
     };
 
     await DATABASE_TABLE2.updateService(updatedParams);
 
-    return { statusCode: 200, message: "Question paper status updated successfully" };
+    return { statusCode: 200, message: messages.QUESTION_PAPER_STATUS_UPDATED_SUCCESSFULLY };
 };
-
 
 exports.fetchAllTestsBasedonSubject2 = async (request) => {
     let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id";
 
     let expressionAttributeValues = {
-        ":common_id": constant.constValues.common_id,
+        ":common_id": constValues.common_id,
         ":quiz_status": request.data.quiz_status,
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
@@ -419,26 +208,26 @@ exports.insertCustomWorkSheetQuestionPaper = async (request) => {
     const insertQuestionPaperParams = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
         Item: {
-            "question_paper_id": request.data.question_paper_id,
-            "student_id": request.data.student_id,
-            "student_name": request.data.student_name,
-            "section_id": request.data.section_id,
-            "subject_id": request.data.subject_id,
-            "client_class_id": request.data.client_class_id,
-            "test_id": request.data.test_id,
-            "questions": request.data.questions,
-            "question_paper_status": request.data.question_paper_status,
-            "question_paper_name": request.data.question_paper_name,
-            "blueprint_type": request.data.blueprint_type,
-            "question_paper_template": "",
-            "common_id": constant.constValues.common_id,
-            "created_ts": helper.getCurrentTimestamp(),
-            "updated_ts": helper.getCurrentTimestamp(),
+            question_paper_id: request.data.question_paper_id,
+            student_id: request.data.student_id,
+            student_name: request.data.student_name,
+            section_id: request.data.section_id,
+            subject_id: request.data.subject_id,
+            client_class_id: request.data.client_class_id,
+            test_id: request.data.test_id,
+            questions: request.data.questions,
+            question_paper_status: request.data.question_paper_status,
+            question_paper_name: request.data.question_paper_name,
+            blueprint_type: request.data.blueprint_type,
+            question_paper_template: "",
+            common_id: constValues.common_id,
+            created_ts: getCurrentTimestamp(),
+            updated_ts: getCurrentTimestamp(),
         }
     };
 
     await DATABASE_TABLE2.putItem(insertQuestionPaperParams);
-    return { statusCode: 200, message: constant.messages.INSERT_SUCCESS };
+    return { statusCode: 200, message: messages.INSERT_SUCCESS };
 
 };
 
@@ -446,13 +235,13 @@ exports.fetchStudentWorksheet = async (request) => {
     let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND question_paper_status=:question_paper_status";
 
     let expressionAttributeValues = {
-        ":common_id": constant.constValues.common_id,
+        ":common_id": constValues.common_id,
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
-        ":blueprint_type": "customWorksheet",
-        ":question_paper_status": "customActive",
+        ":blueprint_type": common.customWorksheet,
+        ":question_paper_status": common.customActive,
     };
 
     let params = {
@@ -470,7 +259,7 @@ exports.updateCustomWorkSheetQuestionPaper = async (request) => {
     const updateQuestionPaperParams = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
         Key: {
-            "question_paper_id": request.data.question_paper_id,
+            question_paper_id: request.data.question_paper_id,
         },
         UpdateExpression: "SET questions = :questions, updated_ts = :updated_ts ,test_id=:test_id,question_paper_name=:question_paper_name ,question_paper_template=:question_paper_template",
         ExpressionAttributeValues: {
@@ -478,42 +267,42 @@ exports.updateCustomWorkSheetQuestionPaper = async (request) => {
             ":question_paper_name": request.data.question_paper_name,
             ":test_id": request.data.test_id,
             ":question_paper_template": "",
-            ":updated_ts": helper.getCurrentTimestamp(),
+            ":updated_ts": getCurrentTimestamp(),
         }
     };
     await DATABASE_TABLE2.updateService(updateQuestionPaperParams);
-    return { statusCode: 200, message: constant.messages.UPDATE_SUCCESS };
+    return { statusCode: 200, message: messages.UPDATE_SUCCESS };
 }
 exports.updateTemplateDetails = async (request) => {
     console.log({ request });
     const updateQuestionPaperParams = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
         Key: {
-            "question_paper_id": request.data.question_paper_id,
+            question_paper_id: request.data.question_paper_id,
         },
         UpdateExpression: "SET question_paper_template = :question_paper_template , updated_ts = :updated_ts , key_answer_template = :key_answer_template",
         ExpressionAttributeValues: {
             ":question_paper_template": request.data.question_paper_template,
             ":key_answer_template": request.data.key_answer_template,
-            ":updated_ts": helper.getCurrentTimestamp(),
+            ":updated_ts": getCurrentTimestamp(),
         }
     };
     await DATABASE_TABLE2.updateService(updateQuestionPaperParams);
-    return { statusCode: 200, message: constant.messages.UPDATE_SUCCESS };
+    return { statusCode: 200, message: messages.UPDATE_SUCCESS };
 }
 
 exports.fetchStudentWorksheetBasedOnTestId = async (request) => {
     let filterExpression = "subject_id = :subject_id AND section_id = :section_id AND client_class_id = :client_class_id AND blueprint_type=:blueprint_type AND student_id=:student_id AND test_id=:test_id AND question_paper_status = :question_paper_status";
 
     let expressionAttributeValues = {
-        ":common_id": constant.constValues.common_id,
+        ":common_id": constValues.common_id,
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
         ":student_id": request.data.student_id,
         ":client_class_id": request.data.client_class_id,
         ":test_id": request.data.test_id,
-        ":question_paper_status": "customActive",
-        ":blueprint_type": "customWorksheet",
+        ":question_paper_status": common.customActive,
+        ":blueprint_type": common.customWorksheet,
     };
 
     let params = {
