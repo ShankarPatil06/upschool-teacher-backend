@@ -18,7 +18,6 @@ exports.fetchUserDataByEmail2 = async (request) => {
 
     const result = await DATABASE_TABLE2.query(queryParams);
     return result;
-
 };
 
 exports.fetchUserDataByPhoneNo2 = async (request) => {
@@ -116,7 +115,6 @@ exports.resetUserOtp2 = async (request) => {
 
     await DATABASE_TABLE2.updateService(params);
     return { statusCode: 200, message: messages.OTP_UPDATED_SUCCESSFULLY };
-
 };
 
 exports.resetPassword2 = async (request) => {

@@ -45,7 +45,7 @@ exports.validScannerUser = (req, res, next) => {
     console.log("Token : ", token);
     console.log("request : ", request);
 
-    jwt.verify(token, process.env.SECRET_KEY, (err, data) => {
+    jwt.verify(token, process.env.SECRET_KEY, async (err, data) => {
         if (err) {
             console.log(err);
             res.status(400).json(constant.messages.INVALID_TOKEN);
@@ -57,35 +57,29 @@ exports.validScannerUser = (req, res, next) => {
             request.data["teacher_id"] = decode_token.teacher_id;
             request.data["test_id"] = decode_token.test_id;
 
-            scannerRepository.fetchScannerSessionData(request, function (fetch_user_data_err, fetch_user_data_response) {
-                if (fetch_user_data_err) {
-                    console.log(fetch_user_data_err);
-                    res.status(400).json(constant.messages.INVALID_TOKEN);
-                } else {
-                    if (fetch_user_data_response.Items.length > 0) {
-                        if (fetch_user_data_response.Items[0].user_jwt === token) {
+            try {
+                const fetchUserDataResponse = await scannerRepository.fetchScannerSessionData2(request);
 
-                            let currentTime = new Date(helper.getCurrentTimestamp());
-                            let previousJWTTime = new Date(fetch_user_data_response.Items[0].jwt_ts);
-
-                            let calculateTime = (currentTime - previousJWTTime) / (1000 * 60);
-
-                            if (calculateTime <= 120) {
-                                next();
-                            } else {
-                                res.status(400).json(constant.messages.SESSION_EXPIRED);
-                            }
-
-                        } else {
-                            res.status(400).json(constant.messages.INVALID_TOKEN);
-                        }
-
-                    } else {
-                        res.status(400).json(constant.messages.INVALID_TOKEN);
-                    }
-
+                if (!fetchUserDataResponse || !fetchUserDataResponse.Items || fetchUserDataResponse.Items.length === 0) {
+                    return res.status(400).json(constant.messages.INVALID_TOKEN);
                 }
-            })
+
+                const userSession = fetchUserDataResponse.Items[0];
+                if (userSession.user_jwt !== token) {
+                    return res.status(400).json(constant.messages.INVALID_TOKEN);
+                }
+                const currentTime = new Date(helper.getCurrentTimestamp());
+                const previousJWTTime = new Date(userSession.jwt_ts);
+                const calculateTime = (currentTime - previousJWTTime) / (1000 * 60);
+
+                if (calculateTime > 120) {
+                    return res.status(400).json(constant.messages.SESSION_EXPIRED);
+                }
+
+                next();
+            } catch (error) {
+                res.status(500).json(constant.messages.DATABASE_ERROR);
+            }
         }
     })
 };
