@@ -32,7 +32,6 @@ exports.addClassTest = async (request) => {
                 timeout: 60000,
             };
 
-            console.log({ firsttttt: options })
             console.log("qs.stringify(request) - ", qs.stringify(request));
 
             request.data.answer_sheet_template = " ";
@@ -46,7 +45,6 @@ exports.addClassTest = async (request) => {
 
             axios(options)
                 .then(response => {
-                    
                     console.log("PDF Data Received: ", response.data);
                     request.data.answer_sheet_template = response.data.answer_sheet_template || "";
                     request.data.question_paper_template = response.data.question_paper_template || "";
@@ -267,8 +265,8 @@ exports.startEvaluationProcess = async (request) => {
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-                            .map((ans) => ans.answer_content)               // Extract the answer_content
-                            .join(" ");                                     // Join the answer contents into a single string
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
 
                         console.log(correctAnswer);
                     }
@@ -315,6 +313,7 @@ exports.startEvaluationProcess = async (request) => {
                 questionAnswerPairs.map((pair, index) => {
                     // const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
+            Question Type: "${pair.question_type}"
             Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
             Correct Answers: ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
@@ -339,7 +338,7 @@ exports.startEvaluationProcess = async (request) => {
 
                 console.log("questionAnswerPairs[index].question_type - ", questionAnswerPairs[index].question_type);
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
                     if (isNaN(scores[index]) || scores[index] < 10) {
                         mark.obtained_marks = 0;
