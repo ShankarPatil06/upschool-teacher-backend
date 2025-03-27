@@ -108,7 +108,7 @@ exports.startEvaluationProcess = async (request) => {
                 return acc;
             }, []);
 
-            const studentAnswers = mergedAnswers.map((mark, i) => {
+            const studentAnswers = mergedAnswers.map((_, i) => {
                 const questionDetail = studentMarkDetail.marks_details[0].qa_details[mergedAnswers[i]?.question - 1]
                 return { question_id: questionDetail?.question_id, answers: mergedAnswers[i].answer }
             })

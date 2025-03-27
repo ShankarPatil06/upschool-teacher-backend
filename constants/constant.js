@@ -32,6 +32,10 @@ exports.messages = {
     DIGICARDS_NOT_FOUND: "DigiCards Not Found",
     NOWORKSHEET_AVAILABLE: "There is no worksheet available",
     NOPARENT_ASSOCIATED_TO_STUDENT: "There is no parent email associated with the student",
+    QUESTION_PAPER_NOT_FOUND: "Question Paper Not Found",
+    NO_QUESTION_PAPER_IDS_PROVIDED: "No Question Paper IDs Provided",
+    QUESTION_PAPER_STATUS_UPDATED_SUCCESSFULLY: "Question Paper Status Updated Successfully",
+    FAILED_TO_FETCH_SUBJECT_UNIT_ID: "Failed to Fetch Subject Unit ID",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -96,6 +100,7 @@ exports.messages = {
     NO_TOPIC_IS_SELECTED: "No topic has been selected!",
     TOPICS_ALREADY_UNLOCKED: "**REPLACE** topics's digicards have already been unlocked!",
     TOPICS_NOT_FOUND: "Topic not found",
+    INVALID_TOPIC_ARRAY: "Invalid Topic Array",
 
     // Chapter :
     CHAPTER_DATABASE_ERROR: "Chapter Database Error",
@@ -129,6 +134,7 @@ exports.messages = {
     EMAIL_ALREADY_IN_USE: "Email Id Already In Use",
     PARENT_DOESNT_EXIST: "Parent Doesn't Exist For This Phone Number",
     INVALID_USER_STATUS: "Invalid User Status to toggle",
+    OTP_UPDATED_SUCCESSFULLY: "OTP Updated Successfully.",
 
     // Concept : 
     CONCEPT_TITLE_ALREADY_EXIST: "Concept Title Already Exist!",
@@ -153,6 +159,7 @@ exports.messages = {
     NO_SUBJECTS_FOR_TEACHER: "No Subjects allocated for Teacher",
     INVALID_TEACHER: "Invalid Teacher Input",
     TEACHER_ACTIVITY_ERROR: "Error in Unlocking Digicards",
+    FAILED_TO_FETCH_TEACHER_EMAIL: "Failed to Fetch Teacher Email",
 
     // Test Question Paper : 
     TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS: "Question Paper Name Already Exists",
@@ -223,6 +230,7 @@ exports.common = {
     Archived: "Archived",
     delete: "delete",
     MasterAdmin: "MasterAdmin",
+    SchoolAdmin: "SchoolAdmin",
     YYYY_MM_DD: "yyyy_mm_dd",
     DD_MM_YYYY: "dd_mm_yyyy",
     Number: "number",
@@ -235,6 +243,8 @@ exports.common = {
     customActive: "customActive",
     customWorksheet: "customWorksheet",
     Enabled: "Enabled",
+    PreLearning: "Pre-Learning",
+    PostLearning: "Post-Learning",
     quizGeneration: "quizGeneration",
     Test: "Test",
     Upschool: "Upschool",

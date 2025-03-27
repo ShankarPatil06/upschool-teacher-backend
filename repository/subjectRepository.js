@@ -1,70 +1,18 @@
-const dynamoDbCon = require('../awsConfig');
-const { DATABASE_TABLE } = require('./baseRepository');
-const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
-const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
-
-exports.getSubjetById = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("Subject Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR);
-        } else {
-
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_subject_table,
-                KeyConditionExpression: "subject_id = :subject_id",
-                ExpressionAttributeValues: {
-                    ":subject_id": request.data.subject_id
-                }
-            }
-
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-        }
-    });
-}
-
+const { DATABASE_TABLE2 } = require("./baseRepositoryNew");
+const { tables: { TABLE_NAMES } } = require("../constants");
+const { messages } = require("../constants/constant");
 
 exports.getSubjetById2 = async (request) => {
-        const params = {
-            TableName: TABLE_NAMES.upschool_subject_table,
-            KeyConditionExpression: "subject_id = :subject_id",
-            ExpressionAttributeValues: {
-                ":subject_id": request.data.subject_id
-            }
-        };
-
-        return await DATABASE_TABLE2.query(params); 
-};
-
-exports.getSubjetByIdAndName = function (request, callback) {
-
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log("Subject Database Error");
-            console.log(DBErr);
-            callback(500, constant.messages.DATABASE_ERROR);
-        } else {
-
-            let docClient = dynamoDBCall;
-
-            let read_params = {
-                TableName: TABLE_NAMES.upschool_subject_table,
-                KeyConditionExpression: "subject_id = :subject_id",
-                ExpressionAttributeValues: {
-                    ":subject_id": request.data.subject_id
-                },
-                ProjectionExpression: ["subject_id", "subject_title"],
-
-            }
-
-            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+    const params = {
+        TableName: TABLE_NAMES.upschool_subject_table,
+        KeyConditionExpression: "subject_id = :subject_id",
+        ExpressionAttributeValues: {
+            ":subject_id": request.data.subject_id
         }
-    });
-}
+    };
+
+    return await DATABASE_TABLE2.query(params);
+};
 
 exports.getSubjectById3 = async (request) => {
     try {
@@ -74,13 +22,12 @@ exports.getSubjectById3 = async (request) => {
             ExpressionAttributeValues: {
                 ":subject_id": request.data.subject_id,
             },
-            ProjectionExpression: "subject_unit_id", 
+            ProjectionExpression: "subject_unit_id",
         };
 
         const result = await DATABASE_TABLE2.query(params);
-        return result.Items[0].subject_unit_id;; 
+        return result.Items[0].subject_unit_id;
     } catch (error) {
-        console.error("Error fetching subject unit ID:", error);
-        throw new Error("Failed to fetch subject unit ID.");
+        throw new Error(messages.FAILED_TO_FETCH_SUBJECT_UNIT_ID);
     }
 };

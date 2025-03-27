@@ -29,7 +29,7 @@ exports.topAndBottomPerformers = async (request) => {
         let test_question_ids = [];
         let quiz_results = [];
         let recentQuiz;
-        if (allquizs?.length) {
+        if (!isEmptyArray(allquizs)) {
             quiz_results = await quizResultRepository.fetchBulkQuizResultsByID4(request);
             if (request.data.isRecent) {
                 const { quiz, quizResults } = await getRecentQuizForMe(allquizs);
@@ -51,7 +51,7 @@ exports.topAndBottomPerformers = async (request) => {
         const test_Ids = allTests.map(test => test.class_test_id);
         request[requestData.classTestId] = test_Ids;
         let recentTest;
-        if (allTests?.length) {
+        if (!isEmptyArray(allTests)) {
             if (request.data.isRecent) {
                 const { test, test_results } = await getRecentTestForMe(allTests);
                 testResults = test_results;
@@ -66,7 +66,7 @@ exports.topAndBottomPerformers = async (request) => {
             );
         }
         let allQuestionIds = [...quiz_question_ids, ...test_question_ids];
-        if (allQuestionIds.length > 0) {
+        if (!isEmptyArray(allQuestionIds)) {
             questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
                 question_id: [...new Set(allQuestionIds)],
             });
@@ -117,7 +117,7 @@ exports.topAndBottomPerformers = async (request) => {
         const processTestResults = async () => {
             testResults?.forEach(testResult => {
                 let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
-                if (singleStudent.length === 0) return;
+                if (isEmptyArray(singleStudent)) return;
                 const testData = {
                     student_id: testResult.student_id,
                     student_name: `${singleStudent[0]?.user_firstname} ${singleStudent[0]?.user_lastname}`,
@@ -199,17 +199,17 @@ exports.needAttention = async (request) => {
                 let topicDetailsPre = pretopicDetails.Items ? pretopicDetails.Items : pretopicDetails;
                 let topicDetailsPost = posttopicDetails.Items ? posttopicDetails.Items : posttopicDetails;
 
-                if (Array.isArray(topicDetailsPre) && topicDetailsPre.length > 0) {
+                if (Array.isArray(topicDetailsPre) && !isEmptyArray(topicDetailsPre)) {
                     preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(topicDetailsPre);
                 }
-                if (Array.isArray(topicDetailsPost) && topicDetailsPost.length > 0) {
+                if (Array.isArray(topicDetailsPost) && !isEmptyArray(topicDetailsPost)) {
                     postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(topicDetailsPost);
                 }
                 const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: recentQuiz.quiz_id });
                 if (recentQuiz.learningType === prePostConstans.postLearningVal) {
                     for (const quizResult of quizResults) {
                         const singleStudentDetails = studentData.Items.filter(student => student.student_id == quizResult.student_id);
-                        if (singleStudentDetails.length === 0) continue;
+                        if (isEmptyArray(singleStudentDetails)) continue;
                         let quizSet = (quizResult.quiz_set).toLowerCase();
 
 
@@ -240,7 +240,7 @@ exports.needAttention = async (request) => {
                                 }
                             }
                         }
-                        if (matchedConcepts.length > 0) {
+                        if (!isEmptyArray(matchedConcepts)) {
                             for (const matchConcept of matchedConcepts) {
                                 let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
                                 const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
@@ -273,7 +273,7 @@ exports.needAttention = async (request) => {
                 } else {
                     for (const quizResult of quizResults) {
                         const singleStudentDetails = studentData.Items.filter(student => student.student_id == quizResult.student_id);
-                        if (singleStudentDetails.length === 0) continue;
+                        if (isEmptyArray(singleStudentDetails)) continue;
                         let quizSet = (quizResult.quiz_set).toLowerCase();
 
                         const questionTrackDetails = recentQuiz.question_track_details;
@@ -303,7 +303,7 @@ exports.needAttention = async (request) => {
                                 }
                             }
                         }
-                        if (matchedConcepts.length > 0) {
+                        if (!isEmptyArray(matchedConcepts)) {
                             for (const matchConcept of matchedConcepts) {
                                 let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
                                 const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
@@ -356,17 +356,17 @@ exports.needAttention = async (request) => {
                     let preConceptDetails = [];
                     let postConceptDetails = [];
                     let allConcept = [];
-                    if (Array.isArray(pretopicDetails) && pretopicDetails.length > 0) {
+                    if (Array.isArray(pretopicDetails) && !isEmptyArray(pretopicDetails)) {
                         preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(pretopicDetails);
                     }
-                    if (Array.isArray(posttopicDetails) && posttopicDetails.length > 0) {
+                    if (Array.isArray(posttopicDetails) && !isEmptyArray(posttopicDetails)) {
                         postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(posttopicDetails);
                     }
                     allConcept = [...preConceptDetails, ...postConceptDetails]
 
                     for (const testResult of testResults) {
                         const singleStudentDetails = studentData.Items.filter(student => student.student_id === testResult.student_id);
-                        if (singleStudentDetails.length === 0) continue;
+                        if (isEmptyArray(singleStudentDetails)) continue;
                         let matchedConcepts = [];
                         for (const mark of testResult.marks_details[0].qa_details) {
                             for (const concept of allConcept) {
@@ -389,7 +389,7 @@ exports.needAttention = async (request) => {
                                 }
                             }
                         }
-                        if (matchedConcepts.length > 0) {
+                        if (!isEmptyArray(matchedConcepts)) {
                             for (const matchConcept of matchedConcepts) {
                                 let questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: matchConcept.question_id })
                                 const totalQuestionMarks = questionDetails.reduce((total, question) => total + question.marks, 0);
@@ -434,7 +434,7 @@ const getRecentQuiz = async (quizDetails) => {
     let recentQuiz;
     for (const quiz of quizDetails) {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
-        if (quizResults.length > 0) {
+        if (!isEmptyArray(quizResults)) {
             recentQuiz = quiz;
             return recentQuiz;
         }
@@ -446,7 +446,7 @@ const getRecentTest = async (testDetails) => {
     let recentTest;
     for (const test of testDetails) {
         const testResults = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
-        if (testResults.length > 0) {
+        if (!isEmptyArray(testResults)) {
             recentTest = test
             return recentTest
         }
@@ -458,7 +458,7 @@ const getRecentQuizForMe = async (quizDetails) => {
     let recentQuiz = { quiz: [], quizResults: [] };
     for (const quiz of quizDetails) {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
-        if (quizResults.length > 0) {
+        if (!isEmptyArray(quizResults)) {
             return { quiz, quizResults };
         }
     }
@@ -469,7 +469,7 @@ const getRecentTestForMe = async (testDetails) => {
     let recentTest = { test: [], test_results: [] };
     for (const test of testDetails) {
         const test_results = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
-        if (test_results.length > 0) {
+        if (!isEmptyArray(test_results)) {
             return { test, test_results };
         }
     }
@@ -509,10 +509,10 @@ exports.studentChaptersPerformance = async (request) => {
                 let postConceptDetails = [];
                 let allConcept = [];
 
-                if (Array.isArray(pretopicDetails) && pretopicDetails.length > 0) {
+                if (Array.isArray(pretopicDetails) && !isEmptyArray(pretopicDetails)) {
                     preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(pretopicDetails);
                 }
-                if (Array.isArray(posttopicDetails) && posttopicDetails.length > 0) {
+                if (Array.isArray(posttopicDetails) && !isEmptyArray(posttopicDetails)) {
                     postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(posttopicDetails);
                 }
                 allConcept = [...preConceptDetails, ...postConceptDetails]
@@ -539,7 +539,7 @@ exports.studentChaptersPerformance = async (request) => {
                     }
                 }
                 let matchedTopics = [];
-                if (matchedConcepts.length > 0) {
+                if (!isEmptyArray(matchedConcepts)) {
                     for (const matchConcept of matchedConcepts) {
                         const questionForConcept = questionDetails.filter(question =>
                             matchConcept.question_id.includes(question.question_id)
@@ -576,9 +576,9 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
-                if (matchedTopics.length > 0) {
+                if (!isEmptyArray(matchedTopics)) {
                     for (const topic of matchedTopics) {
-                        if (topic.concepts.length > 0) {
+                        if (!isEmptyArray(topic.concepts)) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
                                 ? parseFloat(scoredPercentage)
@@ -617,10 +617,10 @@ exports.studentChaptersPerformance = async (request) => {
             let postConceptDetails = [];
             let topicDetailsPre = pretopicDetails.Items ? pretopicDetails.Items : pretopicDetails;
             let topicDetailsPost = posttopicDetails.Items ? posttopicDetails.Items : posttopicDetails;
-            if (Array.isArray(topicDetailsPre) && topicDetailsPre.length > 0) {
+            if (Array.isArray(topicDetailsPre) && !isEmptyArray(topicDetailsPre)) {
                 preConceptDetails = await conceptRepository.fetchConceptUsingTopicId(topicDetailsPre);
             }
-            if (Array.isArray(topicDetailsPost) && topicDetailsPost.length > 0) {
+            if (Array.isArray(topicDetailsPost) && !isEmptyArray(topicDetailsPost)) {
                 postConceptDetails = await conceptRepository.fetchConceptUsingTopicId(topicDetailsPost);
             }
 
@@ -652,7 +652,7 @@ exports.studentChaptersPerformance = async (request) => {
                     }
                 }
                 let matchedTopics = [];
-                if (matchedConcepts.length > 0) {
+                if (!isEmptyArray(matchedConcepts)) {
                     for (const matchConcept of matchedConcepts) {
                         const questionForConcept = questionDetails.filter(question =>
                             matchConcept.question_id.includes(question.question_id)
@@ -689,9 +689,9 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
-                if (matchedTopics.length > 0) {
+                if (!isEmptyArray(matchedTopics)) {
                     for (const topic of matchedTopics) {
-                        if (topic.concepts.length > 0) {
+                        if (!isEmptyArray(topic.concepts)) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
                                 ? parseFloat(scoredPercentage)
@@ -734,7 +734,7 @@ exports.studentChaptersPerformance = async (request) => {
                     }
                 }
                 let matchedTopics = [];
-                if (matchedConcepts.length > 0) {
+                if (!isEmptyArray(matchedConcepts)) {
                     for (const matchConcept of matchedConcepts) {
                         const questionForConcept = questionDetails.filter(question =>
                             matchConcept.question_id.includes(question.question_id)
@@ -772,9 +772,9 @@ exports.studentChaptersPerformance = async (request) => {
                     }
                 }
 
-                if (matchedTopics.length > 0) {
+                if (!isEmptyArray(matchedTopics)) {
                     for (const topic of matchedTopics) {
-                        if (topic.concepts.length > 0) {
+                        if (!isEmptyArray(topic.concepts)) {
                             let scoredPercentage = ((topic.totalStudentMarks / topic.AllConceptQuestionMarks) * 100)
                             topic.scoredPercentage = (scoredPercentage % 1 === 0)
                                 ? parseFloat(scoredPercentage)
@@ -822,7 +822,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
     const studentData = await studentRepository.getStudentsData2(request);
     let quiz_results = [];
-    if (quiz_Ids.length > 0) {
+    if (!isEmptyArray(quiz_Ids)) {
         quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
     }
     const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
@@ -833,7 +833,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     request[requestData.questionPaperId] = question_paper_ids;
 
     let testResult = [];
-    if (test_ids.length > 0) {
+    if (!isEmptyArray(test_ids)) {
         testResult = await testResultRepository.fetchStudentresultMetadata3(request);
     }
 
@@ -845,7 +845,7 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     request[requestData.unitChapterId] = chapter_Ids;
 
     const testChapterMap = {};
-    if (questionPaper?.data?.length > 0) {
+    if (!isEmptyArray(questionPaper?.data)) {
         for (const paper of questionPaper.data) {
             if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
                 const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
@@ -882,17 +882,17 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
     const allQuestionIds = [...new Set([...questionIds1, ...questionIds2])];
     let questionDetails = [];
-    if (allQuestionIds.length > 0) {
+    if (!isEmptyArray(allQuestionIds)) {
         questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: allQuestionIds });
     }
 
     let chapter_details = [];
-    if (chapter_Ids.length > 0) {
+    if (!isEmptyArray(chapter_Ids)) {
         chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
         const chapter_array = chapter_details.map(val => ({ chapter_id: val.chapter_id }));
         const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
 
-        if (chapter_response.Items.length > 0) {
+        if (!isEmptyArray(chapter_response.Items)) {
             for (const chapter of chapter_response.Items) {
                 testChapterMap[chapter.chapter_id] = [
                     ...(chapter.prelearning_topic_id || []),
@@ -903,10 +903,10 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
 
         const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
         let topicMap = { ...testChapterMap };
-        if (topic_array.length > 0) {
+        if (!isEmptyArray(topic_array)) {
             const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: common.OR });
 
-            if (topic_response?.Items?.length > 0) {
+            if (!isEmptyArray(topic_response?.Items)) {
                 const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
 
                 Object.keys(testChapterMap).forEach(chapter => {
@@ -1108,7 +1108,7 @@ exports.customWorksheetGenerated = async (request) => {
             ]))
         }
 
-        if (inValidChapters.length > 0) {
+        if (!isEmptyArray(inValidChapters)) {
             if (inValidChapters.length === 1) {
                 throw new Error(`There is not enough questions for the chapter: ${inValidChapters[0].chapter_name}.`);
             } else {
@@ -1140,7 +1140,7 @@ exports.customWorksheetGenerated = async (request) => {
 
             for (let i = 0; i < totalConcepts; i++) {
                 let questionList = conceptQuestions[i];
-                if (questionList && questionList.length > 0) {
+                if (questionList && !isEmptyArray(questionList)) {
                     let lastUsedIndex = conceptQuestionTracker[chapter.chapter_id]?.[i] || 0;
                     const questionId = questionList[lastUsedIndex];
                     if (questionId !== undefined && !questions.includes(questionId)) {
@@ -1165,7 +1165,7 @@ exports.customWorksheetGenerated = async (request) => {
         }
 
         const studentWorksheet = await testQuestionPaperRepository.fetchStudentWorksheet(request)
-        if (questions.length > 0) {
+        if (!isEmptyArray(questions)) {
             const studentFirstName = request.data.student_name.split(" ")[0];
             const existingName = studentWorksheet.Items[0]?.question_paper_name || `${studentFirstName}_worksheet_0`;
             const nameParts = existingName.match(/^(.*?)(_(\d+))?$/);
@@ -1178,7 +1178,7 @@ exports.customWorksheetGenerated = async (request) => {
             request.data[question.question_paper_name] = question_paper_name
             request.data[question.blueprint_type] = common.customWorksheet
 
-            if (studentWorksheet.Items.length > 0 && studentWorksheet.Items) {
+            if (studentWorksheet.Items && !isEmptyArray(studentWorksheet.Items)) {
                 request.data[question.question_paper_id] = studentWorksheet.Items[0].question_paper_id
                 await testQuestionPaperRepository.updateCustomWorkSheetQuestionPaper(request)
             } else {

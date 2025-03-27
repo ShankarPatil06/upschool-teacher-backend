@@ -5,7 +5,7 @@ const { TABLE_NAMES } = require('../constants/tables');
 exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
     const teacherInfoRes = await teacherRepository.fetchTeacherByID2(request);
 
-    if (teacherInfoRes.Items.length === 0) {
+    if (isEmptyArray(teacherInfoRes.Items)) {
         return { statusCode: 400, message: messages.INVALID_TEACHER };
     }
 
@@ -16,25 +16,25 @@ exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
         e.info_status === common.Active
     );
 
-    if (allocationCheck.length === 0) {
+    if (isEmptyArray(allocationCheck)) {
         return { statusCode: 400, message: messages.SUBJECT_ISNOT_ALLOCATE_TO_TEACHER };
     }
 
     const teacherActivityDetailsRes = await teacherRepository.fetchTeacherActivityDetails2(request);
     const subjectFetchRes = await subjectRepository.getSubjetById2(request);
 
-    if (subjectFetchRes.Items.length === 0) {
+    if (isEmptyArray(subjectFetchRes.Items)) {
         return { statusCode: 400, message: messages.INVALID_SUBJECT_ID };
     }
 
-    if (subjectFetchRes.Items[0].subject_unit_id.length === 0) {
+    if (isEmptyArray(subjectFetchRes.Items[0].subject_unit_id)) {
         return subjectFetchRes;
     }
 
     const unitFetchRes = await unitRepository.fetchUnitData2(subjectFetchRes.Items[0]);
     let chapterIds = [...new Set(unitFetchRes.flatMap((unit) => unit.unit_chapter_id))];
 
-    if (chapterIds.length === 0) {
+    if (isEmptyArray(chapterIds)) {
         return;
     }
 
@@ -61,13 +61,13 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const chapterDataRes = await chapterRepository.fetchChapterByID2(request);
 
-    if (!chapterDataRes.Items || chapterDataRes.Items.length === 0) {
+    if (!chapterDataRes.Items || isEmptyArray(chapterDataRes.Items)) {
         return { statusCode: 404, message: messages.CHAPTER_NOT_FOUND };
     }
 
     const prelearningTopicIds = chapterDataRes.Items[0].prelearning_topic_id;
 
-    if (prelearningTopicIds.length === 0) {
+    if (isEmptyArray(prelearningTopicIds)) {
         return { statusCode: 200, data: [] };
     }
 
@@ -81,13 +81,13 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const topicDataRes = await commonRepository.getBulkDataUsingIndexWithActiveStatus2(fetchBulkReq);
 
-    if (!topicDataRes.Items || topicDataRes.Items.length === 0) {
+    if (!topicDataRes.Items || isEmptyArray(topicDataRes.Items)) {
         return { statusCode: 404, message: messages.TOPIC_NOT_FOUND };
     }
 
     const topicConceptsIds = [...new Set(topicDataRes.Items.flatMap(item => item.topic_concept_id))];
 
-    if (topicConceptsIds.length === 0) {
+    if (isEmptyArray(topicConceptsIds)) {
         return { statusCode: 200, data: [] };
     }
 
@@ -99,7 +99,7 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const conceptDataRes = await commonRepository.fetchBulkData2(fetchBulkConceptReq);
 
-    if (!conceptDataRes.Items || conceptDataRes.Items.length === 0) {
+    if (!conceptDataRes.Items || isEmptyArray(conceptDataRes.Items)) {
         return { statusCode: 404, message: messages.CONCEPT_NOT_FOUND };
     }
     return { statusCode: 200, data: conceptDataRes.Items };
