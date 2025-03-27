@@ -7,6 +7,7 @@ exports.messages = {
     DATABASE_ERROR: "DB Error",
     USER_DOESNOT_EXISTS: "User Doesn't Exist",
     TEACHER_DOESNOT_EXISTS: "Teacher Doesn't Exist",
+    TEACHER_EMAIL_DOESNOT_EXISTS: "Teacher email not found",
     CLASS_SECTION_SUBJECT_COMBO_DOESNT_EXIST: "No Comination of this Class, Section, Subject Exists for the Teacher",
     INVALID_PASSWORD: "Invalid Password",
     FIRST_LOGIN: "Password doesn't exist, please login with OTP or create a password!",
@@ -24,8 +25,13 @@ exports.messages = {
     AUTHORIZATION: "Authorization",
     TOKEN: 'token',
     INVALID_QUIZ_MODE: "Inavlid Quiz Mode",
+    SCHOOL_NOT_FOUND: "School details not found",
+    CHAPTER_NOT_FOUND: "Chapter not found",
+    CONCEPT_NOT_FOUND: "Concepts not found",
     TOPIC_NOT_FOUND: "Topic Not Found",
     DIGICARDS_NOT_FOUND: "DigiCards Not Found",
+    NOWORKSHEET_AVAILABLE: "There is no worksheet available",
+    NOPARENT_ASSOCIATED_TO_STUDENT: "There is no parent email associated with the student",
 
     // School : 
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
@@ -69,6 +75,7 @@ exports.messages = {
     DIGICARD_ACTIVATED_IN_TOPIC: "DigiCards Activated",
     INSUFFICIENT_QUESTIONS: "Insufficient Questions!",
     ERROR_IN_GENERATING_QUIZ: "Error in Generating Quiz",
+    ERROR_IN_FETCHING_QUIZ: "Error in Fetching Quiz",
     NO_ANSWER_SHEET_FOUND: "No answer sheets to evaluate!",
     DUPLICATE_QUIZ_NAME: "Quiz name exists already!",
     COULDNOT_READ_QUIZ_ID: "Couldn't extract Quiz ID, please re-upload!",
@@ -206,16 +213,37 @@ exports.common = {
     OR: "OR",
     No: "No",
     Yes: "Yes",
+    yes: "yes",
+    no: "no",
     AND: "AND",
     Active: "Active",
     Archived: "Archived",
+    delete: "delete",
     MasterAdmin: "MasterAdmin",
     YYYY_MM_DD: "yyyy_mm_dd",
     DD_MM_YYYY: "dd_mm_yyyy",
+    Number: "number",
     Pre: "Pre",
     Post: "Post",
+    PreQuiz: "preQuiz",
+    PostQuiz: "postQuiz",
+    Image: "Image",
+    AudioFile: "Audio File",
+    customActive: "customActive",
+    customWorksheet: "customWorksheet",
+    Enabled: "Enabled",
+    quizGeneration: "quizGeneration",
+    Test: "Test",
+    Upschool: "Upschool",
+    unknownConcept: "Unknown Concept",
+    unknownTopic: "Unknown Topic",
+    unknownChapter: "Unknown Chapter",
+    unknownLearningType: "Unknown Learning Type",
+    unknownStudent: "Unknown Student",
 }
+
 exports.commonConditionValue = {
+    active: "active",
     automated: "Automated",
     express: "express",
     manual: "manual",
@@ -224,6 +252,7 @@ exports.commonConditionValue = {
     testID: "Test ID",
     quizID: "Quiz ID",
     test_id: "testid",
+    toggle: "toggle",
     rollNo: "Roll No",
     roll_no: "rollno",
     quiz_id: "quizid",
@@ -240,6 +269,13 @@ exports.constValues = {
 }
 
 exports.question = {
+    blueprint_type: "blueprint_type",
+    questions: "questions",
+    question_paper_id: "question_paper_id",
+    question_paper_name: "question_paper_name",
+    question_paper_status: "question_paper_status",
+    question_paper_template: "question_paper_template",
+    key_answer_template: "key_answer_template",
     question_id: "question_id",
     question_label: "question_label",
     answers_of_question: "answers_of_question",
@@ -302,7 +338,10 @@ exports.questionKeys = {
 }
 
 exports.contentType = {
-    question: "question"
+    question: "question",
+    topics: "topics",
+    concepts: "concepts",
+    digiCardExtension: "digicard_extension",
 }
 
 exports.status = {
@@ -386,7 +425,8 @@ exports.awsConstants = {
 
 exports.signedUrlConstants = {
     replace: "**REPLACE**",
-    uploads: "uploads/"
+    uploads: "uploads/",
+    digicardExtension: "digicard_extension/",
 }
 
 exports.requestData = {
@@ -399,6 +439,11 @@ exports.requestData = {
     cognitiveName: "cognitive_name",
     chapterId: "chapter_id",
     chapterStatus: "chapter_status",
+    classTestId: "class_test_id",
+    questionPaperId: "question_paper_ids",
+    digiCardTitle: "digi_card_title",
+    displayName: "display_name",
+    getObject: "getObject",
     postLearningTopicId: "postlearning_topic_id",
     preLearningTopicId: "prelearning_topic_id",
     topicId: "topic_id",
@@ -420,10 +465,14 @@ exports.requestData = {
     questionStatus: "question_status",
     questionType: "question_type",
     displayAnswer: "display_answer",
+    parentId: "parent_id",
     publish: "Publish",
     teacherId: "teacher_id",
     reset: "reset",
     create: "create",
     sendOTP: "Send OTP",
-    userOTP: "user_otp"
+    schoolId: "school_id",
+    userOTP: "user_otp",
+    unitChapterId: "unit_chapter_id",
+    unitQuizID: "unit_Quiz_id",
 }

@@ -1,8 +1,6 @@
-const constant = require('../constants/constant');
-const helper = require('../helper/helper');
+const { externalURLs } = require('../constants/constant');
 const axios = require('axios');
 const s3Services = require("./s3Service");
-const fs = require('fs');
 const { OpenAI } = require('openai');
 const { schoolRepository } = require('../repository');
 
@@ -17,7 +15,7 @@ exports.readScannedPage = async function (request, callback) {
 
     await axios({
       method: "post",
-      url: constant.externalURLs.mathpixURL,
+      url: externalURLs.mathpixURL,
       headers: {
         app_id: process.env.MP_APP_ID,
         app_key: process.env.MP_APP_KEY,
@@ -44,7 +42,7 @@ exports.readScannedPage2 = async (request) => {
 
   const response = await axios({
     method: "post",
-    url: constant.externalURLs.mathpixURL,
+    url: externalURLs.mathpixURL,
     headers: {
       app_id: process.env.MP_APP_ID,
       app_key: process.env.MP_APP_KEY,

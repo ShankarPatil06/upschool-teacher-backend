@@ -1,6 +1,7 @@
+const s3Services = require("./s3Service");
 const { schoolRepository, studentRepository, subjectRepository, unitRepository, quizRepository, settingsRepository, questionRepository, quizResultRepository, classTestRepository, chapterRepository, topicRepository, conceptRepository, testResultRepository, testQuestionPaperRepository } = require("../repository");
 const { formatDate } = require("../helper/helper");
-const s3Services = require("./s3Service");
+const { prePostConstans, common, requestData } = require("../constants/constant");
 
 exports.getAssessmentDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
@@ -41,7 +42,7 @@ exports.getAssessmentDetails = async (request) => {
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
 
   const quizResultDataRes =
-    quizIds.length &&
+    !isEmptyArray(quizIds) &&
     (await quizResultRepository.fetchBulkQuizResultsByID2({
       unit_Quiz_id: quizIds,
     }));
@@ -49,7 +50,7 @@ exports.getAssessmentDetails = async (request) => {
   quizDataRes.Items.forEach((val) => {
     const studentsAttendedQuiz = quizResultDataRes ? quizResultDataRes.filter((res) => res.quiz_id === val.quiz_id).length : 0;
 
-    if (val.learningType === "preLearning") {
+    if (val.learningType === prePostConstans.preLearningVal) {
       if (val.not_considered_topics)
         notConsideredTopicsPre += val.not_considered_topics.length;
       if (
@@ -114,7 +115,7 @@ exports.getTargetedLearningExpectation = async (request) => {
 
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
 
-  if (quizDataRes.Items.length === 0) return { totalTopics, reached: reachedTopics, classPercentagePre, classPercentagePost, totalStrength: classStrength };
+  if (isEmptyArray(quizDataRes.Items)) return { totalTopics, reached: reachedTopics, classPercentagePre, classPercentagePost, totalStrength: classStrength };
   const TargetedLearningExpectationData = await this.getTargetedLearningExpectationDetails(request);
 
   const passedTopics = TargetedLearningExpectationData.flatMap(item =>
@@ -122,7 +123,7 @@ exports.getTargetedLearningExpectation = async (request) => {
       dataItem.selectedTopics.filter(topic => {
         const passedStudents = parseInt(topic.passedStudentsCount, 10);
         const totalStrength = parseInt(item.totalStrength, 10);
-        const passPercentage = dataItem.learningType === "preLearning" ? item.classPercentagePre : item.classPercentagePost;
+        const passPercentage = dataItem.learningType === prePostConstans.preLearningVal ? item.classPercentagePre : item.classPercentagePost;
 
         return (
           passPercentage &&
@@ -138,7 +139,7 @@ exports.getTargetedLearningExpectation = async (request) => {
       dataItem.selectedTopics.filter(topic => {
         const passedStudents = parseInt(topic.passedStudentsCount, 10);
         const totalStrength = parseInt(item.totalStrength, 10);
-        const passPercentage = dataItem.learningType === "preLearning" ? item.classPercentagePre : item.classPercentagePost;
+        const passPercentage = dataItem.learningType === prePostConstans.preLearningVal ? item.classPercentagePre : item.classPercentagePost;
 
         return !(
           passPercentage &&
@@ -250,7 +251,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   const quizResultDataRes =
     await quizResultRepository.fetchBulkQuizResultsByID3({
       items: quizIds,
-      condition: "OR",
+      condition: common.OR,
     });
   const chapterIds = groupedData.map((chapter) => chapter.id);
 
@@ -286,7 +287,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   groupedData.forEach((chapter) => {
     chapter.data.forEach((quiz) => {
       const results = quizResultDataRes.filter(
-        (result) => result.quiz_id === quiz.quiz_id && result.evaluated == "Yes"
+        (result) => result.quiz_id === quiz.quiz_id && result.evaluated == common.Yes
       );
       results.forEach((result) => {
         set_key = result?.marks_details[0]?.set_key;
@@ -301,7 +302,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
           let studentMarks = 0;
           const questionIds = topic.topicQuestionDetails?.Questions?.[set_key];
 
-          if (!questionIds || questionIds.length === 0) {
+          if (!questionIds || isEmptyArray(questionIds)) {
             return;
           }
 
@@ -314,7 +315,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
               (qa) => qa.question_id === question_id
             );
             if (studentQuestion) {
-              const obtainedMarks = studentQuestion.modified_marks === "N.A." ? parseFloat(studentQuestion.obtained_marks) : parseFloat(studentQuestion.modified_marks);
+              const obtainedMarks = studentQuestion.modified_marks === common.NA ? parseFloat(studentQuestion.obtained_marks) : parseFloat(studentQuestion.modified_marks);
               if (!isNaN(obtainedMarks)) {
                 studentMarks += obtainedMarks;
               }
@@ -323,7 +324,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
           });
 
           let topicPercentage = topicTotalMarks > 0 ? (studentMarks / topicTotalMarks) * 100 : 0;
-          const classPercentage = quiz.learningType === "preLearning" ? passPercentagePre : passPercentagePost;
+          const classPercentage = quiz.learningType === prePostConstans.preLearningVal ? passPercentagePre : passPercentagePost;
 
           if (topicPercentage >= classPercentage) {
             topic.passedStudentsOfParticularQuizInTopic.push(result.student_id);
@@ -345,14 +346,14 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
     }
     chapter.data = chapter.data.map((quiz) => {
       const result = quizResultDataRes.find(
-        (result) => result.quiz_id === quiz.quiz_id && result.evaluated === "Yes"
+        (result) => result.quiz_id === quiz.quiz_id && result.evaluated === common.Yes
       );
 
       const set_key = result?.marks_details?.[0]?.set_key;
 
       quiz.selectedTopics = quiz.selectedTopics.filter((topic) => {
         const questionIds = topic.topicQuestionDetails?.Questions?.[set_key];
-        return Array.isArray(questionIds) && questionIds.length > 0;
+        return Array.isArray(questionIds) && !isEmptyArray(questionIds);
       });
 
       quiz.selectedTopics.forEach((topic) => {
@@ -365,7 +366,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
         ) || [];
       });
       return quiz;
-    }).filter((quiz) => quiz.selectedTopics.length > 0);
+    }).filter((quiz) => !isEmptyArray(quiz.selectedTopics));
   });
   return groupedData;
 };
@@ -406,7 +407,7 @@ exports.preLearningSummaryDetails = async (request) => {
     val.totalStrength = studentsCount;
     if (val.notConsideredTopics) topicIds.push(...val.notConsideredTopics);
     if (val.quiz_id) {
-      const quizResults = quizResultDataRes.filter((result) => result.quiz_id === val.quiz_id && result.evaluated === "Yes");
+      const quizResults = quizResultDataRes.filter((result) => result.quiz_id === val.quiz_id && result.evaluated === common.Yes);
       val.student_attendance = quizResults.length;
       val.avgMarks = quizResults.length
         ? ((quizResults.reduce(
@@ -484,7 +485,7 @@ exports.postLearningSummaryDetails = async (request) => {
     val.totalStrength = studentsCount;
     if (Array.isArray(val.quiz_id)) {
       val.quiz_id.forEach((quiz) => {
-        const quizResults = quizResultDataRes.filter((result) => result.quiz_id === quiz.id && result.evaluated === "Yes");
+        const quizResults = quizResultDataRes.filter((result) => result.quiz_id === quiz.id && result.evaluated === common.Yes);
         const totalAttendance = quizResults.length;
         quiz.student_attendance = totalAttendance;
         quiz.avgMarks = quizResults.length
@@ -498,7 +499,7 @@ exports.postLearningSummaryDetails = async (request) => {
     }
   });
 
-  if (topicIds.length > 0) {
+  if (!isEmptyArray(topicIds)) {
     const topicDataRes = await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIds });
     chapterDataRes.forEach((val) => {
       if (val.notConsideredTopics) {
@@ -521,7 +522,7 @@ exports.viewAnalysisIndividualReport = async (request) => {
   const quizData = await quizRepository.fetchQuizDataById2(request);
   const studentsDataRes = await quizResultRepository.fetchQuizResultDataOfStudent2(request);
 
-  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === "Yes") {
+  if (quizData.Item && studentsDataRes.Items[0] && studentsDataRes.Items[0].evaluated === common.Yes) {
     const setKey = studentsDataRes.Items[0].marks_details[0].set_key;
     const questionTrackDetails = quizData.Item.question_track_details[setKey];
     const questionIds = questionTrackDetails.map((val) => val.question_id);
@@ -545,10 +546,10 @@ exports.viewAnalysisIndividualReport = async (request) => {
         que.cognitive_skill = cognitive_skill?.cognitive_name || "";
 
         const question = studentsDataRes.Items[0].marks_details[0].qa_details.find((val) => val.question_id == que.question_id);
-        que.obtained_marks = question.modified_marks !== "N.A." ? question.modified_marks : question.obtained_marks !== "N.A." ? question.obtained_marks : 0;
+        que.obtained_marks = question.modified_marks !== common.NA ? question.modified_marks : question.obtained_marks !== common.NA ? question.obtained_marks : 0;
 
         await Promise.all(que.answers_of_question.map(async (ans) => {
-          if (ans.answer_type === "Image" || ans.answer_type === "Audio File") {
+          if (ans.answer_type === common.Image || ans.answer_type === common.AudioFile) {
             ans.answer_content = await s3Services.getS3SignedUrl(ans.answer_content);
           }
         })
@@ -567,14 +568,14 @@ exports.viewClassReportQuestions = async (request) => {
     quizRepository.fetchQuizDataById2(request),
     quizResultRepository.fetchQuizResultByQuizId(request),
   ]);
-  if (quizResult.Items.length === 0) return [];
+  if (isEmptyArray(quizResult.Items)) return [];
   const quizResultMarksData = quizResult.Items
-    .filter((item) => item.evaluated === "Yes")
+    .filter((item) => item.evaluated === common.Yes)
     .map((item) => item.marks_details?.[0]?.qa_details);
 
   const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = quizResult.Items.reduce(
     (acc, item) => {
-      if (item.evaluated === "Yes") {
+      if (item.evaluated === common.Yes) {
         acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
         acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
       }
@@ -640,16 +641,16 @@ exports.viewClassReportQuestions = async (request) => {
       });
       question.answers_of_question[i].mostCommonPercentage = count > 0 ? (count / totalStudents) * 100 : 0;
     });
-    if (allAnswers.length === 0) {
+    if (isEmptyArray(allAnswers)) {
       question.correctAnswerPercentage = 0;
     } else {
       const correct = allAnswers.reduce((total, answer) => {
-        if (String(answer.modified_marks) === "N.A.") {
-          let marks = String(answer.obtained_marks) !== "N.A." ? Number(answer.obtained_marks) : 0;
+        if (String(answer.modified_marks) === common.NA) {
+          let marks = String(answer.obtained_marks) !== common.NA ? Number(answer.obtained_marks) : 0;
           marksInTotal += marks;
           return total + marks;
         } else {
-          let marks = String(answer.modified_marks) !== "N.A." ? Number(answer.modified_marks) : String(answer.obtained_marks) !== "N.A." ? Number(answer.obtained_marks) : 0;
+          let marks = String(answer.modified_marks) !== common.NA ? Number(answer.modified_marks) : String(answer.obtained_marks) !== common.NA ? Number(answer.obtained_marks) : 0;
           marksInTotal += marks;
           return total + marks;
         }
@@ -740,7 +741,7 @@ exports.viewClassReportQuestions = async (request) => {
   });
 
   mergedDataForLevel?.forEach(({ level, totalPercentage, count }) => {
-    if (level !== "N.A") {
+    if (level !== common.NA) {
       if (!levelTotals[level]) {
         levelTotals[level] = { total: 0, count: 0 };
       }
@@ -765,7 +766,7 @@ exports.viewClassReportQuestions = async (request) => {
   await Promise.all(questions.map(async (question) => {
     await Promise.all(
       question.answers_of_question.map(async (ans) => {
-        if (ans.answer_type === "Image" || ans.answer_type === "Audio File") {
+        if (ans.answer_type === common.Image || ans.answer_type === common.AudioFile) {
           ans.answer_content = await s3Services.getS3SignedUrl(ans.answer_content);
         }
       })
@@ -773,11 +774,11 @@ exports.viewClassReportQuestions = async (request) => {
 
     await Promise.all([
       (async () => {
-        const correctAnswer = question.answers_of_question.find((answer) => answer.answer_display === "Yes");
+        const correctAnswer = question.answers_of_question.find((answer) => answer.answer_display === common.Yes);
         if (correctAnswer) {
           question.correctAnswer = correctAnswer.answer_content;
         } else {
-          question.correctAnswer = "N.A";
+          question.correctAnswer = common.NA;
         }
       })()
     ]);
@@ -796,7 +797,7 @@ exports.viewClassReportFocusArea = async (request) => {
   await studentRepository.getStudentsData2(request);
   const allStudentsCount = allStudentsData.Items.length;
   const quizResultMarksData = quizResult.Items
-    .filter(item => item.evaluated === "Yes")
+    .filter(item => item.evaluated === common.Yes)
     .map(item => ({
       marks: item.marks_details?.[0]?.qa_details || [],
       studentId: item.student_id
@@ -851,8 +852,8 @@ exports.viewClassReportFocusArea = async (request) => {
       Array.from(allQuestionIds).map((question) => {
         if (question === marks.question_id) {
           let marksValue;
-          if (marks.modified_marks === "N.A.") {
-            marksValue = marks.obtained_marks === "N.A." ? 0 : Number(marks.obtained_marks);
+          if (marks.modified_marks === common.NA) {
+            marksValue = marks.obtained_marks === common.NA ? 0 : Number(marks.obtained_marks);
           } else {
             marksValue = Number(marks.modified_marks);
           }
@@ -941,9 +942,9 @@ exports.viewClassReportFocusArea = async (request) => {
     item.totalStudents = allStudentsCount;
     let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
     if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
-      item.successMatrix = "yes";
+      item.successMatrix = common.yes;
     } else {
-      item.successMatrix = "no";
+      item.successMatrix = common.no;
       conceptsToFocus.push(item.name);
     }
     const studentFailed = studentsData.filter((student) => student.passed == false)
@@ -999,10 +1000,10 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
         possiblemarks = 0
         quizCount++;
         quizResultDataRes.map(result => {
-          if (quiz.quiz_id === result.quiz_id && result.evaluated === "Yes") {
+          if (quiz.quiz_id === result.quiz_id && result.evaluated === common.Yes) {
             result.marks_details[0].qa_details.map(marks => {
-              const newObtained = marks.obtained_marks === 'N.A.' ? 0 : marks.obtained_marks
-              String(marks.modified_marks) === 'N.A.' ? marksTotal = marksTotal + Number(newObtained) : marksTotal = marksTotal + Number(marks.modified_marks)
+              const newObtained = marks.obtained_marks === common.NA ? 0 : marks.obtained_marks
+              String(marks.modified_marks) === common.NA ? marksTotal = marksTotal + Number(newObtained) : marksTotal = marksTotal + Number(marks.modified_marks)
               questionMarksforeachQuiz.map(marksForEachQuiz => {
                 if (quiz.quiz_id === marksForEachQuiz.quizId) {
                   marksForEachQuiz.overallMarks.map(marking => {
@@ -1064,9 +1065,9 @@ exports.preLearningBlueprintDetails = async (request) => {
 
   const questions = await questionRepository.fetchBulkQuestionsNameById2({ question_id: [...questionIds] });
 
-  quizResultData.Items.length > 0 &&
+  !isEmptyArray(quizResultData.Items) &&
     quizResultData.Items.forEach((result, i) => {
-      if (result.marks_details && result.evaluated == "Yes") {
+      if (result.marks_details && result.evaluated == common.Yes) {
         const marksDetails = result.marks_details;
         marksDetails[0].qa_details.forEach((question) => {
           const questionId = question.question_id;
@@ -1199,7 +1200,7 @@ exports.fetchIndividualQuizReport = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizResultsMap = new Map();
   quizResults.Items.forEach((quizResult) => {
-    if (quizResult.evaluated == "Yes") {
+    if (quizResult.evaluated == common.Yes) {
       quizResultsMap.set(
         quizResult.student_id,
         quizResult.individual_group_performance
@@ -1214,13 +1215,13 @@ exports.fetchIndividualQuizReport = async (request) => {
     } else {
       studentData.individual_group_performance = {
         Basic: {
-          Ispassed: "N.A.",
+          Ispassed: common.NA,
         },
         Intermediate: {
-          Ispassed: "N.A.",
+          Ispassed: common.NA,
         },
         Advanced: {
-          Ispassed: "N.A.",
+          Ispassed: common.NA,
         },
       };
     }
@@ -1231,7 +1232,7 @@ exports.fetchIndividualQuizReport = async (request) => {
 exports.comprehensivePerformanceChapterWise = async (request) => {
   const allStudentsData = await studentRepository.getStudentsData2(request);
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
-  if (quizDataRes?.length === 0) return {};
+  if (isEmptyArray(quizDataRes)) return {};
   const allQuestionIds = quizDataRes.Items.flatMap((quiz) => [
     ...quiz.question_track_details.qp_set_a.map((q) => q.question_id),
     ...quiz.question_track_details.qp_set_b.map((q) => q.question_id),
@@ -1243,12 +1244,12 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
   });
 
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
-  const quizResultDataRes = quizIds.length > 0 && (await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizIds }));
+  const quizResultDataRes = !isEmptyArray(quizIds) && (await quizResultRepository.fetchBulkQuizResultsByID2({ unit_Quiz_id: quizIds }));
 
   const performance = {};
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
-    if (result.evaluated === "Yes") {
+    if (result.evaluated === common.Yes) {
       if (!acc[result.student_id]) acc[result.student_id] = [];
       acc[result.student_id].push(result);
     }
@@ -1292,7 +1293,7 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
 
             studentPerformance[chapterId].totalQuestions += 1;
             studentPerformance[chapterId].totalMarks += marksData?.marks;
-            studentPerformance[chapterId].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
+            studentPerformance[chapterId].obtainedMarks += qa.modified_marks != common.NA ? parseFloat(qa.modified_marks) : obtainedMarks;
           });
         });
     });
@@ -1321,13 +1322,13 @@ exports.comprehensivePerformanceChapterWise = async (request) => {
 exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
   const studentData = await studentRepository.getStudentsData2(request);
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
-  if (testDetails?.length == 0) return [];
+  if (isEmptyArray(testDetails)) return [];
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
-  request['class_test_id'] = test_ids
-  request['question_paper_ids'] = question_paper_ids;
+  request[requestData.classTestId] = test_ids
+  request[requestData.questionPaperId] = question_paper_ids;
   let testResult = [];
-  if (test_ids.length > 0) {
+  if (!isEmptyArray(test_ids)) {
     testResult = await testResultRepository.fetchStudentresultMetadata3(request);
   }
 
@@ -1336,9 +1337,9 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
   let chapter_Ids;
   chapter_Ids = [...new Set([...test_chapter_ids])];
   chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined);
-  request["unit_chapter_id"] = chapter_Ids;
+  request[requestData.unitChapterId] = chapter_Ids;
   const testChapterMap = {};
-  if (questionPaper?.data?.length > 0) {
+  if (!isEmptyArray(questionPaper?.data)) {
     for (const paper of questionPaper.data) {
       if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
         const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
@@ -1365,18 +1366,18 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
   );
   const allQuestionIds = [...new Set([...questionIds1])];
   let questionDetails = [];
-  if (allQuestionIds.length > 0) {
+  if (!isEmptyArray(allQuestionIds)) {
     questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
       question_id: allQuestionIds,
     });
   }
 
   let chapter_details = [];
-  if (chapter_Ids.length > 0) {
+  if (!isEmptyArray(chapter_Ids)) {
     chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
-    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
-    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
-    if (chapter_response.Items.length > 0) {
+    const chapter_array = chapter_details.map(val => ({ chapter_id: val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
+    if (!isEmptyArray(chapter_response.Items)) {
       for (const chapter of chapter_response.Items) {
         testChapterMap[chapter.chapter_id] = [
           ...(chapter.prelearning_topic_id || []),
@@ -1387,9 +1388,9 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
 
     const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
     let topicMap = { ...testChapterMap };
-    if (topic_array.length > 0) {
-      const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
-      if (topic_response?.Items?.length > 0) {
+    if (!isEmptyArray(topic_array)) {
+      const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: common.OR });
+      if (!isEmptyArray(topic_response.Items)) {
         const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
         Object.keys(testChapterMap).forEach(chapter => {
           testChapterMap[chapter] = [];
@@ -1440,7 +1441,7 @@ exports.comprehensivePerformanceChapterWiseForTest = async (request) => {
               const quest = questionDetails.find(q => q.question_id === questionId);
               if (quest) {
                 let total_student_marks = quest?.marks || 0;
-                let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+                let total_student_obtained_marks = question?.modified_marks !== common.NA ? question?.modified_marks : question?.obtained_marks;
 
                 total_marks += parseFloat(total_student_marks);
                 total_obtained_marks += parseFloat(total_student_obtained_marks);
@@ -1491,20 +1492,20 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
     ...quiz.question_track_details.qp_set_c.map((q) => q.question_id),
   ]);
 
-  if (allQuestionIds.length == 0) return [];
+  if (isEmptyArray(allQuestionIds)) return [];
   const questions = await questionRepository.fetchBulkQuestionsNameById5({
     question_id: [...new Set(allQuestionIds)],
   });
 
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
-  const quizResultDataRes = quizIds.length > 0 && (await quizResultRepository.fetchBulkQuizResultsByID2({
+  const quizResultDataRes = !isEmptyArray(quizIds) && (await quizResultRepository.fetchBulkQuizResultsByID2({
     unit_Quiz_id: quizIds,
   }));
 
   const performance = {};
   if (!quizResultDataRes) return {};
   const quizResultsByStudent = quizResultDataRes?.reduce((acc, result) => {
-    if (result.evaluated === "Yes") {
+    if (result.evaluated === common.Yes) {
       if (!acc[result.student_id]) acc[result.student_id] = [];
       acc[result.student_id].push(result);
     }
@@ -1552,7 +1553,7 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
               const obtainedMarks = parseFloat(qa.obtained_marks) || 0;
               studentPerformance[topic_id].totalQuestions += 1;
               studentPerformance[topic_id].totalMarks += marksData?.marks;
-              studentPerformance[topic_id].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
+              studentPerformance[topic_id].obtainedMarks += qa.modified_marks != common.NA ? parseFloat(qa.modified_marks) : obtainedMarks;
             }
           });
         });
@@ -1582,15 +1583,15 @@ exports.comprehensivePerformanceTopicWise = async (request) => {
 
 exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
-  if (testDetails?.length == 0) return [];
+  if (isEmptyArray(testDetails)) return [];
   const studentData = await studentRepository.getStudentsData2(request);
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
-  request['class_test_id'] = test_ids
-  request['question_paper_ids'] = question_paper_ids;
+  request[requestData.classTestId] = test_ids
+  request[requestData.questionPaperId] = question_paper_ids;
 
   let testResult = [];
-  if (test_ids.length > 0) {
+  if (!isEmptyArray(test_ids)) {
     testResult = await testResultRepository.fetchStudentresultMetadata3(request);
   }
 
@@ -1599,10 +1600,10 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
   let chapter_Ids = [...new Set([...test_chapter_ids])];
 
   chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined && chapter_Id === request.data.chapter_id);
-  request["unit_chapter_id"] = chapter_Ids;
+  request[requestData.unitChapterId] = chapter_Ids;
 
   const testChapterMap = {};
-  if (questionPaper?.data?.length > 0) {
+  if (!isEmptyArray(questionPaper?.data)) {
     for (const paper of questionPaper.data) {
       if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
         const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
@@ -1633,19 +1634,19 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
 
   const allQuestionIds = [...new Set([...questionIds1])];
   let questionDetails = [];
-  if (allQuestionIds.length > 0) {
+  if (!isEmptyArray(allQuestionIds)) {
     questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
       question_id: allQuestionIds,
     });
   }
 
   let chapter_details = [];
-  if (chapter_Ids.length > 0) {
+  if (!isEmptyArray(chapter_Ids)) {
     chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
-    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
-    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+    const chapter_array = chapter_details.map(val => ({ chapter_id: val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
 
-    if (chapter_response.Items.length > 0) {
+    if (!isEmptyArray(chapter_response.Items)) {
       for (const chapter of chapter_response.Items) {
         testChapterMap[chapter.chapter_id] = [
           ...(chapter.prelearning_topic_id || []),
@@ -1656,10 +1657,10 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
   }
   const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
   const chapterTestResults = [];
-  if (topic_array.length > 0) {
-    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+  if (!isEmptyArray(topic_array)) {
+    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: common.OR });
 
-    if (topic_response?.Items?.length > 0) {
+    if (!isEmptyArray(topic_response?.Items)) {
       const topicToConceptMap = {};
       topic_response.Items.forEach(topic => {
         if (topic.topic_concept_id && Array.isArray(topic.topic_concept_id)) {
@@ -1669,7 +1670,7 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
 
       concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
 
-      if (concept_response?.length > 0) {
+      if (!isEmptyArray(concept_response)) {
         const conceptToQuestionMap = {};
         concept_response.forEach(concept => {
           if (concept.concept_question_id && Array.isArray(concept.concept_question_id)) {
@@ -1722,7 +1723,7 @@ exports.comprehensivePerformanceTopicWiseForTest = async (request) => {
                   const quest = questionDetails.find(q => q.question_id === questionId);
                   if (quest) {
                     let total_student_marks = quest?.marks || 0;
-                    let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+                    let total_student_obtained_marks = question?.modified_marks !== common.NA ? question?.modified_marks : question?.obtained_marks;
 
                     total_marks += parseFloat(total_student_marks);
                     total_obtained_marks += parseFloat(total_student_obtained_marks);
@@ -1779,14 +1780,14 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
     ...quiz.question_track_details.qp_set_c.map((q) => q.question_id),
   ]);
 
-  if (allQuestionIds.length == 0) return [];
+  if (isEmptyArray(allQuestionIds)) return [];
   const questions = await questionRepository.fetchBulkQuestionsNameById5({
     question_id: [...new Set(allQuestionIds)],
   });
 
   const quizIds = quizDataRes.Items.map((val) => val.quiz_id);
   const quizResultDataRes =
-    quizIds.length > 0 &&
+    !isEmptyArray(quizIds) &&
     (await quizResultRepository.fetchBulkQuizResultsByID2({
       unit_Quiz_id: quizIds,
     }));
@@ -1794,7 +1795,7 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
   const performance = {};
 
   const quizResultsByStudent = quizResultDataRes.reduce((acc, result) => {
-    if (result.evaluated === "Yes") {
+    if (result.evaluated === common.Yes) {
       if (!acc[result.student_id]) acc[result.student_id] = [];
       acc[result.student_id].push(result);
     }
@@ -1844,7 +1845,7 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
               const obtainedMarks = parseFloat(qa.obtained_marks) || 0;
               studentPerformance[concept_id].totalQuestions += 1;
               studentPerformance[concept_id].totalMarks += marksData?.marks;
-              studentPerformance[concept_id].obtainedMarks += qa.modified_marks != 'N.A.' ? parseFloat(qa.modified_marks) : obtainedMarks;
+              studentPerformance[concept_id].obtainedMarks += qa.modified_marks != common.NA ? parseFloat(qa.modified_marks) : obtainedMarks;
             }
           });
         });
@@ -1874,16 +1875,16 @@ exports.comprehensivePerformanceConceptWise = async (request) => {
 
 exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
   const testDetails = await classTestRepository.fetchAllTestBasedOnSubject(request);
-  if (testDetails?.length == 0) return [];
+  if (isEmptyArray(testDetails)) return [];
   const studentData = await studentRepository.getStudentsData2(request);
   const question_paper_ids = testDetails.map(test => test.question_paper_id);
   const test_ids = testDetails.map(test => test.class_test_id);
 
-  request['class_test_id'] = test_ids
-  request['question_paper_ids'] = question_paper_ids;
+  request[requestData.classTestId] = test_ids
+  request[requestData.questionPaperId] = question_paper_ids;
 
   let testResult = [];
-  if (test_ids.length > 0) {
+  if (!isEmptyArray(test_ids)) {
     testResult = await testResultRepository.fetchStudentresultMetadata3(request);
   }
 
@@ -1892,10 +1893,10 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
   let chapter_Ids = [...new Set([...test_chapter_ids])];
 
   chapter_Ids = chapter_Ids.filter(chapter_Id => chapter_Id !== undefined && chapter_Id === request.data.chapter_id);
-  request["unit_chapter_id"] = chapter_Ids;
+  request[requestData.unitChapterId] = chapter_Ids;
 
   const testChapterMap = {};
-  if (questionPaper?.data?.length > 0) {
+  if (!isEmptyArray(questionPaper?.data)) {
     for (const paper of questionPaper.data) {
       if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
         const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
@@ -1926,17 +1927,17 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
 
   const allQuestionIds = [...new Set([...questionIds1])];
   let questionDetails = [];
-  if (allQuestionIds.length > 0) {
+  if (!isEmptyArray(allQuestionIds)) {
     questionDetails = await questionRepository.fetchBulkQuestionsNameById2({ question_id: allQuestionIds });
   }
 
   let chapter_details = [];
-  if (chapter_Ids.length > 0) {
+  if (!isEmptyArray(chapter_Ids)) {
     chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
-    const chapter_array = chapter_details.map(val => ({ "chapter_id": val.chapter_id }));
-    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+    const chapter_array = chapter_details.map(val => ({ chapter_id: val.chapter_id }));
+    const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: common.OR });
 
-    if (chapter_response.Items.length > 0) {
+    if (!isEmptyArray(chapter_response.Items)) {
       for (const chapter of chapter_response.Items) {
         testChapterMap[chapter.chapter_id] = [
           ...(chapter.prelearning_topic_id || []),
@@ -1948,10 +1949,10 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
 
   const topic_array = Object.values(testChapterMap).flat().map(val => ({ topic_id: val }));
   const chapterTestResults = [];
-  if (topic_array.length > 0) {
-    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+  if (!isEmptyArray(topic_array)) {
+    const topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: common.OR });
 
-    if (topic_response?.Items?.length > 0) {
+    if (!isEmptyArray(topic_response?.Items)) {
       const topicToConceptMap = {};
 
       topic_response.Items.forEach(topic => {
@@ -1962,7 +1963,7 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
 
       const concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
 
-      if (concept_response?.length > 0) {
+      if (!isEmptyArray(concept_response)) {
         const conceptToQuestionMap = {};
 
         concept_response.forEach(concept => {
@@ -2017,7 +2018,7 @@ exports.comprehensivePerformanceConceptWiseForTest = async (request) => {
                       const quest = questionDetails.find(q => q.question_id === questionId);
                       if (quest) {
                         let total_student_marks = quest?.marks || 0;
-                        let total_student_obtained_marks = question?.modified_marks !== "N.A." ? question?.modified_marks : question?.obtained_marks;
+                        let total_student_obtained_marks = question?.modified_marks !== common.NA ? question?.modified_marks : question?.obtained_marks;
 
                         total_marks += parseFloat(total_student_marks);
                         total_obtained_marks += parseFloat(total_student_obtained_marks);
@@ -2072,7 +2073,7 @@ exports.getActionsAndRecommendations = async (request) => {
   const studentDataRes = await studentRepository.getStudentsData2(request);
   const totalStudents = studentDataRes.Items.length;
 
-  if (quizDataRes.Items.length === 0) {
+  if (isEmptyArray(quizDataRes.Items)) {
     return []
   }
   const allQuizQuestionSetA = quizDataRes.Items.flatMap((quiz) =>
@@ -2099,7 +2100,7 @@ exports.getActionsAndRecommendations = async (request) => {
   const questionIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.question_id))];
 
   const questions = await new Promise((resolve, reject) => {
-    if (questionIdsSetA.length > 0) {
+    if (!isEmptyArray(questionIdsSetA)) {
       questionRepository.fetchBulkQuestionsNameById3(
         { question_id: questionIdsSetA },
         (err, res) => (err ? reject(err) : resolve(res))
@@ -2126,7 +2127,7 @@ exports.getActionsAndRecommendations = async (request) => {
     : [];
 
   const quizResultMarksData = quizResultsRes
-    .filter((item) => item.evaluated === "Yes")
+    .filter((item) => item.evaluated === common.Yes)
     .map((item) => ({
       marks: item.marks_details[0].qa_details,
       studentId: item.student_id,
@@ -2136,8 +2137,8 @@ exports.getActionsAndRecommendations = async (request) => {
   const marksOfEachStudent = [];
   quizResultMarksData.forEach((qdata) => {
     qdata.marks.forEach((marks) => {
-      let marksValue = marks.modified_marks !== "N.A." ? marks.modified_marks : marks.obtained_marks;
-      if (marksValue === "N.A.") marksValue = "0";
+      let marksValue = marks.modified_marks !== common.NA ? marks.modified_marks : marks.obtained_marks;
+      if (marksValue === common.NA) marksValue = "0";
 
       marksOfEachStudent.push({
         studentid: qdata.studentId,
@@ -2165,27 +2166,27 @@ exports.getActionsAndRecommendations = async (request) => {
 
   conceptAndQuestions.forEach((item) => {
     let studentsData = [];
-    item.name = conceptNames.find((c) => c.concept_id === item.concept)?.display_name || "Unknown Concept";
+    item.name = conceptNames.find((c) => c.concept_id === item.concept)?.display_name || common.unknownConcept;
     const relatedTopic = topicData.find((topic) => topic.topic_id === item.topic_id);
     const relatedChapter = chapterData.find((chapter) =>
       chapter.prelearning_topic_id.includes(item.topic_id) || chapter.postlearning_topic_id.includes(item.topic_id)
     );
 
-    item.topic_name = relatedTopic?.display_name || "Unknown Topic";
-    item.chapter_name = relatedChapter?.display_name || "Unknown Chapter";
+    item.topic_name = relatedTopic?.display_name || common.unknownTopic;
+    item.chapter_name = relatedChapter?.display_name || common.unknownChapter;
 
     const relatedQuiz = quizDataRes.Items.find((quiz) =>
       Object.values(quiz.question_track_details.qp_set_a || {}).flat().some((q) => q.concept_id === item.concept)
     );
 
-    item.learningType = relatedQuiz?.learningType || "Unknown Learning Type";
+    item.learningType = relatedQuiz?.learningType || common.unknownLearningType;
     const quizId = relatedQuiz?.quiz_id;
 
-    const passPercentage = item.learningType === "preLearning"
+    const passPercentage = item.learningType === prePostConstans.preLearningVal
       ? schoolDataRes.Items[0].pre_quiz_config.class_percentage
       : schoolDataRes.Items[0].post_quiz_config.class_percentage;
 
-    const studentPassPercentage = item.learningType === "preLearning"
+    const studentPassPercentage = item.learningType === prePostConstans.preLearningVal
       ? schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach
       : schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
 
@@ -2234,12 +2235,12 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
   const studentDataRes = await studentRepository.getStudentsData2(request);
   const totalStudents = studentDataRes.Items.length;
-  let learningType = quizData.Item.learningType || "Unknown Learning Type";
-  const passPercentage = learningType === "preLearning"
+  let learningType = quizData.Item.learningType || common.unknownLearningType;
+  const passPercentage = learningType === prePostConstans.preLearningVal
     ? schoolDataRes.Items[0].pre_quiz_config.class_percentage
     : schoolDataRes.Items[0].post_quiz_config.class_percentage;
 
-  const studentPassPercentage = learningType === "preLearning"
+  const studentPassPercentage = learningType === prePostConstans.preLearningVal
     ? schoolDataRes.Items[0].pre_quiz_config.pct_of_student_for_reteach
     : schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
 
@@ -2286,7 +2287,7 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({ unit_chapter_id: [quizData.Item.chapter_id] });
 
   const quizResultMarksData = quizResult.Items
-    .filter(item => item.evaluated === "Yes")
+    .filter(item => item.evaluated === common.Yes)
     .map((item) => {
       return {
         marks: item.marks_details[0].qa_details,
@@ -2298,12 +2299,12 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   quizResultMarksData.forEach((qdata) => {
     qdata.marks.forEach((marks) => {
       if (allQuestionIdSet.includes(marks.question_id)) {
-        let marksValue = marks.modified_marks === "N.A."
-          ? marks.obtained_marks === "N.A." ? "0" : marks.obtained_marks
+        let marksValue = marks.modified_marks === common.NA
+          ? marks.obtained_marks === common.NA ? "0" : marks.obtained_marks
           : marks.modified_marks;
 
         const student = studentDataRes.Items.find((student) => student.student_id === qdata.studentId);
-        const studentFullName = student ? `${student.user_firstname} ${student.user_lastname}` : "Unknown Student";
+        const studentFullName = student ? `${student.user_firstname} ${student.user_lastname}` : common.unknownStudent;
 
         marksOfEachStudent.push({
           studentName: studentFullName,
@@ -2331,14 +2332,14 @@ exports.getActionsAndRecommendationDetail = async (request) => {
 
   let conceptsToFocus = [];
 
-  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.display_name || "Unknown Chapter";
+  let chapterName = chapterData.find((chapter) => chapter.chapter_id === quizData.Item.chapter_id)?.display_name || common.unknownChapter;
   conceptAndQuestions.forEach((item) => {
     let studentsData = [];
     let studentPerformance = [];
-    item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || "Unknown Concept";
+    item.name = conceptNames.find((c) => c.concept_id == item.concept)?.display_name || conceptDetails.unknownConcept;
 
     const relatedTopic = topicData.find((topic) => topic.topic_id == item.topic_id);
-    item.topic_name = relatedTopic?.display_name || "Unknown Topic";
+    item.topic_name = relatedTopic?.display_name || common.unknownTopic;
 
     const conceptQuestionDetails = questions.filter((question) => item?.questions?.find((q) => q === question.question_id));
 

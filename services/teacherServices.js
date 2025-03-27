@@ -1,28 +1,28 @@
-const dynamoDbCon = require('../awsConfig');
+const dynamoDbCon = require("../awsConfig");
 const questionServices = require("./questionServices");
 const { digicardExtension, userRepository, chapterRepository, topicRepository, subjectRepository, teacherRepository, schoolRepository, unitRepository, quizRepository, conceptRepository, digicardRepository, settingsRepository, groupRepository, teachingActivityRepository } = require("../repository")
-const constant = require("../constants/constant");
-const helper = require("../helper/helper");
-const qs = require('qs');
-const axios = require('axios');
+const { common, commonConditionValue, contentType, mailSubject, messages, prePostConstans, signedUrlConstants, requestData } = require("../constants/constant");
+const { assignNumberofQuestions, checkOneArrayElementsinAnother, formatErrorResponse, getDifferenceValueFromTwoArray, getQuestionTrackForAutomatic, getRandomGroups, getRandomQuestionsFromGroups, getRandomString, isEmptyArray, PutObjectS3SigneUdrl, removeDuplicates, removeDuplicatesFromArrayOfObj, sortOneArrayBasedonAnother, splitGroups, shuffleArray } = require("../helper/helper");
+const qs = require("qs");
+const axios = require("axios");
 let sendMail = require("./emailService");
 
 exports.getTeacherClasses = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
-  request.data['school_id'] = individual_teacher_response?.Items[0]?.school_id;
+  request.data[requestData.schoolId] = individual_teacher_response?.Items[0]?.school_id;
   const schoolDetails = await schoolRepository.getSchoolDetailsById2(request)
-  if (schoolDetails.Items[0].school_logo && schoolDetails.Items[0].school_logo !== "" && schoolDetails.Items[0].school_logo !== "N.A." && schoolDetails.Items[0].school_logo.includes("uploads/")) {
+  if (schoolDetails.Items[0].school_logo && schoolDetails.Items[0].school_logo !== "" && schoolDetails.Items[0].school_logo !== common.NA && schoolDetails.Items[0].school_logo.includes(signedUrlConstants.uploads)) {
     let Key = schoolDetails.Items[0].school_logo;
     let s3Params = {
       Bucket: process.env.BUCKET_NAME,
       Key,
     }
-    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise('getObject', s3Params)
+    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise(requestData.getObject, s3Params)
     schoolDetails.Items[0].school_logoURL = uploadURL;
   }
-  const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ "client_class_id": val.client_class_id }));
-  const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: "OR" })
-  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === 'Upschool' ? false : schoolDetails.Items[0]?.school_logoURL }
+  const client_class_id = individual_teacher_response.Items[0].teacher_section_allocation.map((val) => ({ client_class_id: val.client_class_id }));
+  const teacherResponse = await teacherRepository.fetchTeacherClientClassData2({ items: client_class_id, condition: common.OR })
+  const teacherResponse2 = { ...teacherResponse, logo: schoolDetails.Items[0]?.school_labelling === common.Upschool ? false : schoolDetails.Items[0]?.school_logoURL }
   return teacherResponse2;
 };
 
@@ -30,20 +30,20 @@ exports.getTeacherSectionsBasedonClass = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
   let section_ids = (individual_teacher_response.Items[0].teacher_section_allocation.filter((e) => e.client_class_id == request.data.client_class_id)).map(({ section_id }) => ({ section_id }));
 
-  return await teacherRepository.fetchTeacherSectionData2({ items: section_ids, condition: "OR" })
+  return await teacherRepository.fetchTeacherSectionData2({ items: section_ids, condition: common.OR })
 };
 
 exports.getTeacherSubjectsBasedonSection = async (request) => {
   const individual_teacher_response = await teacherRepository.fetchTeacherByID2(request)
-  let subject_ids = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === "Active").map(({ subject_id }) => ({ subject_id }));
+  let subject_ids = individual_teacher_response.Items[0].teacher_info.filter((e) => e.client_class_id == request.data.client_class_id && e.section_id == request.data.section_id && e.info_status === common.Active).map(({ subject_id }) => ({ subject_id }));
 
-  return await teacherRepository.fetchTeacherSubjectData2({ items: subject_ids, condition: "OR" })
+  return await teacherRepository.fetchTeacherSubjectData2({ items: subject_ids, condition: common.OR })
 };
 
 exports.archiveAndActivateTopicInChapter = async (request) => {
-  const preOrPost = request.data.learningType === constant.prePostConstans.preLearningVal ? constant.prePostConstans.preLearning : request.data.learningType === constant.prePostConstans.postLearningVal ? constant.prePostConstans.postLearning : "N.A.";
-  if (preOrPost === "N.A.") {
-    throw helper.formatErrorResponse(constant.messages.INVALID_DATA, 400);
+  const preOrPost = request.data.learningType === prePostConstans.preLearningVal ? prePostConstans.preLearning : request.data.learningType === prePostConstans.postLearningVal ? prePostConstans.postLearning : common.NA;
+  if (preOrPost === common.NA) {
+    throw formatErrorResponse(messages.INVALID_DATA, 400);
   }
 
   try {
@@ -53,7 +53,7 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
     let chapterIndex = allChapter.findIndex(Chap => Chap.chapter_id === request.data.chapter_id);
 
     if (chapterIndex >= 0) {
-      if (request.data.isArchived === "Yes") {
+      if (request.data.isArchived === common.Yes) {
         allChapter[chapterIndex][preOrPost].archivedTopics.push(request.data.topic_id);
       } else {
         let archIndex = allChapter[chapterIndex][preOrPost].archivedTopics.findIndex(arTop => arTop === request.data.topic_id);
@@ -61,18 +61,18 @@ exports.archiveAndActivateTopicInChapter = async (request) => {
           allChapter[chapterIndex][preOrPost].archivedTopics.splice(archIndex, 1);
         }
       }
-      allChapter[chapterIndex][preOrPost].archivedTopics = helper.removeDuplicates(allChapter[chapterIndex][preOrPost].archivedTopics);
+      allChapter[chapterIndex][preOrPost].archivedTopics = removeDuplicates(allChapter[chapterIndex][preOrPost].archivedTopics);
     } else {
       const newChapterData = {
         chapter_id: request.data.chapter_id,
-        chapter_locked: "Yes",
+        chapter_locked: common.Yes,
         pre_learning: {
           unlocked_digicard: {},
-          archivedTopics: request.data.learningType === constant.prePostConstans.preLearningVal ? [request.data.topic_id] : []
+          archivedTopics: request.data.learningType === prePostConstans.preLearningVal ? [request.data.topic_id] : []
         },
         post_learning: {
           unlocked_digicard: [],
-          archivedTopics: request.data.learningType === constant.prePostConstans.postLearningVal ? [request.data.topic_id] : []
+          archivedTopics: request.data.learningType === prePostConstans.postLearningVal ? [request.data.topic_id] : []
         }
       };
       allChapter.push(newChapterData);
@@ -101,7 +101,7 @@ exports.getTeacherPreLearningPermissions = async (request) => {
 
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
     if (!schoolDataRes.Items[0].pre_quiz_config) {
-      throw new Error(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+      throw new Error(messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
     }
 
     const preQuizConfig = schoolDataRes.Items[0].pre_quiz_config;
@@ -112,14 +112,14 @@ exports.getTeacherPreLearningPermissions = async (request) => {
     const unlockDigicards = chapterActivity.length > 0 ? chapterActivity[0].pre_learning.unlocked_digicard : {};
     const unlockTopicDigicard = unlockDigicards.topics || [];
 
-    request.data.learningType = constant.prePostConstans.preLearningVal;
+    request.data.learningType = prePostConstans.preLearningVal;
     const quizDataRes = await quizRepository.fetchQuizData2(request);
     if (quizDataRes.Items.length > 0) {
-      throw new Error(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
+      throw new Error(messages.PRE_QUIZ_ALREADY_GENERATED);
     }
 
-    if (preQuizConfig.unlock_digicard_mandatory === "Yes" && unlockTopicDigicard.length <= 0) {
-      throw new Error(constant.messages.DIGICARD_UNLOCK_MANDATORY);
+    if (preQuizConfig.unlock_digicard_mandatory === common.Yes && unlockTopicDigicard.length <= 0) {
+      throw new Error(messages.DIGICARD_UNLOCK_MANDATORY);
     }
 
     const response = {
@@ -134,31 +134,29 @@ exports.getTeacherPreLearningPermissions = async (request) => {
     };
 
     const preQuizType = [
-      preQuizConfig.automated_type === "Enabled" ? constant.prePostConstans.automatedType : "N.A.",
-      preQuizConfig.express_type === "Enabled" ? constant.prePostConstans.expressType : "N.A.",
-      preQuizConfig.manual_type === "Enabled" ? constant.prePostConstans.manualType : "N.A."
-    ].filter(type => type !== "N.A.");
+      preQuizConfig.automated_type === common.Enabled ? prePostConstans.automatedType : common.NA,
+      preQuizConfig.express_type === common.Enabled ? prePostConstans.expressType : common.NA,
+      preQuizConfig.manual_type === common.Enabled ? prePostConstans.manualType : common.NA
+    ].filter(type => type !== common.NA);
 
     const preQuizMode = [
-      preQuizConfig.offline_mode === "Enabled" ? constant.prePostConstans.offlineMode : "N.A.",
-      preQuizConfig.online_mode === "Enabled" ? constant.prePostConstans.onlineMode : "N.A."
-    ].filter(mode => mode !== "N.A.");
+      preQuizConfig.offline_mode === common.Enabled ? prePostConstans.offlineMode : common.NA,
+      preQuizConfig.online_mode === common.Enabled ? prePostConstans.onlineMode : common.NA
+    ].filter(mode => mode !== common.NA);
 
     const preQuizVarient = [
-      preQuizConfig.randomized_order_varient === "Enabled" ? constant.prePostConstans.randomOrder : "N.A.",
-      preQuizConfig.randomized_questions_varient === "Enabled" ? constant.prePostConstans.randomQuestion : "N.A."
-    ].filter(varient => varient !== "N.A.");
+      preQuizConfig.randomized_order_varient === common.Enabled ? prePostConstans.randomOrder : common.NA,
+      preQuizConfig.randomized_questions_varient === common.Enabled ? prePostConstans.randomQuestion : common.NA
+    ].filter(varient => varient !== common.NA);
 
     response.preLearning.quizModes = preQuizMode;
     response.preLearning.quizType = preQuizType;
     response.preLearning.quizVarient = preQuizVarient;
 
-    console.log("PERMISSIONS : ", JSON.stringify(response));
     return response;
 
   } catch (error) {
-    console.error(error);
-    throw error; // or handle the error as per your application's error handling strategy
+    throw error;
   }
 };
 
@@ -166,18 +164,18 @@ exports.generateQuizForPreLearning = async (request) => {
   try {
     const quizDataRes = await quizRepository.fetchQuizData2(request);
 
-    if (!helper.isEmptyArray(quizDataRes.Items)) {
-      throw new Error(constant.messages.PRE_QUIZ_ALREADY_GENERATED);
+    if (!isEmptyArray(quizDataRes.Items)) {
+      throw new Error(messages.PRE_QUIZ_ALREADY_GENERATED);
     }
 
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
     if (schoolDataRes.Items[0].pre_quiz_config) {
       request.data.pre_post_quiz_config = schoolDataRes.Items[0].pre_quiz_config;
-      request.data.quiz_id = helper.getRandomString();
+      request.data.quiz_id = getRandomString();
       request.data.quiz_duration = 0;
 
-      if (request.data.quizType === constant.prePostConstans.automatedType) {
+      if (request.data.quizType === prePostConstans.automatedType) {
 
         const teachActivityRes = await teachingActivityRepository.fetchTeachingActivity2(request);
 
@@ -193,15 +191,15 @@ exports.generateQuizForPreLearning = async (request) => {
           ? chapterDataRes.Items[0].prelearning_topic_id
           : [];
 
-        let activeTopics = await helper.getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
+        let activeTopics = await getDifferenceValueFromTwoArray(preLearningTopicIds, archivedTopics);
 
         if (activeTopics.length === 0) {
-          return { status: 400, message: constant.messages.NO_ACTIVE_TOPICS };
+          return { status: 400, message: messages.NO_ACTIVE_TOPICS };
         }
 
         let selectedTopics = activeTopics.map(topicId => ({
           topic_id: topicId,
-          noOfQuestions: "N.A."
+          noOfQuestions: common.NA
         }));
 
         request.data.selectedTopics = selectedTopics;
@@ -210,11 +208,11 @@ exports.generateQuizForPreLearning = async (request) => {
         const add_quiz_basedon_varient_response = await this.addAutomatedQuizBasedonVarient(request);
 
         if (add_quiz_basedon_varient_response === 200) {
-          if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+          if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
             await exports.sendMailtoTeacher2(request);
             return await exports.createPDFandUpdateTemplateDetails2(request);
           } else {
-            throw new Error(constant.messages.INVALID_QUIZ_MODE);
+            throw new Error(messages.INVALID_QUIZ_MODE);
           }
         } else {
           throw new Error(add_quiz_basedon_varient_response);
@@ -227,20 +225,20 @@ exports.generateQuizForPreLearning = async (request) => {
         fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
         const fetch_concepts_response = await conceptRepository.fetchConceptData3({ topic_concept_id });
 
-        if (request.data.quizType === constant.prePostConstans.expressType) {
+        if (request.data.quizType === prePostConstans.expressType) {
           // Express : 
           const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
           if (add_express_quiz_basedon_varient_response === 200) {
-            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+            if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
               await exports.sendMailtoTeacher2(request);
               return await exports.createPDFandUpdateTemplateDetails2(request);
             } else {
-              throw new Error(constant.messages.INVALID_QUIZ_MODE);
+              throw new Error(messages.INVALID_QUIZ_MODE);
             }
           } else {
             throw new Error(add_express_quiz_basedon_varient_response);
           }
-        } else if (request.data.quizType === constant.prePostConstans.manualType) {
+        } else if (request.data.quizType === prePostConstans.manualType) {
           // Manual : 
           try {
             const addQuizResponse = await exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
@@ -248,18 +246,18 @@ exports.generateQuizForPreLearning = async (request) => {
               throw new Error(addQuizResponse);
             }
 
-            if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+            if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
               await exports.sendMailtoTeacher2(request);
               return await exports.createPDFandUpdateTemplateDetails2(request);
             }
-            throw new Error(constant.messages.INVALID_QUIZ_MODE);
+            throw new Error(messages.INVALID_QUIZ_MODE);
           } catch (error) {
             throw error;
           }
         }
       }
     } else {
-      return { status: 400, message: constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG };
+      return { status: 400, message: messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG };
     }
   } catch (quizDataErr) {
     throw quizDataErr;
@@ -311,7 +309,7 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
       non_considered_topic_data[topic.topic_id] = true;
     });
 
-    if (request.data.varient === "randomOrder") {
+    if (request.data.varient === prePostConstans.randomQuestion) {
       let questions_list = [];
       let group_list = [];
       let dupcheck = [];
@@ -345,10 +343,10 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
 
             await qtnLoop(ind + 1);
           } else {
-            throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+            throw new Error(messages.INSUFFICIENT_QUESTIONS);
           }
         } else {
-          let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(
+          let { res_questionTrackData, res_non_considered_topic_data } = await getQuestionTrackForAutomatic(
             request.data.selectedTopics,
             fetchTopicsResponse.Items,
             fetchConceptsResponse,
@@ -358,7 +356,7 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
           );
 
           non_considered_topic_data = res_non_considered_topic_data;
-          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+          res_questionTrackData = await removeDuplicatesFromArrayOfObj(res_questionTrackData, requestData.questionId);
 
           request.data.question_track_details = {
             qp_set_a: res_questionTrackData,
@@ -367,9 +365,9 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
           };
 
           request.data.quiz_question_details = {
-            qp_set_a: await helper.shuffleArray(questions_list),
-            qp_set_b: await helper.shuffleArray(questions_list),
-            qp_set_c: await helper.shuffleArray(questions_list),
+            qp_set_a: await shuffleArray(questions_list),
+            qp_set_b: await shuffleArray(questions_list),
+            qp_set_c: await shuffleArray(questions_list),
           };
 
           request.data.not_considered_topics = Object.keys(non_considered_topic_data).filter(
@@ -382,9 +380,9 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
       };
       await qtnLoop(0);
       return 200;
-    } else if (request.data.varient === "randomQuestions") {
+    } else if (request.data.varient === prePostConstans.randomQuestion) {
       try {
-        const data = await helper.getRandomGroups(group_response, request.data.noOfQuestionsForAuto, quiz_duration);
+        const data = await getRandomGroups(group_response, request.data.noOfQuestionsForAuto, quiz_duration);
         request.data.quiz_duration = request.data.quiz_duration ? request.data.quiz_duration += data.quiz_duration : data.quiz_duration;
 
         const splitSetQuestions = async (setIndex) => {
@@ -393,7 +391,6 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
               (key) => non_considered_topic_data[key]
             );
             await quizRepository.addQuiz2(request);
-            console.log("QUIZ GENERATED!");
             return 200;
           }
 
@@ -410,11 +407,11 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
                 randomDupCheck.push(qtn_id);
               }
             } else {
-              throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+              throw new Error(messages.INSUFFICIENT_QUESTIONS);
             }
           }
 
-          let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(
+          let { res_questionTrackData, res_non_considered_topic_data } = await getQuestionTrackForAutomatic(
             request.data.selectedTopics,
             fetchTopicsResponse.Items,
             fetchConceptsResponse,
@@ -423,7 +420,7 @@ exports.addAutomatedQuizBasedonVarient = async (request) => {
             data.group_list
           );
 
-          res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
+          res_questionTrackData = await removeDuplicatesFromArrayOfObj(res_questionTrackData, requestData.questionId);
 
           if (setIndex === 1) {
             request.data.quiz_question_details.qp_set_a = questions_list;
@@ -468,7 +465,7 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
   let setBQuestionTrackData = [];
   let setCQuestionTrackData = [];
 
-  topic_response = await helper.assignNumberofQuestions(topic_response, request.data.selectedTopics, "topics");
+  topic_response = await assignNumberofQuestions(topic_response, request.data.selectedTopics, contentType.topics);
 
   let non_considered_topic_data = {};
   request.data.question_track_details = {};
@@ -482,11 +479,11 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
 
       let topicData = topic_response[topicIndex];
 
-      let splitGroups = await helper.splitGroups(topicData, concepts_response);
+      let splitGroup = await splitGroups(topicData, concepts_response);
 
-      let basic_groups = splitGroups.basic_groups;
-      let intermediate_groups = splitGroups.intermediate_groups;
-      let advanced_groups = splitGroups.advanced_groups;
+      let basic_groups = splitGroup.basic_groups;
+      let intermediate_groups = splitGroup.intermediate_groups;
+      let advanced_groups = splitGroup.advanced_groups;
 
       basic_groups = await questionServices.processGroups(basic_groups);
       intermediate_groups = await questionServices.processGroups(intermediate_groups);
@@ -509,18 +506,18 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       request.data.quiz_question_details = {};
       const group_response = await groupRepository.fetchGroupsData2({ group_array: final_group_ids });
 
-      if (request.data.varient === "randomOrder") {
+      if (request.data.varient === prePostConstans.randomQuestion) {
 
-        await helper.getRandomQuestionsFromGroups(group_response, topicData.noOfQuestions, randomDupCheck, quiz_duration).then((data) => {
+        await getRandomQuestionsFromGroups(group_response, topicData.noOfQuestions, randomDupCheck, quiz_duration).then((data) => {
 
-          if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
-            return { status: 200, data: constant.messages.INSUFFICIENT_QUESTIONS };
+          if (data === messages.INSUFFICIENT_QUESTIONS) {
+            return { status: 200, data: messages.INSUFFICIENT_QUESTIONS };
           } else {
             randomOrderQuestions.push(...data.questions_list);
             randomDupCheck = data.randomDupCheck;
             request.data.quiz_duration += data.quiz_duration || 0;
 
-            let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, data.questions_list, non_considered_topic_data, data.group_list);
+            let { res_topic, res_non_considered_topic_data } = getQuestionTrackForExpress(topicData, topic_response, concepts_response, data.questions_list, non_considered_topic_data, data.group_list);
 
             non_considered_topic_data = res_non_considered_topic_data;
             questionTrackData.push(...res_topic);
@@ -532,9 +529,9 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
           console.log(err);
           throw new Error(err);
         })
-      } else if (request.data.varient === "randomQuestions") {
+      } else if (request.data.varient === prePostConstans.randomQuestion) {
 
-        await helper.getRandomGroups(group_response, topicData.noOfQuestions, quiz_duration).then(async (data) => {
+        await getRandomGroups(group_response, topicData.noOfQuestions, quiz_duration).then(async (data) => {
           request.data.quiz_duration += data.quiz_duration || 0;
 
           // Create 3 Sets of Question Paper : 
@@ -577,11 +574,11 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                       qtnLoop(ind)
                     }
                   } else {
-                    return { status: 200, data: constant.messages.INSUFFICIENT_QUESTIONS };
+                    return { status: 200, data: messages.INSUFFICIENT_QUESTIONS };
                   }
                 } else {
                   // getting Question tracking per each topic : 
-                  let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, questions_list, non_considered_topic_data, data.group_list);
+                  let { res_topic, res_non_considered_topic_data } = getQuestionTrackForExpress(topicData, topic_response, concepts_response, questions_list, non_considered_topic_data, data.group_list);
                   non_considered_topic_data = res_non_considered_topic_data;
 
                   if (setIndex === 1) {
@@ -615,18 +612,18 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
           })
       }
     } else {
-      if (request.data.varient === "randomOrder") {
+      if (request.data.varient === prePostConstans.randomQuestion) {
 
-        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
+        questionTrackData = await removeDuplicatesFromArrayOfObj(questionTrackData, requestData.questionId);
 
         // // Formatting Topic-Concept-Group-Question level DS 
         request.data.question_track_details.qp_set_a = questionTrackData
         request.data.question_track_details.qp_set_b = questionTrackData
         request.data.question_track_details.qp_set_c = questionTrackData
 
-        request.data.quiz_question_details.qp_set_a = await helper.shuffleArray(randomOrderQuestions);
-        request.data.quiz_question_details.qp_set_b = await helper.shuffleArray(randomOrderQuestions);
-        request.data.quiz_question_details.qp_set_c = await helper.shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_a = await shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_b = await shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_c = await shuffleArray(randomOrderQuestions);
 
         // add Non considered topics to DB : 
         request.data.not_considered_topics = [];
@@ -641,12 +638,12 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
         } catch (addQuizErr) {
           throw new Error(addQuizErr);
         }
-      } else if (request.data.varient === "randomQuestions") {
+      } else if (request.data.varient === prePostConstans.randomQuestion) {
 
         // get Questions track based on Set of Diff. questions 
-        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');
+        request.data.question_track_details.qp_set_a = await removeDuplicatesFromArrayOfObj(setAQuestionTrackData, requestData.questionId);
+        request.data.question_track_details.qp_set_b = await removeDuplicatesFromArrayOfObj(setBQuestionTrackData, requestData.questionId);
+        request.data.question_track_details.qp_set_c = await removeDuplicatesFromArrayOfObj(setCQuestionTrackData, requestData.questionId);
 
         request.data.quiz_question_details.qp_set_a = setAQuestions;
         request.data.quiz_question_details.qp_set_b = setBQuestions;
@@ -688,7 +685,7 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
   let setBQuestionTrackData = [];
   let setCQuestionTrackData = [];
 
-  concepts_response = await helper.assignNumberofQuestions(concepts_response, request.data.selectedTopics, "concepts");
+  concepts_response = await assignNumberofQuestions(concepts_response, request.data.selectedTopics, contentType.concepts);
 
   let non_considered_topic_data = {};
   request.data.question_track_details = {};
@@ -711,9 +708,9 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           let intermediate_groups = conceptData[0].concept_group_id.intermediate;
           let advanced_groups = conceptData[0].concept_group_id.advanced;
 
-          // basic_groups = helper.removeDuplicates(basic_groups);
-          // intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          // advanced_groups = helper.removeDuplicates(advanced_groups);
+          // basic_groups = removeDuplicates(basic_groups);
+          // intermediate_groups = removeDuplicates(intermediate_groups);
+          // advanced_groups = removeDuplicates(advanced_groups);
 
           basic_groups = await questionServices.processGroups(basic_groups);
           intermediate_groups = await questionServices.processGroups(intermediate_groups);
@@ -731,19 +728,19 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
 
           const group_response = await groupRepository.fetchGroupsData2({ group_array: final_group_ids });
 
-          if (request.data.varient === "randomOrder") {
+          if (request.data.varient === prePostConstans.randomQuestion) {
 
-            await helper.getRandomQuestionsFromGroups(group_response, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
+            await getRandomQuestionsFromGroups(group_response, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
 
-              if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
-                throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+              if (data === messages.INSUFFICIENT_QUESTIONS) {
+                throw new Error(messages.INSUFFICIENT_QUESTIONS);
               } else {
                 randomOrderQuestions.push(...data.questions_list);
                 randomDupCheck = data.randomDupCheck;
                 request.data.quiz_duration += data.quiz_duration;
 
                 // getting Question tracking per each topic : 
-                let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, data.questions_list, non_considered_topic_data, data.group_list);
+                let { res_concept, res_non_considered_topic_data } = await getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, data.questions_list, non_considered_topic_data, data.group_list);
 
                 non_considered_topic_data = res_non_considered_topic_data;
                 questionTrackData.push(...res_concept);
@@ -754,9 +751,9 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
             }).catch(function (err) {
               throw err;
             })
-          } else if (request.data.varient === "randomQuestions") {
+          } else if (request.data.varient === prePostConstans.randomQuestion) {
 
-            await helper.getRandomGroups(group_response, conceptData[0].noOfQuestions, quiz_duration).then(async (data) => {
+            await getRandomGroups(group_response, conceptData[0].noOfQuestions, quiz_duration).then(async (data) => {
               request.data.quiz_duration += data.quiz_duration || 0;
 
               // Create 3 Sets of Question Paper : 
@@ -791,12 +788,12 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
                           qtnLoop(ind);
                         }
                       } else {
-                        throw new Error(constant.messages.INSUFFICIENT_QUESTIONS);
+                        throw new Error(messages.INSUFFICIENT_QUESTIONS);
                       }
                     } else {
 
                       // getting Question tracking per each topic : 
-                      let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, questions_list, non_considered_topic_data, data.group_list);
+                      let { res_concept, res_non_considered_topic_data } = await getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, questions_list, non_considered_topic_data, data.group_list);
 
                       non_considered_topic_data = res_non_considered_topic_data;
                       if (setIndex === 1) {
@@ -834,18 +831,18 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
       conceptLoop(0);
     } else {
       // After Topic Loop is Over : 
-      if (request.data.varient === "randomOrder") {
+      if (request.data.varient === prePostConstans.randomQuestion) {
 
-        questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
+        questionTrackData = await removeDuplicatesFromArrayOfObj(questionTrackData, requestData.questionId);
 
         // // // Formatting Topic-Concept-Group-Question level DS 
         request.data.question_track_details.qp_set_a = questionTrackData
         request.data.question_track_details.qp_set_b = questionTrackData
         request.data.question_track_details.qp_set_c = questionTrackData
 
-        request.data.quiz_question_details.qp_set_a = await helper.shuffleArray(randomOrderQuestions);
-        request.data.quiz_question_details.qp_set_b = await helper.shuffleArray(randomOrderQuestions);
-        request.data.quiz_question_details.qp_set_c = await helper.shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_a = await shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_b = await shuffleArray(randomOrderQuestions);
+        request.data.quiz_question_details.qp_set_c = await shuffleArray(randomOrderQuestions);
 
         // add Non considered topics to DB : 
         request.data.not_considered_topics = [];
@@ -856,12 +853,12 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
         // Add Quiz : 
         await quizRepository.addQuiz2(request);
         return 200;
-      } else if (request.data.varient === "randomQuestions") {
+      } else if (request.data.varient === prePostConstans.randomQuestion) {
 
         // // get Questions track based on Set of Diff. questions 
-        request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');;
-        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');;
+        request.data.question_track_details.qp_set_a = await removeDuplicatesFromArrayOfObj(setAQuestionTrackData, requestData.questionId);
+        request.data.question_track_details.qp_set_b = await removeDuplicatesFromArrayOfObj(setBQuestionTrackData, requestData.questionId);;
+        request.data.question_track_details.qp_set_c = await removeDuplicatesFromArrayOfObj(setCQuestionTrackData, requestData.questionId);;
 
         request.data.quiz_question_details.qp_set_a = setAQuestions;
         request.data.quiz_question_details.qp_set_b = setBQuestions;
@@ -890,19 +887,19 @@ exports.generateQuizForPostLearning = async (request) => {
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
     if (schoolDataRes.Items[0].post_quiz_config) {
       let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
-      if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
-        throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+      if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === common.No) {
+        throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
       }
       else {
         request.data.pre_post_quiz_config = postQuizConfig;
-        request.data.quiz_id = helper.getRandomString();
+        request.data.quiz_id = getRandomString();
         request.data.quiz_duration = 0;
 
-        if (request.data.quizType === constant.prePostConstans.automatedType) {
+        if (request.data.quizType === prePostConstans.automatedType) {
           let selectedTop = [];
           if (request.data.topicList.length > 0) {
             await request.data.topicList.map(reqTop => {
-              selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
+              selectedTop.push({ topic_id: reqTop, noOfQuestions: common.NA });
             })
 
             request.data.selectedTopics = selectedTop;
@@ -911,11 +908,11 @@ exports.generateQuizForPostLearning = async (request) => {
             const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
 
             if (add_quiz_basedon_varient_response === 200) {
-              if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+              if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
                 await exports.sendMailtoTeacher2(request);
                 return await exports.createPDFandUpdateTemplateDetails2(request);
               } else {
-                throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                throw new Error(messages.INVALID_QUIZ_MODE);
               }
             } else {
               throw new Error(add_quiz_basedon_varient_response);
@@ -930,11 +927,11 @@ exports.generateQuizForPostLearning = async (request) => {
               /** FETCH CHAPTER DATA **/
               const chapterData_response = await chapterRepository.fetchChapterByID2(request);
               let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
-              let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
+              let AcitveTopics = await getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
 
               if (AcitveTopics.length > 0) {
                 await AcitveTopics.forEach(actTop => {
-                  selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
+                  selectedTop.push({ topic_id: actTop, noOfQuestions: common.NA });
                 })
 
                 request.data.selectedTopics = selectedTop;
@@ -943,18 +940,18 @@ exports.generateQuizForPostLearning = async (request) => {
                 const add_quiz_basedon_varient_response = await exports.addAutomatedQuizBasedonVarient(request);
 
                 if (add_quiz_basedon_varient_response === 200) {
-                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                  if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
                     await exports.sendMailtoTeacher2(request);
                     return await exports.createPDFandUpdateTemplateDetails2(request);
                   } else {
-                    throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                    throw new Error(messages.INVALID_QUIZ_MODE);
                   }
                 } else {
                   throw new Error(add_quiz_basedon_varient_response);
                 }
               }
               else {
-                throw new Error(constant.messages.NO_ACTIVE_TOPICS);
+                throw new Error(messages.NO_ACTIVE_TOPICS);
               }
             } catch (error) {
               throw error;
@@ -969,31 +966,31 @@ exports.generateQuizForPostLearning = async (request) => {
             fetch_topics_response.Items.forEach(e => topicConceptIds.push(...e.topic_concept_id));
             const fetch_concepts_response = await conceptRepository.fetchConceptData3({ topic_concept_id: topicConceptIds });
 
-            if (request.data.quizType === constant.prePostConstans.expressType) {
+            if (request.data.quizType === prePostConstans.expressType) {
               // Express : 
               const add_express_quiz_basedon_varient_response = await exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
               if (add_express_quiz_basedon_varient_response === 200) {
-                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
                   await exports.sendMailtoTeacher2(request);
                   return await exports.createPDFandUpdateTemplateDetails2(request);
                 } else {
-                  throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                  throw new Error(messages.INVALID_QUIZ_MODE);
                 }
               } else {
                 throw new Error(add_express_quiz_basedon_varient_response);
               }
-            } else if (request.data.quizType === constant.prePostConstans.manualType) {
+            } else if (request.data.quizType === prePostConstans.manualType) {
               // Manual : 
               try {
                 const addQuizResponse = await exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response);
                 if (addQuizResponse !== 200) {
                   throw new Error(addQuizResponse);
                 }
-                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+                if (request.data.quizMode === prePostConstans.offlineMode || request.data.quizMode === prePostConstans.onlineMode) {
                   await exports.sendMailtoTeacher2(request);
                   return await exports.createPDFandUpdateTemplateDetails2(request);
                 }
-                throw new Error(constant.messages.INVALID_QUIZ_MODE);
+                throw new Error(messages.INVALID_QUIZ_MODE);
               } catch (error) {
                 throw error;
               }
@@ -1004,7 +1001,7 @@ exports.generateQuizForPostLearning = async (request) => {
         }
       }
     } else {
-      throw new Error(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+      throw new Error(messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
     }
   } catch (error) {
     throw error;
@@ -1020,8 +1017,8 @@ exports.addteacherDigicardExtension = async (request) => {
     for (let i = 0; i < digiExtension.length; i++) {
       let extFile = digiExtension[i].ext_file;
 
-      if (!(JSON.stringify(extFile).includes("digicard_extension/")) && extFile && extFile !== "N.A.") {
-        let extFilesS3 = await helper.PutObjectS3SigneUdrl(extFile, "digicard_extension");
+      if (!(JSON.stringify(extFile).includes(signedUrlConstants.digicardExtension)) && extFile && extFile !== common.NA) {
+        let extFilesS3 = await PutObjectS3SigneUdrl(extFile, contentType.digiCardExtension);
 
         request.data.extensions[i].ext_file = extFilesS3.Key;
         finalResponse.push({ file_name: extFile, s3Url: extFilesS3.uploadURL });
@@ -1044,13 +1041,13 @@ exports.getTeacherPostLearningPermissions = async (request) => {
 
   try {
     if (!request?.data || !request.data.client_class_id || !request.data.section_id || !request.data.subject_id || !request.data.chapter_id || !request.data.school_id || !request.data.topics) {
-      throw { status: 400, message: constant.messages.INVALID_REQUEST_FORMAT };
+      throw { status: 400, message: messages.INVALID_REQUEST_FORMAT };
     }
 
     const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
 
     if (!schoolDataRes.Items || schoolDataRes.Items.length === 0) {
-      throw { status: 400, message: "School details not found" };
+      throw { status: 400, message: messages.SCHOOL_NOT_FOUND };
     }
 
     if (schoolDataRes.Items[0].post_quiz_config) {
@@ -1067,44 +1064,38 @@ exports.getTeacherPostLearningPermissions = async (request) => {
       let unlockTopicDigicard = unlockDigicards.length > 0 ? unlockDigicards : [];
       let UnlockedTopicIDs = [];
       await unlockTopicDigicard.map((e) => UnlockedTopicIDs.push(...e.topics.map((j) => j.topic_id)));
-      request.data.learningType = constant.prePostConstans.postLearningVal;
+      request.data.learningType = prePostConstans.postLearningVal;
 
       const quizData_res = await quizRepository.fetchQuizData2(request);
 
-      if (postQuizConfig.choose_topic === "Yes") {
+      if (postQuizConfig.choose_topic === common.Yes) {
 
-        // requestTopics shouldn't be empty
-        // Check if they are archived or not and filter unarchived topics 
-        // check if requestTopics which are unlocked or not if unlock digicard is mandatory ,  if not, intimate user that, digicard is not unlocked 
-        // requestTopics shouldn't be empty , if yes, throw error 
-        // check quiz table, if there is data, check if the requestTopics id's are there in selectedTopics columns or not 
-        // If yes, throw error, that its already generated 
-        let quizGenerated = "No";
+        let quizGenerated = common.No;
 
         await quizData_res.Items.length > 0 && quizData_res.Items.forEach((e) => {
           e.selectedTopics.length > 0 && e.selectedTopics.forEach((a) =>
-            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = "Yes"))
+            requestTopics.filter((k) => k === a.topic_id).length > 0 && (quizGenerated = common.Yes))
         })
-        if (quizData_res.Items.length > 0 && quizGenerated === "Yes") {
-          throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+        if (quizData_res.Items.length > 0 && quizGenerated === common.Yes) {
+          throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
         } else {
           if (requestTopics.length === 0) {
-            console.log(constant.messages.NO_TOPICS_SELECTED);
-            return { status: 400, message: constant.messages.NO_TOPICS_SELECTED };
+            console.log(messages.NO_TOPICS_SELECTED);
+            return { status: 400, message: messages.NO_TOPICS_SELECTED };
           }
-          if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
-            const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(requestTopics, UnlockedTopicIDs);
+          if (postQuizConfig.unlock_digicard_mandatory === common.Yes) {
+            const unlockAllTopicsCheck = await checkOneArrayElementsinAnother(requestTopics, UnlockedTopicIDs);
             if (!unlockAllTopicsCheck) {
-              return { status: 400, message: constant.messages.DIDNT_UNLOCK_DIGICARD };
+              return { status: 400, message: messages.DIDNT_UNLOCK_DIGICARD };
             }
-          } else if (postQuizConfig.unlock_digicard_mandatory !== "No") {
-            return { status: 400, message: constant.messages.DIDNT_SET_CONFIG };
+          } else if (postQuizConfig.unlock_digicard_mandatory !== common.No) {
+            return { status: 400, message: messages.DIDNT_SET_CONFIG };
           }
 
           const generateResponse = await exports.generateResponse(postQuizConfig);
           return { status: 200, data: generateResponse };
         }
-      } else if (postQuizConfig.choose_topic === "No") {
+      } else if (postQuizConfig.choose_topic === common.No) {
 
         // if request.data.topics is [], fetch all post topics and removed archived topics 
         // check digicads are unlocked for those topics or not if its mandatory
@@ -1114,7 +1105,7 @@ exports.getTeacherPostLearningPermissions = async (request) => {
           const singleChapterResponse = await chapterRepository.fetchChapterByID2(request);
 
           if (!singleChapterResponse.Items || singleChapterResponse.Items.length === 0) {
-            return { status: 400, message: "No chapter data found" };
+            return { status: 400, message: messages.CHAPTER_NOT_FOUND };
           }
 
           const post_topic_response = await topicRepository.fetchPostTopicData2(singleChapterResponse.Items[0]);
@@ -1122,43 +1113,43 @@ exports.getTeacherPostLearningPermissions = async (request) => {
           if (requestTopics.length === 0) {
             let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
 
-            let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
+            let AcitveTopics = await getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
 
-            if (postQuizConfig.unlock_digicard_mandatory === "Yes") {
+            if (postQuizConfig.unlock_digicard_mandatory === common.Yes) {
               let unlockCheck = [];
 
               AcitveTopics.forEach((e) => UnlockedTopicIDs.filter((a) => e === a).length > 0 && unlockCheck.push(e));
 
-              const unlockAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, unlockCheck);
+              const unlockAllTopicsCheck = await checkOneArrayElementsinAnother(AcitveTopics, unlockCheck);
 
               if (unlockAllTopicsCheck) {
                 return await exports.generateResponse(postQuizConfig);
               } else {
-                throw new Error(constant.messages.DIDNT_UNLOCK_DIGICARD);
+                throw new Error(messages.DIDNT_UNLOCK_DIGICARD);
               }
-            } else if (postQuizConfig.unlock_digicard_mandatory === "No") {
+            } else if (postQuizConfig.unlock_digicard_mandatory === common.No) {
               return await exports.generateResponse(postQuizConfig);
             } else {
-              throw new Error(constant.messages.DIDNT_SET_CONFIG);
+              throw new Error(messages.DIDNT_SET_CONFIG);
             }
           } else {
             let topicIDs = post_topic_response.Items.map((e) => e.topic_id);
-            let AcitveTopics = await helper.getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
-            const selectAllTopicsCheck = await helper.checkOneArrayElementsinAnother(AcitveTopics, requestTopics);
+            let AcitveTopics = await getDifferenceValueFromTwoArray(topicIDs, archivedTopics);
+            const selectAllTopicsCheck = await checkOneArrayElementsinAnother(AcitveTopics, requestTopics);
 
             if (selectAllTopicsCheck === true) {
               return await exports.generateResponse(postQuizConfig);
             } else {
-              throw new Error(constant.messages.SELECT_ALL_TOPICS);
+              throw new Error(messages.SELECT_ALL_TOPICS);
             }
           }
         } else {
-          throw new Error(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+          throw new Error(messages.POST_QUIZ_ALREADY_GENERATED);
         }
       }
     }
     else {
-      throw new Error(constant.messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG);
+      throw new Error(messages.SCHOOL_DOESNT_HAVE_POSTQUIZ_CONFIG);
     }
   } catch (error) {
     throw error;
@@ -1179,19 +1170,19 @@ exports.generateResponse = (postQuizConfig) => {
   let preQuizType = [];
   let preQuizVarient = [];
 
-  preQuizType.push(postQuizConfig.automated_type === "Enabled" ? constant.prePostConstans.automatedType : "N.A.");
-  preQuizType.push(postQuizConfig.express_type === "Enabled" ? constant.prePostConstans.expressType : "N.A.");
-  preQuizType.push(postQuizConfig.manual_type === "Enabled" ? constant.prePostConstans.manualType : "N.A.");
+  preQuizType.push(postQuizConfig.automated_type === common.Enabled ? prePostConstans.automatedType : common.NA);
+  preQuizType.push(postQuizConfig.express_type === common.Enabled ? prePostConstans.expressType : common.NA);
+  preQuizType.push(postQuizConfig.manual_type === common.Enabled ? prePostConstans.manualType : common.NA);
 
-  preQuizMode.push(postQuizConfig.offline_mode === "Enabled" ? constant.prePostConstans.offlineMode : "N.A.");
-  preQuizMode.push(postQuizConfig.online_mode === "Enabled" ? constant.prePostConstans.onlineMode : "N.A.");
+  preQuizMode.push(postQuizConfig.offline_mode === common.Enabled ? prePostConstans.offlineMode : common.NA);
+  preQuizMode.push(postQuizConfig.online_mode === common.Enabled ? prePostConstans.onlineMode : common.NA);
 
-  preQuizVarient.push(postQuizConfig.randomized_order_varient === "Enabled" ? constant.prePostConstans.randomOrder : "N.A.");
-  preQuizVarient.push(postQuizConfig.randomized_questions_varient === "Enabled" ? constant.prePostConstans.randomQuestion : "N.A.");
+  preQuizVarient.push(postQuizConfig.randomized_order_varient === common.Enabled ? prePostConstans.randomOrder : common.NA);
+  preQuizVarient.push(postQuizConfig.randomized_questions_varient === common.Enabled ? prePostConstans.randomQuestion : common.NA);
 
-  response.postLearning.quizModes = preQuizMode.filter(qMode => qMode !== "N.A.");
-  response.postLearning.quizType = preQuizType.filter(qType => qType !== "N.A.");
-  response.postLearning.quizVarient = preQuizVarient.filter(qVar => qVar !== "N.A.");
+  response.postLearning.quizModes = preQuizMode.filter(qMode => qMode !== common.NA);
+  response.postLearning.quizType = preQuizType.filter(qType => qType !== common.NA);
+  response.postLearning.quizVarient = preQuizVarient.filter(qVar => qVar !== common.NA);
 
   response.postLearning.concept_mandatory = postQuizConfig.concept_mandatory;
   response.postLearning.min_qn_at_topic_level = postQuizConfig.min_qn_at_topic_level;
@@ -1201,7 +1192,7 @@ exports.generateResponse = (postQuizConfig) => {
 }
 exports.changeDigiCardOrder = async (request) => {
   if (!request || !request.data || !request.data.client_class_id || !request.data.section_id || !request.data.subject_id || !request.data.chapter_id) {
-    throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
+    throw new Error(messages.INVALID_REQUEST_FORMAT);
   }
   try {
     const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
@@ -1210,7 +1201,7 @@ exports.changeDigiCardOrder = async (request) => {
     const allDigicardActivity = teachActivity_response.Items[0]?.digicard_activities || [];
     const digicardActivity = allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
-    let PrePOstActivity = digicardActivity.length > 0 ? (request.data.learningType === "Pre" ? [...digicardActivity[0].pre_learning] : [...digicardActivity[0].post_learning]) : [];
+    let PrePOstActivity = digicardActivity.length > 0 ? (request.data.learningType === common.Pre ? [...digicardActivity[0].pre_learning] : [...digicardActivity[0].post_learning]) : [];
     let reordered_data = {
       topic_id: request.data.topic_id,
       digicardOrder: request.data.digicardOrder,
@@ -1230,7 +1221,7 @@ exports.changeDigiCardOrder = async (request) => {
     }
 
     if (digicardActivity.length > 0) {
-      request.data.learningType === "Pre" ? digicardActivity[0].pre_learning = PrePOstActivity : digicardActivity[0].post_learning = PrePOstActivity;
+      request.data.learningType === common.Pre ? digicardActivity[0].pre_learning = PrePOstActivity : digicardActivity[0].post_learning = PrePOstActivity;
       allDigicardActivity.forEach((e, i) => e.chapter_id === request.data.chapter_id && (allDigicardActivity[i] = digicardActivity[0]));
       request.data.digicard_activities = allDigicardActivity;
     } else {
@@ -1241,15 +1232,15 @@ exports.changeDigiCardOrder = async (request) => {
     request.data.activity_id = teachActivity_response.Items[0].activity_id;
 
     await teachingActivityRepository.updateTeachingDigiCardActivity2(request);
-    return constant.messages.DIGICARD_ORDER_CHANGED;
+    return messages.DIGICARD_ORDER_CHANGED;
   } catch (error) {
-    throw new Error(error.message || constant.messages.ERROR);
+    throw new Error(error.message || messages.ERROR);
   }
 };
 
 exports.createDigicardActivityData2 = async (request) => {
   if (!request || !request.data || !request.data.chapter_id || !request.data.topic_id) {
-    throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
+    throw new Error(messages.INVALID_REQUEST_FORMAT);
   }
 
   let individual_digicard_activity = {
@@ -1260,16 +1251,16 @@ exports.createDigicardActivityData2 = async (request) => {
 
   const learningData = {
     topic_id: request.data.topic_id,
-    digicardOrder: request.data.key === "toggle" ? [] : request.data.digicardOrder,
-    archivedDigicard: request.data.key === "toggle" ? request.data.digi_card_id : []
+    digicardOrder: request.data.key === commonConditionValue.toggle ? [] : request.data.digicardOrder,
+    archivedDigicard: request.data.key === commonConditionValue.toggle ? request.data.digi_card_id : []
   };
 
-  if (request.data.learningType === "Pre") {
+  if (request.data.learningType === common.Pre) {
     individual_digicard_activity.pre_learning.push(learningData);
-  } else if (request.data.learningType === "Post") {
+  } else if (request.data.learningType === common.Post) {
     individual_digicard_activity.post_learning.push(learningData);
   } else {
-    throw new Error(constant.messages.INVALID_REQUEST_FORMAT);
+    throw new Error(messages.INVALID_REQUEST_FORMAT);
   }
 
   return individual_digicard_activity;
@@ -1277,29 +1268,29 @@ exports.createDigicardActivityData2 = async (request) => {
 
 exports.activeAndArchiveDigicardsInTopic = async (request) => {
   if (!request?.data?.client_class_id || !request?.data?.section_id || !request?.data?.subject_id || !request?.data?.chapter_id || !request?.data?.action) {
-    throw helper.formatErrorResponse(400, constant.messages.INVALID_REQUEST_FORMAT);
+    throw formatErrorResponse(400, messages.INVALID_REQUEST_FORMAT);
   }
 
-  if (request.data.action !== "active" && request.data.action !== "delete") {
-    throw helper.formatErrorResponse(400, constant.messages.INVALID_REQUEST_FORMAT);
+  if (request.data.action !== commonConditionValue.active && request.data.action !== common.delete) {
+    throw formatErrorResponse(400, messages.INVALID_REQUEST_FORMAT);
   }
 
   try {
     const teachActivityResponse = await teachingActivityRepository.fetchTeachingActivity2(request);
-    request.data.key = "toggle";
+    request.data.key = commonConditionValue.toggle;
 
     const digicardActivityData = await exports.createDigicardActivityData2(request);
     let allDigicardActivity = teachActivityResponse.Items.length > 0 ? teachActivityResponse.Items[0].digicard_activities || [] : [];
     let digicardActivity = allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
     let archivedData = { topic_id: request.data.topic_id, digicardOrder: [], archivedDigicard: [] };
-    let prePostActivity = request.data.learningType === "Pre" ? digicardActivity[0]?.pre_learning || [] : digicardActivity[0]?.post_learning || [];
+    let prePostActivity = request.data.learningType === common.Pre ? digicardActivity[0]?.pre_learning || [] : digicardActivity[0]?.post_learning || [];
 
     if (prePostActivity.some(e => e.topic_id === request.data.topic_id)) {
       prePostActivity = prePostActivity.map((e) => {
         if (e.topic_id === request.data.topic_id) {
           archivedData.digicardOrder = e.digicardOrder;
-          if (request.data.action === "delete") {
+          if (request.data.action === common.delete) {
             e.archivedDigicard.push(...request.data.digi_card_id);
           } else {
             const digiCardList = new Set(request.data.digi_card_id);
@@ -1315,10 +1306,10 @@ exports.activeAndArchiveDigicardsInTopic = async (request) => {
       prePostActivity.push(archivedData);
     }
 
-    if (request.data.learningType === "Pre") {
-      digicardActivity[0]["pre_learning"] = prePostActivity;
+    if (request.data.learningType === common.Pre) {
+      digicardActivity[0][prePostConstans.preLearning] = prePostActivity;
     } else {
-      digicardActivity[0]["post_learning"] = prePostActivity;
+      digicardActivity[0][prePostConstans.postLearning] = prePostActivity;
     }
 
     if (digicardActivity.length > 0) {
@@ -1334,16 +1325,16 @@ exports.activeAndArchiveDigicardsInTopic = async (request) => {
 
       await teachingActivityRepository.updateTeachingDigiCardActivity2(request);
     }
-    return request.data.action === "delete" ? constant.messages.DIGICARD_DELETED_IN_TOPIC : constant.messages.DIGICARD_ACTIVATED_IN_TOPIC;
+    return request.data.action === common.delete ? messages.DIGICARD_DELETED_IN_TOPIC : messages.DIGICARD_ACTIVATED_IN_TOPIC;
   } catch (error) {
-    throw helper.formatErrorResponse(error.statusCode || 500, error.message || "Internal Server Error");
+    throw formatErrorResponse(error.statusCode || 500, error.message || messages.INTERNAL_SERVER_ERROR);
   }
 };
 
 exports.getDigiCardstoReorder = async (request) => {
 
   if (request === undefined || request.data === undefined || request.data.client_class_id === undefined || request.data.client_class_id === "" || request.data.section_id === undefined || request.data.section_id === "" || request.data.subject_id === undefined || request.data.subject_id === "" || request.data.chapter_id === undefined || request.data.chapter_id === "") {
-    return { status: 400, message: constant.messages.INVALID_REQUEST_FORMAT };
+    return { status: 400, message: messages.INVALID_REQUEST_FORMAT };
   } else {
     try {
       const teachActivity_response = await teachingActivityRepository.fetchTeachingActivity2(request);
@@ -1359,7 +1350,7 @@ exports.getDigiCardstoReorder = async (request) => {
           let digicardActivity = await allDigicardActivity.filter(ce => ce.chapter_id === request.data.chapter_id);
 
           if (digicardActivity.length > 0) {
-            let PrePOstActivity = request.data.learningType === "Pre" ? JSON.parse(JSON.stringify(digicardActivity[0].pre_learning)) : JSON.parse(JSON.stringify(digicardActivity[0].post_learning));
+            let PrePOstActivity = request.data.learningType === common.Pre ? JSON.parse(JSON.stringify(digicardActivity[0].pre_learning)) : JSON.parse(JSON.stringify(digicardActivity[0].post_learning));
             PrePOstActivity = PrePOstActivity === undefined ? [] : PrePOstActivity;
 
             if (PrePOstActivity.length > 0) {
@@ -1393,19 +1384,18 @@ exports.getDigiCardstoReorder = async (request) => {
               let archivedDigiCardSet = new Set(archivedDigiCardList);
               let FinalDigiCardList = changedDigiCardOrder.filter((e) => { return !archivedDigiCardSet.has(e) });
 
-              FinalDigiCardList = helper.removeDuplicates(FinalDigiCardList);
+              FinalDigiCardList = removeDuplicates(FinalDigiCardList);
               const get_digicard_res = await digicardRepository.fetchDigiCardDisplayTitleID2(FinalDigiCardList);
-              get_digicard_res.Items = await helper.sortOneArrayBasedonAnother(get_digicard_res.Items, FinalDigiCardList, "digi_card_id");
+              get_digicard_res.Items = await sortOneArrayBasedonAnother(get_digicard_res.Items, FinalDigiCardList, messages.DIGI_CARD_ID);
               return get_digicard_res;
             } else {
-              changedDigiCardOrder = helper.removeDuplicates(changedDigiCardOrder);
+              changedDigiCardOrder = removeDuplicates(changedDigiCardOrder);
               const get_digicard_res = await digicardRepository.fetchDigiCardDisplayTitleID2(FinalDigiCardList);
-              get_digicard_res.Items = await helper.sortOneArrayBasedonAnother(get_digicard_res.Items, changedDigiCardOrder, "digi_card_id");
+              get_digicard_res.Items = await sortOneArrayBasedonAnother(get_digicard_res.Items, changedDigiCardOrder, messages.DIGI_CARD_ID);
               return get_digicard_res;
             }
           } else {
             request.data.archivedDigiCardList = archivedDigiCardList.length > 0 ? archivedDigiCardList : [];
-
             const digicard_list_response = await getAllDigicardsBasedonTopic(request);
             return { status: 200, data: digicard_list_response };
           }
@@ -1423,16 +1413,16 @@ exports.getAllDigicardsBasedonTopic = async (request) => {
 
   try {
     if (!request?.data?.topic_id) {
-      return { status: 400, message: constant.messages.INVALID_REQUEST };
+      return { status: 400, message: messages.INVALID_REQUEST };
     }
 
     const single_topic_response = await topicRepository.fetchTopicByID2(request);
     if (!single_topic_response?.Items?.length) {
-      return { status: 404, message: constant.messages.TOPIC_NOT_FOUND };
+      return { status: 404, message: messages.TOPIC_NOT_FOUND };
     }
     const topic_related_concept_response = await conceptRepository.fetchConceptData3(single_topic_response.Items[0]);
     if (!topic_related_concept_response?.Items?.length) {
-      return { status: 404, message: constant.messages.CONCEPTS_NOT_FOUND };
+      return { status: 404, message: messages.CONCEPTS_NOT_FOUND };
     }
     let concept_digicard_id = [];
 
@@ -1440,7 +1430,7 @@ exports.getAllDigicardsBasedonTopic = async (request) => {
 
     const get_digicard_res = await digicardRepository.fetchDigiCardDisplayTitleID2(concept_digicard_id);
     if (!get_digicard_res?.Items?.length) {
-      return { status: 404, message: constant.messages.DIGICARDS_NOT_FOUND };
+      return { status: 404, message: messages.DIGICARDS_NOT_FOUND };
     }
 
     const sorted_data_response = await exports.sortDigiCardsBasedonTopic(single_topic_response, topic_related_concept_response, get_digicard_res);
@@ -1466,7 +1456,7 @@ exports.sortDigiCardsBasedonTopic = async (topic_response, concept_response, dig
     Items: []
   };
 
-  let sortedConceptData = await helper.sortOneArrayBasedonAnother(concept_response, topic_concept_id, "concept_id");
+  let sortedConceptData = await sortOneArrayBasedonAnother(concept_response, topic_concept_id, requestData.conceptId);
 
   let concept_digicard_id = [];
 
@@ -1474,9 +1464,9 @@ exports.sortDigiCardsBasedonTopic = async (topic_response, concept_response, dig
     concept_digicard_id.push(...each_concept.concept_digicard_id);
   });
 
-  concept_digicard_id = await helper.removeDuplicates(concept_digicard_id)
+  concept_digicard_id = await removeDuplicates(concept_digicard_id)
 
-  let sortedDigiCardData = await helper.sortOneArrayBasedonAnother(digicard_response.Items, concept_digicard_id, "digi_card_id");
+  let sortedDigiCardData = await sortOneArrayBasedonAnother(digicard_response.Items, concept_digicard_id, messages.DIGI_CARD_ID);
   finalDigiCardData.Items = sortedDigiCardData;
 
   return { status: 200, data: finalDigiCardData };
@@ -1485,7 +1475,7 @@ exports.sortDigiCardsBasedonTopic = async (topic_response, concept_response, dig
 exports.getQuestionSourceandChapters = async (request) => {
   try {
     if (!request?.data?.subject_id) {
-      return { status: 400, message: constant.messages.INVALID_SUBJECT };
+      return { status: 400, message: messages.INVALID_SUBJECT };
     }
     const source_res = await settingsRepository.getQuestionSources2(request);
     const response = { question_sources: source_res.Items };
@@ -1508,7 +1498,7 @@ exports.getQuestionSourceandChapters = async (request) => {
     response.chapters = chapter_res.Items;
     return { status: 200, data: response };
   } catch (error) {
-    return { status: error.status || 500, message: error.message || "Internal Server Error" };
+    return { status: error.status || 500, message: error.message || messages.INTERNAL_SERVER_ERROR };
   }
 }
 
@@ -1516,10 +1506,10 @@ exports.createPDFandUpdateTemplateDetails2 = async (request) => {
   try {
     // Call API in EC2 Service and get Question and Answer Paper Paths
     const options = {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
       data: qs.stringify(request),
-      url: process.env.PDF_GENERATION_URL + '/createQuizQuestionAndAnswerPapers',
+      url: process.env.PDF_GENERATION_URL + "/createQuizQuestionAndAnswerPapers",
     };
 
     await axios(options);
@@ -1533,22 +1523,22 @@ exports.sendMailtoTeacher2 = async (request) => {
   try {
     const fetchTeacherEmailRes = await userRepository.fetchTeacherEmailById2(request);
     if (!fetchTeacherEmailRes.Items || fetchTeacherEmailRes.Items.length === 0) {
-      throw new Error("Teacher email not found");
+      throw new Error(messages.TEACHER_EMAIL_DOESNOT_EXISTS);
     }
 
     const mailPayload = {
-      "quiz_name": request.data.quiz_name,
-      "toMail": fetchTeacherEmailRes.Items[0].user_email,
-      "subject": constant.mailSubject.quizGeneration,
-      "mailFor": "quizGeneration",
+      quiz_name: request.data.quiz_name,
+      toMail: fetchTeacherEmailRes.Items[0].user_email,
+      subject: mailSubject.quizGeneration,
+      mailFor: common.quizGeneration,
     };
 
     const dataEmail = await sendMail.process(mailPayload);
 
     if (dataEmail.httpStatusCode === 200) {
-      return constant.messages.QUIZ_GENERATED;
+      return messages.QUIZ_GENERATED;
     } else {
-      throw new Error("SNS ERROR");
+      throw new Error(messages.SNS_ERROR);
     }
   } catch (error) {
     throw error;

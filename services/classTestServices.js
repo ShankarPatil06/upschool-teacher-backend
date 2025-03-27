@@ -1,7 +1,7 @@
 const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository, testResultRepository, } = require("../repository")
 const { TABLE_NAMES } = require("../constants/tables");
-const constant = require("../constants/constant");
-const helper = require("../helper/helper");
+const { answerSheet, common, evalConstant, messages, question, questionKeys, testFolder } = require("../constants/constant");
+const { formatErrorResponse, getRandomString, getMarksDetailsFormat, getIndexOfStudentAns, getOptionsWrightAnswers, getObjectiveMarks, isEmptyArray } = require("../helper/helper");
 const qs = require("qs");
 const axios = require("axios");
 const s3Services = require("./s3Service");
@@ -13,8 +13,8 @@ const openai = new OpenAI({
 
 exports.addClassTest = async (request) => {
     const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    if (fetch_class_test_res.Items.length === 0) {
-        request.data.class_test_id = helper.getRandomString();
+    if (isEmptyArray(fetch_class_test_res.Items)) {
+        request.data.class_test_id = getRandomString();
         const options = {
             method: "POST",
             headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -31,43 +31,43 @@ exports.addClassTest = async (request) => {
     }
 };
 
-exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: constant.common.AND });
+exports.fetchClassTestsBasedonStatus = async (request) => await classTestRepository.getClassTestsBasedonStatus2({ items: [request.data], condition: common.AND });
 
 exports.fetchClassTestsBasedonStatus2 = async (request) => await classTestRepository.fetchAllTestBasedOnSubject(request);
 
 exports.getClassTestbyId = async (request) => {
-    request.data.class_test_status = constant.common.Active;
+    request.data.class_test_status = common.Active;
     const classTestRes = await classTestRepository.getClassTestIdAndName2(request)
 
-    let questionPaperTEmp = classTestRes.Items[0].question_paper_template ? classTestRes.Items[0].question_paper_template : constant.common.NA;
-    let answerSheetTemp = classTestRes.Items[0].answer_sheet_template ? classTestRes.Items[0].answer_sheet_template : constant.common.NA;
-    let keyAnswerTemp = classTestRes.Items[0].key_answer_template ? classTestRes.Items[0].key_answer_template : constant.common.NA;
+    let questionPaperTEmp = classTestRes.Items[0].question_paper_template ? classTestRes.Items[0].question_paper_template : common.NA;
+    let answerSheetTemp = classTestRes.Items[0].answer_sheet_template ? classTestRes.Items[0].answer_sheet_template : common.NA;
+    let keyAnswerTemp = classTestRes.Items[0].key_answer_template ? classTestRes.Items[0].key_answer_template : common.NA;
 
-    let questionUrlCheck = constant.testFolder.questionPapers.split("/")[0];
-    let answerUrlCheck = constant.testFolder.answerSheets.split("/")[0];
-    let keyanswerUrlCheck = constant.testFolder.questionPapers.split("/")[0];
+    let questionUrlCheck = testFolder.questionPapers.split("/")[0];
+    let answerUrlCheck = testFolder.answerSheets.split("/")[0];
+    let keyanswerUrlCheck = testFolder.questionPapers.split("/")[0];
 
-    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await s3Services.getS3SignedUrl(questionPaperTEmp) : constant.common.NA;
-    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await s3Services.getS3SignedUrl(answerSheetTemp) : constant.common.NA;
-    classTestRes.Items[0].key_answer_template_url = keyAnswerTemp.includes(keyanswerUrlCheck) ? await s3Services.getS3SignedUrl(keyAnswerTemp) : constant.common.NA;
+    classTestRes.Items[0].question_paper_template_url = questionPaperTEmp.includes(questionUrlCheck) ? await s3Services.getS3SignedUrl(questionPaperTEmp) : common.NA;
+    classTestRes.Items[0].answer_sheet_template_url = answerSheetTemp.includes(answerUrlCheck) ? await s3Services.getS3SignedUrl(answerSheetTemp) : common.NA;
+    classTestRes.Items[0].key_answer_template_url = keyAnswerTemp.includes(keyanswerUrlCheck) ? await s3Services.getS3SignedUrl(keyAnswerTemp) : common.NA;
 
     return classTestRes
 }
 
 exports.startEvaluationProcess = async (request) => {
     try {
-        request.data.class_test_status = constant.common.Active;
+        request.data.class_test_status = common.Active;
 
         const classTestRes = await classTestRepository.getClassTestIdAndName2(request);
         const classTest = classTestRes.Items[0];
 
         if (!classTest) {
-            throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
+            throw formatErrorResponse(messages.NO_DATA, 400);
         }
 
         const studentMetaRes = await testResultRepository.fetchStudentresultMetadata2(request);
-        if (studentMetaRes.Items.length === 0) {
-            throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
+        if (isEmptyArray(studentMetaRes.Items)) {
+            throw formatErrorResponse(messages.NO_ANSWER_SHEET_FOUND, 400);
         }
 
         request.data.question_paper_id = classTest.question_paper_id;
@@ -75,21 +75,21 @@ exports.startEvaluationProcess = async (request) => {
         const questionPaper = questionPaperRes.Items[0];
 
         if (!questionPaper) {
-            throw helper.formatErrorResponse(constant.messages.NO_QUESTION_PAPER_FOUND, 400);
+            throw formatErrorResponse(messages.NO_QUESTION_PAPER_FOUND, 400);
         }
 
         const questionArray = questionPaper.questions.flatMap((e) => e.question_id);
 
         const fetchBulkQtnReq = {
             IdArray: questionArray,
-            fetchIdName: constant.question.question_id,
+            fetchIdName: question.question_id,
             TableName: TABLE_NAMES.upschool_question_table,
-            projectionExp: [constant.question.question_id, constant.question.answers_of_question  , constant.question.answers_of_question, constant.question.question_content, constant.question.question_disclaimer, constant.question.question_type, constant.question.marks],
+            projectionExp: [question.question_id, question.answers_of_question, question.answers_of_question, question.question_content, question.question_disclaimer, question.question_type, question.marks],
         };
 
         const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
-        if (questionDataRes.length === 0) {
-            throw helper.formatErrorResponse(constant.messages.NO_QUESTION_DATA_FOUND, 400);
+        if (isEmptyArray(questionDataRes)) {
+            throw formatErrorResponse(messages.NO_QUESTION_DATA_FOUND, 400);
         }
         const marksFormat = await exports.assigningMarks(questionPaperRes.Items[0])
 
@@ -127,20 +127,20 @@ exports.startEvaluationProcess = async (request) => {
                 );
 
                 if (question) {
-                    if (question.question_type === constant.question.Descriptive) {
+                    if (question.question_type === question.Descriptive) {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_weightage > 0)
                             .map((ans) => ans.answer_content) // Extract all answer_content
                             .join(" ");
-                    } else if (question.question_type === constant.question.Objective) {
+                    } else if (question.question_type === question.Objective) {
                         const index = question.answers_of_question.findIndex(
-                            (ans) => ans.answer_display === constant.common.Yes || !ans.answer_display
+                            (ans) => ans.answer_display === common.Yes || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
                         correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
-                    } else if (question.question_type === constant.question.Subjective) {
+                    } else if (question.question_type === question.Subjective) {
                         correctAnswer = question.answers_of_question
-                            .filter((ans) => ans.answer_display === constant.common.Yes)  // Filter answers with answer_display as constant.common.Yes
+                            .filter((ans) => ans.answer_display === common.Yes)  // Filter answers with answer_display as common.Yes
                             .map((ans) => ans.answer_content)               // Extract the answer_content
                             .join(" ");                                     // Join the answer contents into a single string
                     }
@@ -201,7 +201,7 @@ exports.startEvaluationProcess = async (request) => {
             marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
 
-                if (questionAnswerPairs[index].question_type === constant.question.Descriptive) {
+                if (questionAnswerPairs[index].question_type === question.Descriptive) {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
                     if (isNaN(scores[index]) || scores[index] < 10) {
                         mark.obtained_marks = 0;
@@ -225,7 +225,7 @@ exports.startEvaluationProcess = async (request) => {
                 mark.student_answer = questionAnswerPairs[index].studentAnswer;
             });
             studentMarkDetail.marks_details[0].qa_details = marksToUpdate;
-            studentMarkDetail.evaluated = constant.common.Yes;
+            studentMarkDetail.evaluated = common.Yes;
             studentMarkDetail.marks_details[0].expectedMarks = totalExpectedMarks;
             studentMarkDetail.marks_details[0].totalMark = totalMarks;
             studentMarkDetail.isPassed = (totalMarks / totalExpectedMarks) * 100 > classTest.classPassPercentage;
@@ -240,7 +240,7 @@ exports.startEvaluationProcess = async (request) => {
 
 exports.assigningMarks = async (questionPaper) => {
     try {
-        const markDetails = await helper.getMarksDetailsFormat(questionPaper.questions);
+        const markDetails = await getMarksDetailsFormat(questionPaper.questions);
         return markDetails;
     } catch (error) {
         throw error;
@@ -249,19 +249,19 @@ exports.assigningMarks = async (questionPaper) => {
 
 exports.compareAnswer = (question, studAns) => {
     return new Promise(async (resolve, reject) => {
-        let multiAns = await studAns.split(constant.evalConstant.splitLines).filter(emptyEle => emptyEle !== "");
-        if (question.question_type === constant.questionKeys.objective) {
-            await helper.getIndexOfStudentAns(multiAns).then(async (studentAnswer) => {
-                await helper.getOptionsWrightAnswers(question.answers_of_question).then(async (correctAns) => {
+        let multiAns = await studAns.split(evalConstant.splitLines).filter(emptyEle => emptyEle !== "");
+        if (question.question_type === questionKeys.objective) {
+            await getIndexOfStudentAns(multiAns).then(async (studentAnswer) => {
+                await getOptionsWrightAnswers(question.answers_of_question).then(async (correctAns) => {
                     (async () => {
-                        await helper.getObjectiveMarks(correctAns, studentAnswer).then(async (scoredMark) => {
+                        await getObjectiveMarks(correctAns, studentAnswer).then(async (scoredMark) => {
                             resolve(scoredMark > question.marks ? question.marks : scoredMark);
                         })
                     })();
                 })
             })
         }
-        else if (question.question_type === constant.questionKeys.subjective) {
+        else if (question.question_type === questionKeys.subjective) {
             await exports.subjectiveAnswerCorrection(question.answers_of_question, multiAns, question.question_content).then(async (scoredMark) => {
                 resolve(scoredMark > question.marks ? question.marks : scoredMark);
             })
@@ -291,11 +291,11 @@ exports.subjectiveAnswerCorrection = async (answersOfQuestion, studentAnsArr, qu
         let blankAns = "";
         let totalMarks = 0;
 
-        let reg = new RegExp((constant.answerSheet.findBlank) + ("(.*?)") + (constant.answerSheet.findBlank), "g");
+        let reg = new RegExp((answerSheet.findBlank) + ("(.*?)") + (answerSheet.findBlank), "g");
         let blanklist = (questionContent.match(reg) || []);
         await blanklist.forEach(async (bName, i) => {
             blankAns = await answersOfQuestion.filter(bAns => bAns.answer_option === bName);
-            if (blankAns.length > 0 && studentAnsArr[i]) {
+            if (!isEmptyArray(blankAns) && studentAnsArr[i]) {
                 totalMarks += blankAns[0].answer_content.toLowerCase().replace(/ /g, "") == studentAnsArr[i].replace(/^,/, "").toLowerCase().replace(/ /g, "") ? Number(blankAns[0].answer_weightage) : 0;
             }
         })
@@ -306,12 +306,12 @@ exports.subjectiveAnswerCorrection = async (answersOfQuestion, studentAnsArr, qu
 exports.fetchGetStudentData = async (request) => {
     const studentData = await classTestRepository.getStudentInfo(request);
     studentData?.Items?.sort((a, b) => a.roll_no.localeCompare(b.roll_no));
-    return { Items: studentData?.Items?.filter(student => student.user_status === constant.common.Active) };
+    return { Items: studentData?.Items?.filter(student => student.user_status === common.Active) };
 };
 
 exports.getResult = async (request) => {
     const result_response = await classRepository.getResult2(request)
-    if (result_response.Items.length == 0) return result_response;
+    if (isEmptyArray(result_response.Items)) return result_response;
     await Promise.all(result_response.Items[0].answer_metadata.map(async (result) => {
         result.content_url = await s3Services.getS3SignedUrl(result.url);
     }));
