@@ -17,29 +17,56 @@ const openai = new OpenAI({
 });
 
 exports.addClassTest = async (request) => {
-    const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    console.log("fetch_class_test_res - ", fetch_class_test_res);
-    if (fetch_class_test_res.Items.length === 0) {
-        request.data.class_test_id = helper.getRandomString();
-        console.log("request.data.class_test_id - ", request.data.class_test_id);
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const options = {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            data: qs.stringify(request),
-            url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-            // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
-        };
-        // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const pdfData = await axios(options);
-        // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
-        request.data.question_paper_template = pdfData.data.question_paper_template;
-        request.data.key_answer_template = pdfData.data.key_answer_template;
+    try {
+        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request);
 
-        return await classTestRepository.insertClassTest2(request);
+        if (fetch_class_test_res.Items.length === 0) {
+            request.data.class_test_id = helper.getRandomString();
+            console.log("request.data.class_test_id - ", request.data.class_test_id);
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+            const options = {
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify(request),
+                url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
+                timeout: 60000,
+            };
+
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+
+            request.data.answer_sheet_template = " ";
+            request.data.question_paper_template = " ";
+            request.data.key_answer_template = " ";
+
+            await classTestRepository.insertClassTest2(request)
+                .then(() => console.log("Class Test Inserted"))
+                .catch(err => console.error("DB Insert Error:", err));
+
+
+            axios(options)
+                .then(response => {
+
+                    console.log("PDF Data Received: ", response.data);
+                    request.data.answer_sheet_template = response.data.answer_sheet_template || "";
+                    request.data.question_paper_template = response.data.question_paper_template || "";
+                    request.data.key_answer_template = response.data.key_answer_template || "";
+
+                    console.log("request==", request);
+
+                    classTestRepository.updateClassTest(request)
+                        .then(() => console.log("Class Test Updated"))
+                        .catch(err => console.error("DB Update Error:", err));
+                })
+                .catch(error => {
+                    console.error("PDF Generation Error:", error);
+                });
+
+
+            return 200;
+        }
+    } catch (error) {
+        console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
+        return { status: 500, message: "PDF Generation Failed" };
     }
 };
 
@@ -239,8 +266,8 @@ exports.startEvaluationProcess = async (request) => {
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-                            .map((ans) => ans.answer_content)               // Extract the answer_content
-                            .join(" ");                                     // Join the answer contents into a single string
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
 
                         console.log(correctAnswer);
                     }
@@ -287,6 +314,7 @@ exports.startEvaluationProcess = async (request) => {
                 questionAnswerPairs.map((pair, index) => {
                     // const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
+            Question Type: "${pair.question_type}"
             Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
             Correct Answers: ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
@@ -311,7 +339,7 @@ exports.startEvaluationProcess = async (request) => {
 
                 console.log("questionAnswerPairs[index].question_type - ", questionAnswerPairs[index].question_type);
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
                     if (isNaN(scores[index]) || scores[index] < 10) {
                         mark.obtained_marks = 0;
@@ -325,7 +353,7 @@ exports.startEvaluationProcess = async (request) => {
                         }
                     }
                 } else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         totalMarks += questionAnswerPairs[index].marks;
                     } else {
