@@ -82,6 +82,7 @@ exports.messages = {
     UNABLE_TO_EXTRACT_TEXT: "Unable to extract text, please re-upload!",
     UNABLE_TO_READ_PAGE_DETAILS: "Unable to extract basic page details, please re-upload!",
     UNABLE_TO_READ_ROLL_NUMBER: "Unable to extract student roll no, please enter it manually!",
+    QUIZ_ADDED_SUCCESS: "Quiz added successfully.",
 
     // Topic : 
     TOPIC_DATABASE_ERROR: "Topic Database Error",
@@ -204,7 +205,9 @@ exports.messages = {
     NO_QUESTION_IDS_PROVIDED: "No question IDs provided.",
     BULK_DATA_FETCH_FAILED: "Failed to fetch bulk data.",
     INVALID_INPUT_TOPIC_CONCEPT_ID: "Invalid input: topic_concept_id must be a non-empty array.",
-    GROUPS_FETCH_FAILED: "Error fetching groups from database."
+    GROUPS_FETCH_FAILED: "Error fetching groups from database.",
+    QUESTIONS_FETCH_FAILED: "Error fetching questions."
+
 
 }
 
@@ -475,4 +478,53 @@ exports.requestData = {
     userOTP: "user_otp",
     unitChapterId: "unit_chapter_id",
     unitQuizID: "unit_Quiz_id",
+}
+
+exports.helperConstValue = {
+    aes128Cbc: 'aes-128-cbc',
+    utf8: 'utf8',
+    encodingHex: 'hex',
+    sha256: 'sha256',
+    base64: 'base64',
+    none: 'none',
+    ascending: 'ascending',
+    publicRead: 'public-read',
+    putObject: 'putObject'
+
+
+}
+exports.fileTypes = {
+    jpg: '.jpg',
+    png: '.png',
+    jpeg: '.jpeg',
+    txt: '.txt',
+    html: '.html',
+    css: '.css',
+    pptx: '.pptx',
+    xlsx: '.xlsx',
+    docx: '.docx',
+    pdf: '.pdf',
+    zip: '.zip',
+    doc: '.doc',
+    ppt: '.ppt',
+    xls: '.xls',
+    txt: '.txt',
+    json: '.json',
+    textHtml: 'text/html',
+    imageCss: 'text/css',
+    imagePng: 'image/png',
+    imageJpeg: 'image/jpeg',
+    imageJpg: 'image/jpg',
+    textPlain: 'text/plain',
+    applicationPdf: 'application/pdf',
+    applicationZip: 'application/zip',
+    applicationJson: 'application/json',
+    applicationXml: 'application/xml',
+    applicationXhtml: 'application/xhtml+xml',
+    applicationOctetStream: 'application/octet-stream',
+    applicationMsWord: 'application/msword',
+    applicationVndMsExcel: 'application/vnd.ms-excel',
+    applicationVndMsPowerpoint: 'application/vnd.ms-powerpoint',
+    applicationXZipCompressed: 'application/x-zip-compressed',
+    multipartXZip: 'multipart/x-zip'
 }

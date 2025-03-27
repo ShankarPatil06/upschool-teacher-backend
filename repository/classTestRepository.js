@@ -24,25 +24,25 @@ exports.insertClassTest2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
         Item: {
-            "class_test_id": request.data.class_test_id,
-            "question_paper_id": request.data.question_paper_id,
-            "client_class_id": request.data.client_class_id,
-            "section_id": request.data.section_id,
-            "subject_id": request.data.subject_id,
-            "class_test_name": request.data.class_test_name,
-            "lc_class_test_name": request.data.class_test_name.toLowerCase().replace(/ /g, ''),
-            "class_test_mode": request.data.class_test_mode,
-            "test_start_date": request.data.test_start_date === common.NA ? common.NA : { yyyy_mm_dd: request.data.test_start_date, dd_mm_yyyy: change_dd_mm_yyyy(request.data.test_start_date) },
-            "test_end_date": request.data.test_end_date === common.NA ? common.NA : { yyyy_mm_dd: request.data.test_end_date, dd_mm_yyyy: change_dd_mm_yyyy(request.data.test_end_date) },
-            "test_start_time": request.data.test_start_time,
-            "test_end_time": request.data.test_end_time,
-            "answer_sheet_template": request.data.answer_sheet_template,
-            "question_paper_template": request.data.question_paper_template,
-            "key_answer_template": request.data.key_answer_template,
-            "class_test_status": common.Active,
-            "common_id": constValues.common_id,
-            "created_ts": getCurrentTimestamp(),
-            "updated_ts": getCurrentTimestamp(),
+            class_test_id: request.data.class_test_id,
+            question_paper_id: request.data.question_paper_id,
+            client_class_id: request.data.client_class_id,
+            section_id: request.data.section_id,
+            subject_id: request.data.subject_id,
+            class_test_name: request.data.class_test_name,
+            lc_class_test_name: request.data.class_test_name.toLowerCase().replace(/ /g, ''),
+            class_test_mode: request.data.class_test_mode,
+            test_start_date: request.data.test_start_date === common.NA ? common.NA : { yyyy_mm_dd: request.data.test_start_date, dd_mm_yyyy: change_dd_mm_yyyy(request.data.test_start_date) },
+            test_end_date: request.data.test_end_date === common.NA ? common.NA : { yyyy_mm_dd: request.data.test_end_date, dd_mm_yyyy: change_dd_mm_yyyy(request.data.test_end_date) },
+            test_start_time: request.data.test_start_time,
+            test_end_time: request.data.test_end_time,
+            answer_sheet_template: request.data.answer_sheet_template,
+            question_paper_template: request.data.question_paper_template,
+            key_answer_template: request.data.key_answer_template,
+            class_test_status: common.Active,
+            common_id: constValues.common_id,
+            created_ts: getCurrentTimestamp(),
+            updated_ts: getCurrentTimestamp(),
         }
     }
 
@@ -109,7 +109,7 @@ exports.fetchClassTestDataById2 = async (request) => {
     const readParams = {
         TableName: TABLE_NAMES.upschool_class_test_table,
         Key: {
-            "class_test_id": request.data.class_test_id
+            class_test_id: request.data.class_test_id
         }
     };
 
@@ -122,7 +122,7 @@ exports.updateClassTestStatus2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
         Key: {
-            "class_test_id": request.data.class_test_id
+            class_test_id: request.data.class_test_id
         },
         UpdateExpression: "SET class_test_status = :class_test_status, updated_ts = :updated_ts",
         ExpressionAttributeValues: {

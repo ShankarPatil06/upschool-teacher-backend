@@ -612,14 +612,10 @@ exports.viewClassReportQuestions = async (request) => {
   const conceptNames = conceptIds.length && (await conceptRepository.fetchBulkConceptsIDName2({ unit_Concept_id: conceptIds }));
   const topicNames = topicIds.length && (await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIds }));
 
-  const cognitiveSkillNames = await new Promise((resolve, reject) => {
-    settingsRepository.fetchBulkCognitiveSkillNameById({ cognitive_id: cognitive_id }, (err, res) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(res);
-    });
-  });
+  const cognitiveSkillNames = await settingsRepository.fetchBulkCognitiveSkillNameById2({
+    cognitive_id: cognitive_id,
+  }
+  )
 
   let marksInTotal = 0;
   let possiblemarks = 0;
@@ -834,17 +830,7 @@ exports.viewClassReportFocusArea = async (request) => {
   const allQuestionIds = new Set([...questionIdsSetC, ...questionIdsSetB, ...questionIdsSetA]);
   const allConceptIds = new Set([...conceptIdsSetC, ...conceptIdsSetB, ...conceptIdsSetA]);
 
-  const questions = await new Promise((resolve, reject) => {
-    questionRepository.fetchBulkQuestionsNameById3(
-      { question_id: allQuestionIds },
-      (err, res) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(res);
-      }
-    );
-  });
+  const questions = await questionRepository.fetchBulkQuestionsNameById2({ question_id: allQuestionIds });
 
   const marksOfEachStudent = [];
   quizResultMarksData.map((qdata) => {
@@ -973,14 +959,7 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     const uniqueArray = [...new Set(Object.values(quizData.question_track_details).flat())];
     const questionIds = uniqueArray.map(item => item.question_id);
-    const questions = await new Promise((resolve, reject) => {
-      questionRepository.fetchBulkQuestionsNameById3({ question_id: questionIds }, (err, res) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(res);
-      });
-    });
+    const questions = await questionRepository.fetchBulkQuestionsNameById2({ question_id: questionIds });
     return { quizId: quizData.quiz_id, overallMarks: questions };
   }));
 
@@ -2098,17 +2077,7 @@ exports.getActionsAndRecommendations = async (request) => {
 
   const conceptIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.concept_id))];
   const questionIdsSetA = [...new Set(allQuizQuestionSetA.map((item) => item.question_id))];
-
-  const questions = await new Promise((resolve, reject) => {
-    if (!isEmptyArray(questionIdsSetA)) {
-      questionRepository.fetchBulkQuestionsNameById3(
-        { question_id: questionIdsSetA },
-        (err, res) => (err ? reject(err) : resolve(res))
-      );
-    } else {
-      resolve([]);
-    }
-  });
+  const questions = await questionRepository.fetchBulkQuestionsNameById2({ question_id: questionIdsSetA });
 
   const chapterIds = [...new Set(quizDataRes.Items.map((quiz) => quiz.chapter_id))];
   const chapterData = await chapterRepository.fetchBulkChaptersIDName2({
@@ -2270,17 +2239,8 @@ exports.getActionsAndRecommendationDetail = async (request) => {
   const questionIdsSetA = questionSetA.map((item) => item.question_id);
   const allQuestionIdSet = allAuestionSet.map((item) => item.question_id);
 
-  const questions = await new Promise((resolve, reject) => {
-    questionRepository.fetchBulkQuestionsNameById(
-      { question_id: questionIdsSetA },
-      (err, res) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(res);
-      }
-    );
-  });
+  const questions = await questionRepository.fetchBulkQuestionsNameById2({ question_id: questionIdsSetA });
+
 
   const topicIdsSetA = [...new Set(questionSetA.map((item) => item.topic_id))];
   const topicData = await topicRepository.fetchBulkTopicsIDName2({ unit_Topic_id: topicIdsSetA });
