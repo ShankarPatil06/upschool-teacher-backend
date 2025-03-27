@@ -45,7 +45,6 @@ exports.addClassTest = async (request) => {
 
             axios(options)
                 .then(response => {
-
                     console.log("PDF Data Received: ", response.data);
                     request.data.answer_sheet_template = response.data.answer_sheet_template || "";
                     request.data.question_paper_template = response.data.question_paper_template || "";
