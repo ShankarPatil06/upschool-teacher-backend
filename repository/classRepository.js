@@ -25,7 +25,7 @@ exports.modifyStudentMarks2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_test_result,
         Key: {
-            "result_id": request.data.result_id
+            result_id: request.data.result_id
         },
         UpdateExpression: "set marks_details = :marks_details, updated_ts = :updated_ts",
         ExpressionAttributeValues: {

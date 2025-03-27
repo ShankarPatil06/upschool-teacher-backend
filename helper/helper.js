@@ -1,77 +1,59 @@
-// const uuid = require("uuidv4");
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const jwt_decode = require('jwt-decode');
 const dynamoDbCon = require('../awsConfig');
-const constant = require('../constants/constant');
-const {groupTypes } = require('../constants/constant');
+const { helperConstValue, fileTypes, common, quizSetDetails, answerSheet, quizSets, evalConstant, messages } = require('../constants/constant');
+const { groupTypes } = require('../constants/constant');
 const { constants } = require("buffer");
 const { StatusCodes } = require('http-status-codes');
 const fs = require("fs");
-// const { getS3SignedUrl } = require("../services/s3Service");
 const s3Services = require("../services/s3Service");
-
 
 const excelEpoc = new Date(1900, 0, 0).getTime();
 const msDay = 86400000;
 
 exports.getCurrentTimestamp = () => new Date().toISOString();
 
-// exports.getRandomString = function () {
-//     // let group_random_user_id = crypto.randomBytes(20).toString("hex");
-//     // return uuid.fromString(group_random_user_id);
-//         return uuidv4(); // Generates a random UUID
-// }
-exports.getRandomString = () => uuidv4(); 
+exports.getRandomString = () => uuidv4();
 
-
-// exports.getRandomString = function () {
-//     let group_random_user_id = crypto.randomBytes(20).toString("hex");
-//     return uuid.fromString(group_random_user_id);
-//     // const NAMESPACE = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"; // Predefined namespace for DNS
-//     // let group_random_user_id = crypto.randomBytes(20).toString("hex");
-//     // return v5(group_random_user_id, NAMESPACE);
-// }
-
-exports.getRandomOtp = function () {
+exports.getRandomOtp = () => {
     return Math.floor(100000 + Math.random() * 900000);
 }
 
-exports.getEncryptedPassword = function (password) {
-    let encrypt_key = crypto.createCipher('aes-128-cbc', process.env.SECRET_KEY);
-    let encrypted_password = encrypt_key.update(password, 'utf8', 'hex')
-    encrypted_password += encrypt_key.final('hex');
+exports.getEncryptedPassword = (password) => {
+    let encrypt_key = crypto.createCipher(helperConstValue.aes128Cbc, process.env.SECRET_KEY);
+    let encrypted_password = encrypt_key.update(password, helperConstValue.utf8, helperConstValue.encodingHex)
+    encrypted_password += encrypt_key.final(helperConstValue.encodingHex);
     return encrypted_password;
 }
 
-exports.getDecryptedPassword = function (password) {
-    let decrypt_key = crypto.createDecipher('aes-128-cbc', process.env.SECRET_KEY);
-    let decrypted_password = decrypt_key.update(password, 'hex', 'utf8')
-    decrypted_password += decrypt_key.final('utf8');
+exports.getDecryptedPassword = (password) => {
+    let decrypt_key = crypto.createDecipher(helperConstValue.aes128Cbc, process.env.SECRET_KEY);
+    let decrypted_password = decrypt_key.update(password, helperConstValue.encodingHex, helperConstValue.utf8)
+    decrypted_password += decrypt_key.final(helperConstValue.utf8);
     return decrypted_password;
 }
 
-exports.getJwtToken = function (request) {
+exports.getJwtToken = (request) => {
     return jwt.sign({ teacher_id: request.teacher_id, user_role: request.user_role, user_name: request.user_firstname }, process.env.SECRET_KEY);
 }
 
-exports.getJwtTokenForScanner = function (request) {
+exports.getJwtTokenForScanner = (request) => {
     return jwt.sign({ teacher_id: request.teacher_id, test_id: request.test_id }, process.env.SECRET_KEY);
 }
 
-exports.decodeJwtToken = function (token) {
+exports.decodeJwtToken = (token) => {
     return jwt_decode(token);
 }
 
-exports.hashingPassword = function (hashReq) {
+exports.hashingPassword = (hashReq) => {
     let givenPassword = hashReq.salt + hashReq.password;
-    let hashedPassword = crypto.createHash('sha256').update(givenPassword).digest('base64');
+    let hashedPassword = crypto.createHash(helperConstValue.sha256).update(givenPassword).digest(helperConstValue.base64);
     return hashedPassword;
 }
 
-exports.change_dd_mm_yyyy = function (givenDate) {
-    console.log({givenDate});
+exports.change_dd_mm_yyyy = (givenDate) => {
     if (givenDate.toString().includes('-')) {
         let splitedDate = givenDate.split("-");
         let dd_mm_yyyy = splitedDate[2] + "-" + splitedDate[1] + "-" + splitedDate[0];
@@ -82,10 +64,9 @@ exports.change_dd_mm_yyyy = function (givenDate) {
     }
 }
 
-
-exports.sortDataBasedOnTimestamp = function (j, data) {
+exports.sortDataBasedOnTimestamp = (j, data) => {
     let orderedData = data;
-    function getSortedData(i) {
+    getSortedData = (i) => {
         if (i < data.Items.length) {
             let today = new Date(data.Items[i].case_created_ts);
             let y = today.getFullYear();
@@ -105,7 +86,7 @@ exports.sortDataBasedOnTimestamp = function (j, data) {
             i++;
             getSortedData(i);
         } else {
-            data.Items.sort(function (a, b) {
+            data.Items.sort((a, b) => {
                 return b.order_id - a.order_id;
             });
             return orderedData;
@@ -115,8 +96,7 @@ exports.sortDataBasedOnTimestamp = function (j, data) {
     return orderedData;
 }
 
-exports.findDuplicatesInArrayOfObjects = function (reqArray, checkField) {
-    console.log(reqArray);
+exports.findDuplicatesInArrayOfObjects = (reqArray, checkField) => {
     const lookup = reqArray.reduce((a, e) => {
         a[e[checkField]] = ++a[e[checkField]] || 0;
         return a;
@@ -152,7 +132,7 @@ exports.hasText = (str) => !!(str && str.trim() !== "");
 exports.hasNoText = (str) => !(str && str.trim() !== "");
 
 exports.sortArrayOfObjects = (arr, keyToSort, direction) => {
-    if (direction === 'none') return arr;
+    if (direction === helperConstValue.none) return arr;
 
     const compare = (objectA, objectB) => {
         const valueA = objectA[keyToSort]
@@ -161,9 +141,9 @@ exports.sortArrayOfObjects = (arr, keyToSort, direction) => {
         if (valueA === valueB) return 0;
 
         if (valueA > valueB) {
-            return direction === 'ascending' ? 1 : -1
+            return direction === helperConstValue.ascending ? 1 : -1
         } else {
-            return direction === 'ascending' ? -1 : 1
+            return direction === helperConstValue.ascending ? -1 : 1
         }
     }
 
@@ -172,144 +152,142 @@ exports.sortArrayOfObjects = (arr, keyToSort, direction) => {
 
 exports.sortByDate = (arr, keyToSort) => arr.sort((a, b) => new Date(b[keyToSort]) - new Date(a[keyToSort]));
 
-exports.getExtType = function (file_type) {
+exports.getExtType = (file_type) => {
     let file_ext;
     switch (file_type) {
-        case 'image/jpeg':
-            file_ext = '.jpg';
+        case fileTypes.imageJpg:
+            file_ext = fileTypes.jpg;
             break;
 
-        case 'text/plain':
-            file_ext = '.txt';
+        case fileTypes.textPlain:
+            file_ext = fileTypes.txt;
             break;
 
-        case 'text/html':
-            file_ext = '.html';
+        case fileTypes.textHtml:
+            file_ext = fileTypes.html;
             break;
 
-        case 'text/css':
-            file_ext = '.css';
+        case fileTypes.imageCss:
+            file_ext = fileTypes.css;
             break;
 
-        case 'image/png':
-            file_ext = '.png';
+        case fileTypes.imagePng:
+            file_ext = fileTypes.png;
             break;
 
-        case 'application/pdf':
-            file_ext = '.pdf';
+        case fileTypes.applicationPdf:
+            file_ext = fileTypes.pdf;
             break;
 
-        case 'application/json':
-            file_ext = '.json';
+        case fileTypes.applicationJson:
+            file_ext = fileTypes.json;
             break;
 
-        case 'application/octet-stream':
-            file_ext = '.docx';
+        case fileTypes.applicationOctetStream:
+            file_ext = fileTypes.docx;
             break;
 
-        case 'application/msword':
-            file_ext = '.doc';
+        case fileTypes.applicationMsWord:
+            file_ext = fileTypes.doc;
             break;
 
-        case 'application/vnd.ms-excel':
-            file_ext = '.xls';
+        case fileTypes.applicationVndMsExcel:
+            file_ext = fileTypes.xls;
             break;
 
-        case 'application/vnd.ms-powerpoint':
-            file_ext = '.ppt';
+        case fileTypes.applicationVndMsExcel:
+            file_ext = fileTypes.ppt;
             break;
 
-        case "application/zip":
-            file_ext = ".zip";
+        case fileTypes.applicationZip:
+            file_ext = fileTypes.zip;
             break;
 
-        case "application/x-zip-compressed":
-            file_ext = ".zip";
+        case fileTypes.applicationXZipCompressed:
+            file_ext = fileTypes.zip;
             break;
 
-        case "multipart/x-zip":
-            file_ext = ".zip"
+        case fileTypes.multipartXZip:
+            file_ext = fileTypes.zip
             break;
     }
     return file_ext;
 }
 
-exports.getMimeType = function (file_ext) {
+exports.getMimeType = (file_ext) => {
     let file_mime;
     switch (file_ext) {
-        case '.jpg':
-            file_mime = 'image/jpeg';
+        case fileTypes.jpg:
+            file_mime = fileTypes.imageJpeg;
             break;
 
-        case '.jpeg':
-            file_mime = 'image/jpeg';
+        case fileTypes.jpeg:
+            file_mime = fileTypes.imageJpeg;
             break;
 
-        case '.txt':
-            file_mime = 'text/plain';
+        case fileTypes.txt:
+            file_mime = fileTypes.textPlain;
             break;
 
-        case '.html':
-            file_mime = 'text/html';
+        case fileTypes.html:
+            file_mime = fileTypes.textHtml;
             break;
 
-        case '.css':
-            file_mime = 'text/css';
+        case fileTypes.css:
+            file_mime = fileTypes.imageCss;
             break;
 
-        case '.png':
-            file_mime = 'image/png';
+        case fileTypes.png:
+            file_mime = fileTypes.imagePng;
             break;
 
-        case '.pdf':
-            file_mime = 'application/pdf';
+        case fileTypes.pdf:
+            file_mime = fileTypes.applicationPdf;
             break;
 
-        case '.json':
-            file_mime = 'application/json';
+        case fileTypes.json:
+            file_mime = fileTypes.applicationJson;
             break;
 
-        case '.docx':
-            file_mime = 'application/octet-stream';
+        case fileTypes.docx:
+            file_mime = fileTypes.applicationOctetStream;
             break;
 
-        case '.doc':
-            file_mime = 'application/msword';
+        case fileTypes.doc:
+            file_mime = fileTypes.applicationMsWord;
             break;
 
-        case '.xls':
-            file_mime = 'application/vnd.ms-excel';
+        case fileTypes.xls:
+            file_mime = fileTypes.applicationVndMsExcel;
             break;
 
-        case '.xlsx':
-            file_mime = 'application/vnd.ms-excel';
+        case fileTypes.xlsx:
+            file_mime = fileTypes.applicationVndMsExcel;
             break;
 
-        case '.ppt':
-            file_mime = 'application/vnd.ms-powerpoint';
+        case fileTypes.ppt:
+            file_mime = fileTypes.applicationVndMsExcel;
             break;
 
-        case '.zip':
-            file_mime = 'application/zip';
+        case fileTypes.zip:
+            file_mime = fileTypes.applicationZip;
             break;
     }
     return file_mime;
 }
 
-exports.excelDateToJavascriptDate = function (excelDate) {
+exports.excelDateToJavascriptDate = (excelDate) => {
     return new Date(excelEpoc + excelDate * msDay);
 }
 
-exports.convertNumberToAlphabet = function (number) {
+exports.convertNumberToAlphabet = (number) => {
     return (number + 9).toString(36).toUpperCase();
 }
 
-exports.compareAndFindDuplicateObj = function (arrayOfId, arrayOfObj) {
-    console.log("arrayOfId : ", arrayOfId);
-    console.log("arrayOfObj : ", arrayOfObj);
-    function comparer(otherArray) {
-        return function (current) {
-            return otherArray.filter(function (other) {
+exports.compareAndFindDuplicateObj = (arrayOfId, arrayOfObj) => {
+    comparer = (otherArray) => {
+        return (current) => {
+            return otherArray.filter((other) => {
                 return other == current.chapter_id
             }).length != 0;
         }
@@ -319,8 +297,7 @@ exports.compareAndFindDuplicateObj = function (arrayOfId, arrayOfObj) {
     return onlyInB
 }
 
-exports.giveindextoList = function (listToCompare, listToChange, key) {
-    // Adding Index to List given
+exports.giveindextoList = (listToCompare, listToChange, key) => {
     let count = 1;
     listToChange.length > 0 && listToCompare.map(ele1 => {
         listToChange.map(ele2 => {
@@ -330,32 +307,30 @@ exports.giveindextoList = function (listToCompare, listToChange, key) {
             }
         })
     })
-    // Sorting List based on index key value 
     listToChange.sort((a, b) => a.index - b.index);
     return listToChange;
 }
 
-exports.getDifferenceValueFromTwoArray = async function (arrayOne, arrayTwo) {
+exports.getDifferenceValueFromTwoArray = async (arrayOne, arrayTwo) => {
     let result = [];
     await arrayOne.map(aOne => {
         if (!arrayTwo.includes(aOne)) {
             result.push(aOne);
         }
     })
-
     return result;
 }
-exports.checkOneArrayElementsinAnother = function (arrayOne, arrayTwo) {
-    const result = arrayOne.every(function (elem) {
+exports.checkOneArrayElementsinAnother = (arrayOne, arrayTwo) => {
+    const result = arrayOne.every((elem) => {
         return arrayTwo.indexOf(elem) > -1;
     });
     return result;
 };
-exports.sortOneArrayBasedonAnother = function (arrayToBeSorted, arrayAsIndex, Key) {
+exports.sortOneArrayBasedonAnother = (arrayToBeSorted, arrayAsIndex, Key) => {
     arrayToBeSorted = arrayAsIndex.map((a) => arrayToBeSorted.filter((e) => e[Key] === a)[0]);
     return arrayToBeSorted;
 };
-exports.PutObjectS3SigneUdrl = async function (requestFileName, folderName) {
+exports.PutObjectS3SigneUdrl = async (requestFileName, folderName) => {
 
     let file_type = requestFileName.split(".");
     let file_ext = '.' + file_type[file_type.length - 1];
@@ -364,21 +339,20 @@ exports.PutObjectS3SigneUdrl = async function (requestFileName, folderName) {
     let randomID = exports.getRandomString();
     let Key = `${folderName}/${randomID}` + file_ext;
 
-    // Get signed URL from S3
     let s3Params = {
         Bucket: process.env.BUCKET_NAME,
         Key,
         Expires: URL_EXPIRATION_SECONDS,
         ContentType: exports.getMimeType(file_ext),
-        ACL: 'public-read'
+        ACL: helperConstValue.publicRead
     }
 
-    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise('putObject', s3Params);
+    let uploadURL = await dynamoDbCon.s3.getSignedUrlPromise(helperConstValue.putObject, s3Params);
 
     return { uploadURL: uploadURL, Key: Key };
 }
 
-exports.removeDuplicatesFromArrayOfObj = async function (reqArray, checkField) {
+exports.removeDuplicatesFromArrayOfObj = async (reqArray, checkField) => {
 
     const uniqueArr = reqArray.filter((obj, index) => {
         return index === reqArray.findIndex(o => obj[checkField] === o[checkField]);
@@ -386,7 +360,7 @@ exports.removeDuplicatesFromArrayOfObj = async function (reqArray, checkField) {
 
     return uniqueArr;
 }
-exports.shuffleArray = async function (reqArray) {
+exports.shuffleArray = async (reqArray) => {
 
     let shuffled = await reqArray
         .map(value => ({ value, sort: Math.random() }))
@@ -410,13 +384,10 @@ exports.removeExistObject = async (idArray, checkObjArr, idName) => {
 }
 
 exports.getAnswerContentFileUrl = async (answerArr) => {
-console.log("answerArr",answerArr)
     return new Promise(async (resolve, reject) => {
-
-        async function contentUrl(i) {
+        contentUrl = async (i) => {
             if (i < answerArr.length) {
-                console.log("answerArr",answerArr[i].answer_content)
-                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await s3Services.getS3SignedUrl(answerArr[i].answer_content) : "N.A.";
+                answerArr[i].answer_content_url = (JSON.stringify(answerArr[i].answer_content).includes("question_uploads/")) ? await s3Services.getS3SignedUrl(answerArr[i].answer_content) : common.NA;
                 i++;
                 contentUrl(i);
             }
@@ -433,15 +404,15 @@ console.log("answerArr",answerArr)
 exports.checkPriorityQuestions = async (quesDetails) => {
     let priorityOrder = [];
     return new Promise(async (resolve, reject) => {
-        async function secLoop(i) {
+        secLoop = async (i) => {
             if (i < quesDetails.length) {
                 await quesDetails[i].questions.forEach((qes, j) => {
                     priorityOrder.push(
                         {
-                            "sec": i,
-                            "que": j,
-                            "pre": (qes.concept_ids.length > 0) ? 0 : (qes.concept_ids.length == 0 && quesDetails[i].topic_ids.length > 0) ? 1 : 2,
-                            "qStatus": "No"
+                            sec: i,
+                            que: j,
+                            pre: (qes.concept_ids.length > 0) ? 0 : (qes.concept_ids.length == 0 && quesDetails[i].topic_ids.length > 0) ? 1 : 2,
+                            qStatus: common.No
                         }
                     )
                 });
@@ -457,32 +428,24 @@ exports.checkPriorityQuestions = async (quesDetails) => {
 }
 
 exports.formattingAnswer = async (answer) => {
-    answer = answer.split("\n");  // Split by line
-  const formattedAnswer = answer.map((words) => {
-    // Remove LaTeX style parentheses (\\( and \\)) and \\qquad with surrounding spaces
-    words = words.replace(/\\\(\s*\\qquad\s*\\\)/g, ""); // Remove \\( \\qquad \\)
-    words = words.replace(/\s*\\qquad\s*/g, ""); // Remove \\qquad with spaces
-    // Remove all spaces
-    words = words.replace(/\s/g, "");
-    // Remove periods and other unwanted characters
-    words = words.replace(/\./g, "");  // Remove periods
-    words = words.replace(/\:/g, "");  // Remove colons
-    words = words.replace(/\;/g, "");  // Remove semicolons
-
-    // Convert to lowercase if needed
-    words = words.toLowerCase();
-
-    return words;
-  });
-
-  console.log("AFTER FORMATTING : ", formattedAnswer);
-  return formattedAnswer;
+    answer = answer.split("\n");
+    const formattedAnswer = answer.map((words) => {
+        words = words.replace(/\\\(\s*\\qquad\s*\\\)/g, "");
+        words = words.replace(/\s*\\qquad\s*/g, "");
+        words = words.replace(/\s/g, "");
+        words = words.replace(/\./g, "");
+        words = words.replace(/\:/g, "");
+        words = words.replace(/\;/g, "");
+        words = words.toLowerCase();
+        return words;
+    });
+    return formattedAnswer;
 }
 
 exports.getAnswerBlanks = async (blankCount) => {
 
     let blank = "";
-    let dashes = constant.answerSheet;
+    let dashes = answerSheet;
     let iCount = 0;
     for (let i = 0; i < blankCount; i++) {
         iCount = i + 1;
@@ -495,63 +458,56 @@ exports.getAnswerBlanks = async (blankCount) => {
 }
 
 exports.checkDuplicateQuestionIds = async (duplicateArrayCheck, group_question_id, questions_list) => {
-    
-    async function duplicateCheck(k){
-                                
-        let dupCheck = duplicateArrayCheck.filter((d) =>  d === group_question_id[k] && d ); 
 
-        console.log("dupCheck : ", dupCheck); 
-        console.log("group_question_id : ", group_question_id[k]);
-        console.log("duplicateArrayCheck : ", duplicateArrayCheck);
+    duplicateCheck = async (k) => {
 
-        if(k < group_question_id.length){
-          if(dupCheck.length > 0){
-              console.log("Inside If : ");
+        let dupCheck = duplicateArrayCheck.filter((d) => d === group_question_id[k] && d);
 
-            k++; 
-            duplicateCheck(k); 
-          }else{
-            questions_list.push(group_question_id[k]); 
-            duplicateArrayCheck.push(group_question_id[k]); 
-            return{
-                break: false, duplicateArrayCheck, questions_list  // Loop completed without Breaking 
+        if (k < group_question_id.length) {
+            if (dupCheck.length > 0) {
+                k++;
+                duplicateCheck(k);
+            } else {
+                questions_list.push(group_question_id[k]);
+                duplicateArrayCheck.push(group_question_id[k]);
+                return {
+                    break: false, duplicateArrayCheck, questions_list
+                }
             }
-          }
-        }else{ 
-            return{
-                break: true, reason: constant.messages.NO_ENOUGH_QUESTIONS, duplicateArrayCheck, questions_list
+        } else {
+            return {
+                break: true, reason: messages.NO_ENOUGH_QUESTIONS, duplicateArrayCheck, questions_list
             }
         }
-      }
-      duplicateCheck(0); 
-
     }
+    duplicateCheck(0);
+
+}
 exports.getMarksDetailsFormat = async (secAndQues) => {
     let finalDetials = [];
     let questionArr = [];
 
     return new Promise(async (resolve, reject) => {
-        async function secLoop(i) {
+        secLoop = async (i) => {
             if (i < secAndQues.length) {
                 questionArr = [];
                 await secAndQues[i].question_id.forEach(ques => {
                     questionArr.push(
                         {
                             question_id: ques,
-                            modified_marks: "N.A.",
-                            obtained_marks: "N.A.",
-                            student_answer: "N.A."
+                            modified_marks: common.NA,
+                            obtained_marks: common.NA,
+                            student_answer: common.NA
                         }
                     );
                 })
 
-                // finalDetials.push({ section_name: secAndQues[i].section_name, qa_details: questionArr });
-                finalDetials.push( ...questionArr );
+                finalDetials.push(...questionArr);
                 i++;
                 secLoop(i);
             }
             else {
-                resolve({qa_details : finalDetials});
+                resolve({ qa_details: finalDetials });
             }
         }
         secLoop(0)
@@ -562,23 +518,23 @@ exports.getQuizMarksDetailsFormat = async (questionDetails) => {
     let finalDetials = [];
     let questionArr = [];
 
-    let quizSetDetails = constant.quizSetDetails;
+    let quizSetDetail = quizSetDetails;
     return new Promise(async (resolve, reject) => {
-        async function secLoop(i) {
-            if (i < quizSetDetails.length) {
+        secLoop = async (i) => {
+            if (i < quizSetDetail.length) {
                 questionArr = [];
-                await questionDetails[quizSetDetails[i].setKey].forEach(ques => {
+                await questionDetails[quizSetDetail[i].setKey].forEach(ques => {
                     questionArr.push(
                         {
                             question_id: ques,
-                            modified_marks: "N.A.",
-                            obtained_marks: "N.A.",
-                            student_answer: "N.A."
+                            modified_marks: common.NA,
+                            obtained_marks: common.NA,
+                            student_answer: common.NA
                         }
                     );
                 })
 
-                finalDetials.push({ set_key: quizSetDetails[i].setKey, set_name: quizSetDetails[i].setName, qa_details: questionArr });
+                finalDetials.push({ set_key: quizSetDetail[i].setKey, set_name: quizSetDetail[i].setName, qa_details: questionArr });
                 i++;
                 secLoop(i);
             }
@@ -591,9 +547,8 @@ exports.getQuizMarksDetailsFormat = async (questionDetails) => {
 }
 
 exports.concatAnswers = async (studentAns) => {
-    console.log("STUDENT ANSWERS :", studentAns);
     return new Promise(async (resolve, reject) => {
-        async function studentLoop(i) {
+        studentLoop = async (i) => {
             if (i < studentAns.length) {
                 studentAns[i].overall_answer = await exports.checkAndConcatAns(studentAns[i].answer_metadata);
                 i++;
@@ -645,31 +600,19 @@ exports.splitSectionAnswer = async (studMetaData, questionPaper) => {
 
         let splitedAns = [];
         let forIndividualAns;
-        async function splitAns(j) {
+        const splitAns = async (j) => {
             if (j < sectionIndex.length) {
                 if (j < sectionIndex.length && ((j + 1) == sectionIndex.length)) {
-                    // forIndividualAns = studMetaData.slice(sectionIndex[j]);
-                    // forIndividualAns.shift(); // Remove the first element
-                    // forIndividualAns.pop(); // Remove last element
-
-                    forIndividualAns = await exports.formatIndividualAnsArr(studMetaData, sectionIndex[j], "N.A.");
+                    forIndividualAns = await exports.formatIndividualAnsArr(studMetaData, sectionIndex[j], common.NA);
                     await exports.splitIndividualAns(forIndividualAns).then((speAns) => {
                         splitedAns.push({ secAns: forIndividualAns, individualAns: speAns });
                     })
-
-                    // splitedAns.push({ secAns: studMetaData.slice(sectionIndex[j])});
                 }
                 else {
-                    // forIndividualAns = studMetaData.slice(sectionIndex[j], sectionIndex[j+1] + 1);
-                    // forIndividualAns.shift(); // Remove the first element
-                    // forIndividualAns.pop(); // Remove last element
-
                     forIndividualAns = await exports.formatIndividualAnsArr(studMetaData, sectionIndex[j], sectionIndex[j + 1] + 1);
                     await exports.splitIndividualAns(forIndividualAns).then((speAns) => {
                         splitedAns.push({ secAns: forIndividualAns, individualAns: speAns });
                     })
-
-                    // splitedAns.push({ secAns: studMetaData.slice(sectionIndex[j], sectionIndex[j+1] + 1)});        
                 }
                 j++;
                 splitAns(j);
@@ -683,7 +626,6 @@ exports.splitSectionAnswer = async (studMetaData, questionPaper) => {
 }
 
 exports.splitStudentQuizAnswer = async (studMetaData) => {
-    console.log("studMetaData",studMetaData)
     return new Promise(async (resolve, reject) => {
         let splitedAns = [];
         await exports.splitIndividualAns(studMetaData).then((speAns) => {
@@ -694,76 +636,37 @@ exports.splitStudentQuizAnswer = async (studMetaData) => {
 }
 
 exports.formatIndividualAnsArr = async (studMetaData, sectionIndex, splitContinues) => {
-    // forIndividualAns = studMetaData.slice(sectionIndex[j]);
-    // forIndividualAns.shift(); // Remove the first element
-    // forIndividualAns.pop(); // Remove last element
-
-    // forIndividualAns = studMetaData.slice(sectionIndex[j], sectionIndex[j+1] + 1);
-    // forIndividualAns.shift(); // Remove the first element
-    // forIndividualAns.pop(); // Remove last element
-
-    let resArr = splitContinues === "N.A." ? studMetaData.slice(sectionIndex) : studMetaData.slice(sectionIndex, splitContinues);
-    resArr.shift(); // Remove the first element
-    resArr.pop(); // Remove last element
+    let resArr = splitContinues === common.NA ? studMetaData.slice(sectionIndex) : studMetaData.slice(sectionIndex, splitContinues);
+    resArr.shift();
+    resArr.pop();
     return resArr;
 }
 
-// exports.splitIndividualAns = async (ansArray) => {
-
-//     return new Promise(async (resolve, reject) => {
-//         let individualAns = [];
-//         let formattedAns = "";
-//         let tempAns = "";
-        
-//         await ansArray.forEach(inAns => {
-//             if(inAns.toLowerCase().replace(/ /g,'').includes(constant.evalConstant.ans))
-//             {
-//                 individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
-//                 formattedAns = inAns.toLowerCase().replace(/ /g, '').split(constant.evalConstant.ans)[1];
-//                 tempAns = formattedAns == "" ? constant.evalConstant.empty : formattedAns;
-//             }
-//             else {
-//                 if (tempAns.length > 0) {
-//                     tempAns += tempAns != constant.evalConstant.splitLines ? constant.evalConstant.splitLines + inAns : inAns;
-//                 }
-//             }
-//         })
-
-//         if (tempAns.length > 0) {
-//             individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
-//         }
-//         individualAns.shift();
-//         resolve(individualAns);
-//     })
-// }
-
 exports.splitIndividualAns = async (ansArray) => {
     if (!Array.isArray(ansArray)) {
-        console.error("splitIndividualAns expected an array but got:", ansArray);
-        return []; // or handle the error appropriately
+        return [];
     }
 
     return new Promise(async (resolve, reject) => {
         let individualAns = [];
         let formattedAns = "";
         let tempAns = "";
-        
+
         await ansArray.forEach(inAns => {
-            if(inAns.toLowerCase().replace(/ /g,'').includes(constant.evalConstant.ans))
-            {
-                individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
-                formattedAns = inAns.toLowerCase().replace(/ /g, '').split(constant.evalConstant.ans)[1];
-                tempAns = formattedAns == "" ? constant.evalConstant.empty : formattedAns;
+            if (inAns.toLowerCase().replace(/ /g, '').includes(evalConstant.ans)) {
+                individualAns.push(tempAns.replace(new RegExp(`${evalConstant.empty}`, "gi"), ""));
+                formattedAns = inAns.toLowerCase().replace(/ /g, '').split(evalConstant.ans)[1];
+                tempAns = formattedAns == "" ? evalConstant.empty : formattedAns;
             }
             else {
                 if (tempAns.length > 0) {
-                    tempAns += tempAns != constant.evalConstant.splitLines ? constant.evalConstant.splitLines + inAns : inAns;
+                    tempAns += tempAns != evalConstant.splitLines ? evalConstant.splitLines + inAns : inAns;
                 }
             }
         });
 
         if (tempAns.length > 0) {
-            individualAns.push(tempAns.replace(new RegExp(`${constant.evalConstant.empty}`, "gi"), ""));
+            individualAns.push(tempAns.replace(new RegExp(`${evalConstant.empty}`, "gi"), ""));
         }
         individualAns.shift();
         resolve(individualAns);
@@ -791,7 +694,7 @@ exports.getOptionsWrightAnswers = async (options) => {
     return new Promise(async (resolve, reject) => {
         let correctAns = [];
         await options.forEach((op, i) => {
-            if (op.answer_display === "Yes") {
+            if (op.answer_display === common.Yes) {
                 correctAns.push({ ansIndex: i, weightage: Number(op.answer_weightage) });
             }
         })
@@ -801,200 +704,174 @@ exports.getOptionsWrightAnswers = async (options) => {
 
 exports.getObjectiveMarks = async (arr1, arr2) => {
     return new Promise(async (resolve, reject) => {
-        // const resultMap = await arr2.reduce((map, obj) => {
-        //     map.set(obj.studAnsIndex, (map.get(obj.studAnsIndex) || 0) + obj.weightage);
-        //     return map;
-        // }, new Map());
-
-        // const overallMarks = await arr1.reduce((sum, obj1) => {
-        //     return sum + (resultMap.get(obj1.ansIndex) || 0);
-        // }, 0);
-
-        // resolve(overallMarks);
-        /** ========================================================================================= **/
-
-        // let overallMarks =  await arr2.reduce(async (overallWeightage, student) => {
-        //     const match = await arr1.find(answer => answer.ansIndex === student.studAnsIndex);
-        //     return overallWeightage + (match ? match.weightage : 0);
-        // }, 0);
-
-        /** ========================================================================================= **/
-
         const promises = arr2.map(async (student) => {
             const match = await arr1.find(answer => answer.ansIndex === student.studAnsIndex);
             return match ? match.weightage : 0;
         });
 
         const weights = await Promise.all(promises);
-        // return weights.reduce((sum, weightage) => sum + weightage, 0);
-
         resolve(weights.reduce((sum, weightage) => sum + weightage, 0));
     })
 }
 
 exports.fetchQuizSetName = (variant) => {
-    // const returnValue = await variant === 'A' ? variant === 'B' ? constant.quizSets.b : constant.quizSets.a : constant.quizSets.c ;
-    return variant === 'A' ? constant.quizSets.a : variant === 'B' ? constant.quizSets.b : constant.quizSets.c ;
+    return variant === 'A' ? quizSets.a : variant === 'B' ? quizSets.b : quizSets.c;
 }
 
-exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDupCheck, quiz_duration) => { 
+exports.getRandomQuestionsFromGroups = (group_response, noOfQuestions, randomDupCheck, quiz_duration) => {
 
-    let questions_list = []; 
-    let group_list = []; 
-    let dupcheck = []; 
+    let questions_list = [];
+    let group_list = [];
+    let dupcheck = [];
 
     return new Promise((resolve, reject) => {
-       
+
         try {
-            async function getRandomGroups(i){
-                if(group_list.length < Number(noOfQuestions)){ 
+            getRandomGroups = async (i) => {
+                if (group_list.length < Number(noOfQuestions)) {
 
-                  const randomIndexforGroup = Math.floor(Math.random() * group_response.length); 
-          
-                  if(dupcheck.includes(randomIndexforGroup)){
-                    i++; 
-                    getRandomGroups(i);
-                  }else{
-                    let randomGroup = group_response[randomIndexforGroup]; 
-                    group_list.push(randomGroup);
-                    dupcheck.push(randomIndexforGroup); 
-                    i++; 
-                    getRandomGroups(i);
-                  }
-          
-                }else{
-                  let indheck = []; 
-                  await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration)); 
+                    const randomIndexforGroup = Math.floor(Math.random() * group_response.length);
 
-                  function qtnLoop(ind){
-                      if(ind < group_list.length){ 
+                    if (dupcheck.includes(randomIndexforGroup)) {
+                        i++;
+                        getRandomGroups(i);
+                    } else {
+                        let randomGroup = group_response[randomIndexforGroup];
+                        group_list.push(randomGroup);
+                        dupcheck.push(randomIndexforGroup);
+                        i++;
+                        getRandomGroups(i);
+                    }
 
-                        if(indheck.length < Number(noOfQuestions)){ //group_list[ind].group_question_id.length
-                            // Pick Random Questions out of each group : 
-                            const randomIndex = Math.floor(Math.random() * group_list[ind].group_question_id.length); 
-                            let qtn_id = group_list[ind].group_question_id[randomIndex]; 
-                            let dupCheck = randomDupCheck.filter((id) => id === qtn_id);
-                            
-                            !indheck.includes(randomIndex) && indheck.push(randomIndex); 
+                } else {
+                    let indheck = [];
+                    await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
 
-                            if(dupCheck.length > 0){
-                                qtnLoop(ind); 
-                            }else{
-                                questions_list.push(qtn_id); 
-                                randomDupCheck.push(qtn_id); 
-                                ind++;
-                                qtnLoop(ind); 
+                    qtnLoop = (ind) => {
+                        if (ind < group_list.length) {
+
+                            if (indheck.length < Number(noOfQuestions)) {
+                                const randomIndex = Math.floor(Math.random() * group_list[ind].group_question_id.length);
+                                let qtn_id = group_list[ind].group_question_id[randomIndex];
+                                let dupCheck = randomDupCheck.filter((id) => id === qtn_id);
+
+                                !indheck.includes(randomIndex) && indheck.push(randomIndex);
+
+                                if (dupCheck.length > 0) {
+                                    qtnLoop(ind);
+                                } else {
+                                    questions_list.push(qtn_id);
+                                    randomDupCheck.push(qtn_id);
+                                    ind++;
+                                    qtnLoop(ind);
+                                }
+                            } else {
+
+                                reject(messages.INSUFFICIENT_QUESTIONS)
                             }
-                        }else{
-                           
-                            reject(constant.messages.INSUFFICIENT_QUESTIONS)
-                        }
-                         
-                      }else{
 
-                        resolve({questions_list, randomDupCheck, quiz_duration,group_list}); 
-    
-                      }
-                  }; 
-                  qtnLoop(0); 
-                  
+                        } else {
+
+                            resolve({ questions_list, randomDupCheck, quiz_duration, group_list });
+
+                        }
+                    };
+                    qtnLoop(0);
+
                 }
-              }
-              getRandomGroups(0); 
+            }
+            getRandomGroups(0);
         }
-          catch(err) {
-            console.log("Error is here : ", err); 
-            reject(err); 
+        catch (err) {
+            reject(err);
         }
-      })
+    })
 }
 
 exports.getRandomGroups = (group_response, noOfQuestions, quiz_duration) => {
 
-    let group_list = []; 
-    let dupcheck = []; 
+    let group_list = [];
+    let dupcheck = [];
 
     return new Promise((resolve, reject) => {
-       
-        try {
-            async function getRandomGroups(i){
-                if(group_list.length < Number(noOfQuestions)){ 
-                    
-                  const randomIndexforGroup = Math.floor(Math.random() * group_response.length); 
-        
-                  if(dupcheck.includes(randomIndexforGroup)){
-                    i++; 
-                    getRandomGroups(i);
-                  }else{
-                    let randomGroup = group_response[randomIndexforGroup]; 
-                    group_list.push(randomGroup);
-                    dupcheck.push(randomIndexforGroup); 
-                    i++; 
-                    getRandomGroups(i);
-                  }
-        
-                }else{
-                    await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration)); 
 
-                    resolve({group_list, quiz_duration}); 
+        try {
+            getRandomGroups = async (i) => {
+                if (group_list.length < Number(noOfQuestions)) {
+
+                    const randomIndexforGroup = Math.floor(Math.random() * group_response.length);
+
+                    if (dupcheck.includes(randomIndexforGroup)) {
+                        i++;
+                        getRandomGroups(i);
+                    } else {
+                        let randomGroup = group_response[randomIndexforGroup];
+                        group_list.push(randomGroup);
+                        dupcheck.push(randomIndexforGroup);
+                        i++;
+                        getRandomGroups(i);
+                    }
+
+                } else {
+                    await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
+
+                    resolve({ group_list, quiz_duration });
                 }
             }
-          getRandomGroups(0); 
+            getRandomGroups(0);
         }
-          catch(err) {
-            console.log("Error is here : ", err); 
-            reject(err); 
+        catch (err) {
+            reject(err);
         }
-      })
+    })
 }
 
 exports.splitGroups = async (topicData, concepts_response) => {
 
-    let basic_groups = []; 
-    let intermediate_groups = []; 
-    let advanced_groups = []; 
+    let basic_groups = [];
+    let intermediate_groups = [];
+    let advanced_groups = [];
 
     await topicData.topic_concept_id.forEach((f) => {
-            
-        let eachConcept = concepts_response.filter((concept) => concept.concept_id === f); 
 
-        basic_groups.push(...eachConcept[0].concept_group_id.basic); 
-        intermediate_groups.push(...eachConcept[0].concept_group_id.intermediate); 
-        advanced_groups.push(...eachConcept[0].concept_group_id.advanced); 
-          
-      })
+        let eachConcept = concepts_response.filter((concept) => concept.concept_id === f);
 
-      return {
-        basic_groups, 
-        intermediate_groups, 
-        advanced_groups 
-      }
+        basic_groups.push(...eachConcept[0].concept_group_id.basic);
+        intermediate_groups.push(...eachConcept[0].concept_group_id.intermediate);
+        advanced_groups.push(...eachConcept[0].concept_group_id.advanced);
+
+    })
+
+    return {
+        basic_groups,
+        intermediate_groups,
+        advanced_groups
+    }
 }
 
-exports.assignNumberofQuestions = async (fetchResponse, selectedTopics, param) => { 
+exports.assignNumberofQuestions = async (fetchResponse, selectedTopics, param) => {
 
-    if(param === "topics"){
+    if (param === "topics") {
 
         await fetchResponse.forEach(async (fetchData, Index) => {
-            let topicDetails = await selectedTopics.filter((ele) => ele.topic_id === fetchData.topic_id); 
-            fetchResponse[Index].noOfQuestions = topicDetails[0].noOfQuestions; 
-          }); 
-        
-          return fetchResponse; 
+            let topicDetails = await selectedTopics.filter((ele) => ele.topic_id === fetchData.topic_id);
+            fetchResponse[Index].noOfQuestions = topicDetails[0].noOfQuestions;
+        });
 
-    }else if(param === "concepts"){
-        // console.log("fetchResponse : ", fetchResponse);
-        
+        return fetchResponse;
+
+    } else if (param === "concepts") {
+
         await fetchResponse.forEach(async (fetchData, Index) => {
-            
+
             await selectedTopics.forEach(async (ele1) => {
 
-                await ele1.selectedConcepts.forEach((ele2) => { ( ele2.concept_id === fetchData.concept_id ) && ( fetchResponse[Index].noOfQuestions = ele2.noOfQuestions ) }); 
-            }); 
-            
-          }); 
-        
-          return fetchResponse; 
+                await ele1.selectedConcepts.forEach((ele2) => { (ele2.concept_id === fetchData.concept_id) && (fetchResponse[Index].noOfQuestions = ele2.noOfQuestions) });
+            });
+
+        });
+
+        return fetchResponse;
     }
 }
 
@@ -1006,28 +883,64 @@ exports.reduceKeys = (data, keysToRetain) => {
             }
             return obj;
         }, {})
-    ); 
-    return filteredData; 
-}; 
+    );
+    return filteredData;
+};
 
 exports.getQuestionTrackForAutomatic = (selectedTopics, topic_response, concepts_response, questions_list, non_considered_topic_data, group_list) => {
-    
-    let questionTrackData = []; 
+
+    let questionTrackData = [];
     selectedTopics.forEach((topic) => {
-    
-    let topic_concept_id = (topic_response.find((top) => top.topic_id === topic.topic_id)).topic_concept_id; 
+
+        let topic_concept_id = (topic_response.find((top) => top.topic_id === topic.topic_id)).topic_concept_id;
 
         topic_concept_id.forEach((concept) => {
 
-        let rawGroupDetails = (concepts_response.find((con) => con.concept_id === concept)).concept_group_id; 
+            let rawGroupDetails = (concepts_response.find((con) => con.concept_id === concept)).concept_group_id;
 
-        let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced]; 
+            let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced];
+
+            groupDetails.forEach((grp) => {
+                let grpPicked = group_list.filter((grpList) => grpList.group_id === grp);
+
+                if (!exports.isEmptyArray(grpPicked)) {
+                    let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn));
+
+                    let trackPerQUestion = pickedQtnsFromGrp.map((qtn) => ({
+                        topic_id: topic.topic_id,
+                        question_id: qtn,
+                        concept_id: concept,
+                        group_id: grpPicked[0].group_id,
+                        type: exports.filterGroupType(grpPicked[0].group_id, rawGroupDetails)
+                    }));
+                    questionTrackData.push(...trackPerQUestion);
+
+                    if (!exports.isEmptyArray(pickedQtnsFromGrp)) {
+                        non_considered_topic_data[topic.topic_id] = false;
+                    }
+                };
+            });
+        });
+    });
+    return { res_questionTrackData: questionTrackData, res_non_considered_topic_data: non_considered_topic_data };
+
+}
+
+exports.getQuestionTrackForExpress = (topic, topic_response, concepts_response, questions_list, non_considered_topic_data, group_list) => {
+
+    let questionTrackData = [];
+    let topic_concept_id = (topic_response.find((top) => top.topic_id === topic.topic_id)).topic_concept_id;
+
+    topic_concept_id.forEach((concept) => {
+
+        let rawGroupDetails = (concepts_response.find((con) => con.concept_id === concept)).concept_group_id
+        let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced];
 
         groupDetails.forEach((grp) => {
-            let grpPicked = group_list.filter((grpList) => grpList.group_id === grp); 
+            let grpPicked = group_list.filter((grpList) => grpList.group_id === grp);
 
-            if(!exports.isEmptyArray(grpPicked)){
-                let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn)); 
+            if (!exports.isEmptyArray(grpPicked)) {
+                let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn))
 
                 let trackPerQUestion = pickedQtnsFromGrp.map((qtn) => ({
                     topic_id: topic.topic_id,
@@ -1035,123 +948,78 @@ exports.getQuestionTrackForAutomatic = (selectedTopics, topic_response, concepts
                     concept_id: concept,
                     group_id: grpPicked[0].group_id,
                     type: exports.filterGroupType(grpPicked[0].group_id, rawGroupDetails)
-                }) ); 
-                questionTrackData.push(...trackPerQUestion); 
+                }));
+                questionTrackData.push(...trackPerQUestion);
 
-                // check if topic is nonAssigned based on selected questions count 
-                if(!exports.isEmptyArray(pickedQtnsFromGrp)){
-                    non_considered_topic_data[topic.topic_id] = false; 
+                if (!exports.isEmptyArray(pickedQtnsFromGrp)) {
+                    non_considered_topic_data[topic.topic_id] = false;
                 }
-            }; 
-        });  
-    }); 
-});
-return {res_questionTrackData: questionTrackData, res_non_considered_topic_data: non_considered_topic_data}; 
+            };
+        });
+    });
 
-}
-
-exports.getQuestionTrackForExpress = (topic, topic_response, concepts_response, questions_list, non_considered_topic_data, group_list) => {
-
-    // Formatting Topic-Concept-Group-Question level DS : 
-    let questionTrackData = []; 
-    let topic_concept_id = (topic_response.find((top) => top.topic_id === topic.topic_id)).topic_concept_id; 
-
-    topic_concept_id.forEach((concept) => {
-
-        let rawGroupDetails = (concepts_response.find((con) => con.concept_id === concept)).concept_group_id
-        let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced]; 
-
-        groupDetails.forEach((grp) => {
-        let grpPicked = group_list.filter((grpList) => grpList.group_id === grp); 
-
-        if(!exports.isEmptyArray(grpPicked)){
-            let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn))
-
-            let trackPerQUestion = pickedQtnsFromGrp.map((qtn) => ({
-                topic_id: topic.topic_id,
-                question_id: qtn,
-                concept_id: concept,
-                group_id: grpPicked[0].group_id,
-                type: exports.filterGroupType(grpPicked[0].group_id, rawGroupDetails)
-            }) ); 
-            questionTrackData.push(...trackPerQUestion); 
-            
-            // check if topic is nonAssigned based on selected questions count 
-            if(!exports.isEmptyArray(pickedQtnsFromGrp)){
-                non_considered_topic_data[topic.topic_id] = false; 
-            }
-        }; 
-        }); 
-    }); 
-
-    return {res_topic: questionTrackData, res_non_considered_topic_data: non_considered_topic_data}
+    return { res_topic: questionTrackData, res_non_considered_topic_data: non_considered_topic_data }
 }
 
 exports.getQuestionTrackForManual = async (topicId, concepts_response, questions_list, non_considered_topic_data, group_list) => {
 
-    // Formatting Topic-Concept-Group-Question level DS 
-    let questionTrackData = []; 
+    let questionTrackData = [];
     await concepts_response.forEach((concept) => {
 
         let rawGroupDetails = concept.concept_group_id
-        let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced]; 
+        let groupDetails = [...rawGroupDetails.basic, ...rawGroupDetails.intermediate, ...rawGroupDetails.advanced];
 
         groupDetails.forEach((grp) => {
-        let grpPicked = group_list.filter((grpList) => grpList.group_id === grp); 
+            let grpPicked = group_list.filter((grpList) => grpList.group_id === grp);
 
-        if(!exports.isEmptyArray(grpPicked)){
-            let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn))
+            if (!exports.isEmptyArray(grpPicked)) {
+                let pickedQtnsFromGrp = grpPicked[0].group_question_id.filter((grpQtn) => questions_list.includes(grpQtn))
 
-            let trackPerQUestion = pickedQtnsFromGrp.map((qtn) => ({
-                topic_id: topicId,
-                question_id: qtn,
-                concept_id: concept.concept_id,
-                group_id: grpPicked[0].group_id,
-                type: exports.filterGroupType(grpPicked[0].group_id, rawGroupDetails)
-            }) ); 
+                let trackPerQUestion = pickedQtnsFromGrp.map((qtn) => ({
+                    topic_id: topicId,
+                    question_id: qtn,
+                    concept_id: concept.concept_id,
+                    group_id: grpPicked[0].group_id,
+                    type: exports.filterGroupType(grpPicked[0].group_id, rawGroupDetails)
+                }));
 
-            questionTrackData.push(...trackPerQUestion);
+                questionTrackData.push(...trackPerQUestion);
 
-            // check if topic is nonAssigned based on selected questions count 
-            if(!exports.isEmptyArray(pickedQtnsFromGrp)){
-                non_considered_topic_data[topicId] = false; 
-            }
-        }; 
-        }); 
-    }); 
-    return {res_concept: questionTrackData, res_non_considered_topic_data: non_considered_topic_data}; 
+                if (!exports.isEmptyArray(pickedQtnsFromGrp)) {
+                    non_considered_topic_data[topicId] = false;
+                }
+            };
+        });
+    });
+    return { res_concept: questionTrackData, res_non_considered_topic_data: non_considered_topic_data };
 };
 
 exports.filterGroupType = (groupId, allGroups) => {
     return allGroups.basic.includes(groupId) ? groupTypes.Basic : allGroups.intermediate.includes(groupId) ? groupTypes.Intermediate : allGroups.advanced.includes(groupId) ? groupTypes.Advanced : 'N.A.'
-}; 
+};
 
-// Function to build an array of rows from the Athena query results
 exports.processRows = (resultsData) => {
-    // Build an array of columns from the Athena query results
     let cols = resultsData.ResultSet.ResultSetMetadata.ColumnInfo.map(c => c.Name);
 
     let rows = [];
     resultsData.ResultSet.Rows.map((result) => {
-      let row = {};
-      result.Data.map((r, i) => {
-        row[cols[i]] = r.VarCharValue;
-      });
-      rows.push(row);
+        let row = {};
+        result.Data.map((r, i) => {
+            row[cols[i]] = r.VarCharValue;
+        });
+        rows.push(row);
     });
     return rows.slice(1);
-  }
+}
 
-  exports.ERROR = StatusCodes;
+exports.ERROR = StatusCodes;
 
-  exports.formatResponse = (res ,data ,statusCode = 200) =>
-  {
+exports.formatResponse = (res, data, statusCode = 200) => {
     return res.status(statusCode).json(data);
-  }
-  exports.formatErrorResponse = (errorMessage, status = '') => {  let error = new Error(errorMessage);  error.status = status;  return error;};
-  exports.formatResponse2 = (result) => ({ "Items": result });
-  exports.getDataByFilterKey = async (request) => {
-   console.log("test2request", request);
+}
+exports.formatErrorResponse = (errorMessage, status = '') => { let error = new Error(errorMessage); error.status = status; return error; };
+exports.formatResponse2 = (result) => ({ Items: result });
+exports.getDataByFilterKey = async (request) => {
     let { items, condition } = request;
     const result = items.reduce((acc, item, index) => {
         const currentResult = Object.entries(items[index]).reduce((acc, [key, value]) => {
@@ -1164,98 +1032,44 @@ exports.processRows = (resultsData) => {
                 FilterExpression: ' ',
                 ExpressionAttributeValues: {},
             });
-        // Remove the trailing condition (AND/OR) from the current FilterExpression
         currentResult.FilterExpression = currentResult.FilterExpression.slice(0, -(condition.length + 1));
- 
-        // Concatenate the FilterExpression for the current item with the overall result
+
         acc.FilterExpression += `(${currentResult.FilterExpression}) ${condition} `;
         acc.ExpressionAttributeValues = {
             ...acc.ExpressionAttributeValues,
             ...currentResult.ExpressionAttributeValues,
         };
- 
+
         return acc;
     }, {
         FilterExpression: '',
         ExpressionAttributeValues: {},
     });
     result.FilterExpression = result.FilterExpression.slice(0, -(condition.length + 1));
-    result.ExpressionAttributeValues[':common_id'] = '61692656'   
+    result.ExpressionAttributeValues[':common_id'] = '61692656'
     return result;
 }
 
-exports.formatDate =(isoString) => {
+exports.formatDate = (isoString) => {
     const date = new Date(isoString);
-  
+
     const day = String(date.getUTCDate()).padStart(2, '0');
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const year = date.getUTCFullYear();
-  
+
     return `${day}-${month}-${year}`;
-  }
+}
 
-  exports.fortmatData = (data) => JSON.stringify(data, null, 2);
+exports.fortmatData = (data) => JSON.stringify(data, null, 2);
 
-  exports.readFile = async filePath => await fs.promises.readFile(filePath, 'utf8');
+exports.readFile = async filePath => await fs.promises.readFile(filePath, helperConstValue.utf8);
 
-  exports.extractValuesFromInput = async (input) => {
-    // Split the input string by newlines
-    let lines = input.split('\n');
-    
-    // Create an array to store the formatted lines as objects
-    let formattedLines = [];
-  
-    // Helper function to process lines with a specific label
-    const processLine = (line, label) => {
-        console.log("label - ",label);
-      const [_, ...value] = line.slice(2).split(':');
-      formattedLines.push({
-        label: label,
-        value: value.join(':').replace(/\*/g, '').replace(/\\$/, '').trim()
-      });
-    };
-  
-    // Iterate over each line and apply formatting
-    lines.forEach((line) => {
-      // Trim whitespace and skip empty lines
-      line = line.trim();
-      if (line === '') return;
-  
-      // Process specific lines
-      if (line.includes('Set')) processLine(line, "set");
-      else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
-      else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
-      else if (line.includes('Class')) processLine(line, "Class");
-      else if (line.includes('Section')) processLine(line, "Section");
-      else if (line.includes('Subject Name')) processLine(line, "Subject Name");
-      else if (line.includes('Test ID')) processLine(line, "Test ID");
-      else if (line.includes('Roll No')) processLine(line, "Roll No");
-       else if (line.includes('Page')) {
-        const match = line.match(/Page No: (\d+)\/\d+/);
-        if (match) {
-          formattedLines.push({
-            label: "pageNo",
-            value: match[1].replace(/\*/g, '').replace(/\\$/, '').trim()
-          });
-        }
-      }
-    });
-  
-    return formattedLines;
-  };
-
-  exports.extractValuesFromInputNew = async (input) => {
-    // Split the input string by newlines
+exports.extractValuesFromInput = async (input) => {
     let lines = input.split('\n');
 
-    console.log({ firstttttt: lines })
-
-    // Create an array to store the formatted lines as objects
     let formattedLines = [];
 
-    // Helper function to process lines with a specific label
     const processLine = (line, label) => {
-        console.log("label - ", label);
         const [_, ...value] = line.slice(2).split(':');
         formattedLines.push({
             label: label,
@@ -1263,13 +1077,10 @@ exports.formatDate =(isoString) => {
         });
     };
 
-    // Iterate over each line and apply formatting
     lines.forEach((line) => {
-        // Trim whitespace and skip empty lines
         line = line.trim();
         if (line === '') return;
 
-        // Process specific lines
         if (line.includes('Set')) processLine(line, "set");
         else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
         else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
@@ -1279,8 +1090,7 @@ exports.formatDate =(isoString) => {
         else if (line.includes('Test ID')) processLine(line, "Test ID");
         else if (line.includes('Roll No')) processLine(line, "Roll No");
         else if (line.includes('Page')) {
-            const match = line.match(/Page No: (\d+)(?:\/\d+)?/);
-            console.log({ firstttttt: match })
+            const match = line.match(/Page No: (\d+)\/\d+/);
             if (match) {
                 formattedLines.push({
                     label: "pageNo",
@@ -1293,113 +1103,97 @@ exports.formatDate =(isoString) => {
     return formattedLines;
 };
 
-//   exports.extractAnswersFromInput = async (input) => {
-//     // Split the input by newline
-//     let lines = input.split('\n');
-    
-//     // Array to store the extracted question-answer pairs
-//     let answers = [];
-    
-//     // Iterate over each line and check for answer format
-//     lines.forEach((line) => {
-//       // Trim the line to remove extra spaces
-//       line = line.trim();
-      
-//       // Check if the line starts with a number followed by 'Ans:'
-//       const match = line.match(/^(\d+)\.\s*Ans:\s*(.*)$/);
-      
-//       if (match) {
-//         // Extract question number and the corresponding answer
-//         const question = match[1] + '.'; // e.g., "2."
-//         const answer = match[2]; // e.g., "one"
-        
-//         // Push the question-answer pair to the array
-//         answers.push({ question, answer });
-//       }
-//     });
-    
-//     return answers;
-//   }
+exports.extractValuesFromInputNew = async (input) => {
+    let lines = input.split('\n');
+
+    let formattedLines = [];
+
+    const processLine = (line, label) => {
+        const [_, ...value] = line.slice(2).split(':');
+        formattedLines.push({
+            label: label,
+            value: value.join(':').replace(/\*/g, '').replace(/\\$/, '').trim()
+        });
+    };
+
+    lines.forEach((line) => {
+        line = line.trim();
+        if (line === '') return;
+
+        if (line.includes('Set')) processLine(line, "set");
+        else if (line.includes('Quiz ID')) processLine(line, "Quiz ID");
+        else if (line.includes('Quiz Name')) processLine(line, "Quiz Name");
+        else if (line.includes('Class')) processLine(line, "Class");
+        else if (line.includes('Section')) processLine(line, "Section");
+        else if (line.includes('Subject Name')) processLine(line, "Subject Name");
+        else if (line.includes('Test ID')) processLine(line, "Test ID");
+        else if (line.includes('Roll No')) processLine(line, "Roll No");
+        else if (line.includes('Page')) {
+            const match = line.match(/Page No: (\d+)(?:\/\d+)?/);
+            if (match) {
+                formattedLines.push({
+                    label: "pageNo",
+                    value: match[1].replace(/\*/g, '').replace(/\\$/, '').trim()
+                });
+            }
+        }
+    });
+
+    return formattedLines;
+};
 
 
 exports.extractAnswersFromInput1 = async (input) => {
-    console.log({input});
-    
-    // Split the input by question numbers followed by '. Ans:'
     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
-    
+
     let answers = [];
-    
-    // Remove the first element which is before the first question
     sections.shift();
-    
-    // Iterate over each section to process the answers
+
     sections.forEach((section, index) => {
-      let trimmedSection = section.trim();
-      
-      let questionNumber = (index + 1) + '.';
-      let answer = trimmedSection;
-      
-      // Push the full answer content for each question
-      answers.push({ question: questionNumber, answer: answer });
+        let trimmedSection = section.trim();
+
+        let questionNumber = (index + 1) + '.';
+        let answer = trimmedSection;
+        answers.push({ question: questionNumber, answer: answer });
     });
-    
-    console.log("Extracted answers:", answers);
-    
     return answers;
-  };
-  exports.extractAnswersFromInput = async (input) => {
-    console.log({ input });
-  
-    // Split the input by question numbers followed by '. Ans:'
+};
+exports.extractAnswersFromInput = async (input) => {
     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
-    
+
     let answers = [];
-    
-    // Remove the first element which is before the first question
+
     sections.shift();
 
-    let questionMatches = input.match(/\d+\.\s*Ans:/g); // Matches all question numbers followed by "Ans:"
+    let questionMatches = input.match(/\d+\.\s*Ans:/g);
 
-    // If no questions are found, we return empty answers
     if (!questionMatches) {
-        console.log("No question found.");
         return [];
     }
-    
-    // Iterate over each section to process the answers
+
     sections.forEach((section, index) => {
-      let trimmedSection = section.trim();
-      
-      // Extract the question number from the questionMatches
-      let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
+        let trimmedSection = section.trim();
 
-      
-      // Remove line breaks or replace them with a space to make the answer a complete string
-      let answer = trimmedSection.replace(/\n+/g, ' ').trim();
-      
-      // Push the full answer content as a single string for each question
-      answers.push({ question: questionNumber, answer: answer });
+        let questionNumber = questionMatches[index] ? questionMatches[index].match(/\d+/)[0] : 'Unknown';
+
+
+        let answer = trimmedSection.replace(/\n+/g, ' ').trim();
+
+        answers.push({ question: questionNumber, answer: answer });
     });
-    
-    console.log("Extracted answers:", answers);
-    
-    return answers;
-  };
-  
-  exports.extractAnswersFromInputNew = async (input) => {
-    console.log({ input });
 
-    // Match all question numbers with "ans:"
+
+    return answers;
+};
+
+exports.extractAnswersFromInputNew = async (input) => {
     let questionMatches = input.match(/\d+\.?\s*ans:/gi) || [];
 
     let answers = [];
 
-    // Iterate over each match and extract the corresponding answer
     questionMatches.forEach((match) => {
-        let questionNumber = match.match(/\d+/)[0]; // Extract the question number
+        let questionNumber = match.match(/\d+/)[0];
 
-        // Use regex to find the answer after the question number
         let regex = new RegExp(`${match}\\s*(.*?)\\s*(?=\\d+\\.\\s*ans:|$)`, "is");
         let answerMatch = input.match(regex);
 
@@ -1408,47 +1202,5 @@ exports.extractAnswersFromInput1 = async (input) => {
         answers.push({ question: questionNumber, answer: answer });
     });
 
-    console.log("Extracted answers:", answers);
     return answers;
 };
-  
-// exports.extractAnswersFromInput = async (input) => {
-//     console.log({input})
-//     let sections = input.split(/\d+\.\s*Ans:/).filter((sec) => sec.trim().length > 0);
-    
-//     let answers = [];
-    
-//     sections.shift();
-    
-//     sections.forEach((section, index) => {
-//       let trimmedSection = section.trim();
-      
-//       if (index < 6) {
-//         let questionNumber = (index + 1) + '.';
-//         let answer = trimmedSection.split("\n")[0].trim();
-//         answers.push({ question: questionNumber, answer: answer });
-//       } else {
-//         let questionNumber = (index + 1) + '.';
-//         let answer = trimmedSection;
-//         answers.push({ question: questionNumber, answer: answer });
-//       }
-//     });
-  
-//     console.log("Extracted answers:", answers);
-    
-//     return answers;
-//   };
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
