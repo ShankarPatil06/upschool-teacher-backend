@@ -1,6 +1,6 @@
 const s3Services = require("./s3Service");
 const { schoolRepository, studentRepository, subjectRepository, unitRepository, quizRepository, settingsRepository, questionRepository, quizResultRepository, classTestRepository, chapterRepository, topicRepository, conceptRepository, testResultRepository, testQuestionPaperRepository } = require("../repository");
-const { formatDate } = require("../helper/helper");
+const { formatDate, isEmptyArray } = require("../helper/helper");
 const { prePostConstans, common, requestData } = require("../constants/constant");
 
 exports.getAssessmentDetails = async (request) => {

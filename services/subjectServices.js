@@ -1,6 +1,7 @@
 const { subjectRepository, unitRepository, teacherRepository, chapterRepository, commonRepository } = require("../repository")
 const { common, messages, requestData } = require('../constants/constant');
 const { TABLE_NAMES } = require('../constants/tables');
+const { isEmptyArray } = require("../helper/helper");
 
 exports.getUnitsandChaptersBasedonSubjects2 = async (request) => {
     const teacherInfoRes = await teacherRepository.fetchTeacherByID2(request);
