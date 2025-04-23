@@ -10,6 +10,8 @@ const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
 const s3Services = require("./s3Service");
+const pLimit = require('p-limit');
+const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
 
@@ -864,7 +866,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
-        for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
+        const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
             const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 
@@ -1013,7 +1015,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             let totalMarks = 0;
             let totalExpectedMarks = 0;
             qa_detailsCopyArray.push([]);
-            marksToUpdate.forEach((mark, index) => {
+            await marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
                 // console.log("type", questionAnswerPairs[index].question_type)
 
@@ -1054,7 +1056,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 // console.log("scores[index] - ", scores[index]);
 
                 let newMarksData = { ...mark }
-                qa_detailsCopyArray[i].push(newMarksData);
+                qa_detailsCopyArray[i]?.push(newMarksData);
 
                 answerCompareArray.push({
                     question_id: questionAnswerPairs[index].question_id,
@@ -1073,7 +1075,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
         }
-
+        ));
+        await Promise.all(tasks);
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
         qa_detailsCopyArray.forEach((marksDataArray, i) => {
@@ -1104,8 +1107,6 @@ exports.startQuizEvaluationProcess = async (request) => {
         throw error;
     }
 };
-
-
 
 const getQuizQuestionIds = async (quiz_question_details) => {
     let quizSetDetails = constant.quizSetDetails;
