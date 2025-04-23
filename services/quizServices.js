@@ -10,8 +10,8 @@ const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
 const s3Services = require("./s3Service");
-const pLimit = require('p-limit');
-const limit = pLimit(5);
+// const pLimit = require('p-limit');
+// const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
 
@@ -866,7 +866,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
-        const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
+        // const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
+            for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
             const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 
@@ -1075,8 +1076,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
         }
-        ));
-        await Promise.all(tasks);
+        // ));
+        // await Promise.all(tasks);
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
         qa_detailsCopyArray.forEach((marksDataArray, i) => {
