@@ -32,7 +32,6 @@ exports.addClassTest = async (request) => {
                 timeout: 60000,
             };
 
-            console.log({ firsttttt: options })
             console.log("qs.stringify(request) - ", qs.stringify(request));
 
             request.data.answer_sheet_template = " ";
@@ -46,7 +45,6 @@ exports.addClassTest = async (request) => {
 
             axios(options)
                 .then(response => {
-                    
                     console.log("PDF Data Received: ", response.data);
                     request.data.answer_sheet_template = response.data.answer_sheet_template || "";
                     request.data.question_paper_template = response.data.question_paper_template || "";
@@ -267,8 +265,8 @@ exports.startEvaluationProcess = async (request) => {
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-                            .map((ans) => ans.answer_content)               // Extract the answer_content
-                            .join(" ");                                     // Join the answer contents into a single string
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
 
                         console.log(correctAnswer);
                     }
@@ -309,16 +307,39 @@ exports.startEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, compare it with the rubrics/ marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
-         
-            Provide a similarity score between 0 and 100 for each comparison.\n\n` +
-                questionAnswerPairs.map((pair, index) => {
-                    // const correctAnswers = extractValidAnswers(pair.correctAnswer);
-                    return `Question ${index + 1}:
-            Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
-            Correct Answers: ${pair.correctAnswer}\n`;
-                }).join("\n") + `.
-            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`
+            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: "Subjective"**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.\n\n` +
+            questionAnswerPairs.map((pair, index) => {
+            return `Question ${index + 1}:
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
+            }).join("\n") + `.
+
+            ### Response Format:
+            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
+            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',
@@ -339,7 +360,7 @@ exports.startEvaluationProcess = async (request) => {
 
                 console.log("questionAnswerPairs[index].question_type - ", questionAnswerPairs[index].question_type);
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
                     if (isNaN(scores[index]) || scores[index] < 10) {
                         mark.obtained_marks = 0;
@@ -353,7 +374,7 @@ exports.startEvaluationProcess = async (request) => {
                         }
                     }
                 } else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         totalMarks += questionAnswerPairs[index].marks;
                     } else {
