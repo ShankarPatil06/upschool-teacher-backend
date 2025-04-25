@@ -915,7 +915,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
                         // console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
@@ -966,12 +966,12 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             Provide a similarity score between 0 and 100 for each comparison.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
-                    const correctAnswers = extractValidAnswers(pair.correctAnswer);
+                    // const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
             Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
-            Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
+            Correct Answers: ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
-            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
+            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',

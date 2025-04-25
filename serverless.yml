@@ -463,4 +463,4 @@ functions:
       - http:
           path: /v1/removeUploadedAnswerData
           method: POST
-          cors: true    
+          cors: true
