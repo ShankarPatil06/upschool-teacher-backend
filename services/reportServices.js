@@ -851,6 +851,10 @@ exports.viewAnalysisIndividualReport = async (request) => {
       })
     );
 
+    questions.sort((a, b) =>
+      a.topic_title.localeCompare(b.topic_title, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
     return questions;
   } else {
     return [];
@@ -1148,6 +1152,10 @@ exports.viewClassReportQuestions = async (request) => {
       })()
     ]);
   }));
+
+  questions.sort((a, b) =>
+    a?.topic.localeCompare(b?.topic, undefined, { numeric: true, sensitivity: 'base' })
+  );
 
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
@@ -1657,6 +1665,10 @@ exports.preLearningBlueprintDetails = async (request) => {
       topic_average_score: totalScore / count,
       number_of_concepts: count,
     })
+  );
+
+  topicAverages.sort((a, b) =>
+    a.topic_title.localeCompare(b.topic_title, undefined, { numeric: true, sensitivity: 'base' })
   );
 
   // Step 3: Combine topic and concept data for UI display
