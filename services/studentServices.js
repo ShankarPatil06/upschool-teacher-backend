@@ -47,9 +47,9 @@ exports.topAndBottomPerformers = async function (request, callback) {
             } else {
                 quiz_results = await quizResultRepository.fetchBulkQuizResultsByID2(request);
             }
-            console.log({quiz_results});
+            console.log({ quiz_results });
             quiz_question_ids = await quiz_results?.flatMap(quiz =>
-                quiz.marks_details.flatMap(mark =>
+                quiz.marks_details?.flatMap(mark =>
                     mark.qa_details.map(qa => qa.question_id)
                 )
             );
@@ -61,11 +61,11 @@ exports.topAndBottomPerformers = async function (request, callback) {
         const test_Ids = allTests.map(test => test.class_test_id);
         request["class_test_id"] = test_Ids;
         let recentTest;
-        console.log({allTests});
+        console.log({ allTests });
         if (allTests?.length) {
             if (request.data.isRecent) {
                 const { test, test_results } = await getRecentTestForMe(allTests);
-                console.log({test});
+                console.log({ test });
                 testResults = test_results;
                 recentTest = test;
             } else {
@@ -78,6 +78,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
             );
         }
         let allQuestionIds = [...quiz_question_ids, ...test_question_ids];
+        allQuestionIds = allQuestionIds.filter((item) => item);
         if (allQuestionIds.length > 0) {
             questionDetails = await questionRepository.fetchBulkQuestionsNameById2({
                 question_id: [...new Set(allQuestionIds)],
@@ -129,7 +130,7 @@ exports.topAndBottomPerformers = async function (request, callback) {
         const processTestResults = async () => {
             testResults?.forEach(testResult => {
                 let singleStudent = studentData.Items.filter(student => student.student_id === testResult.student_id)
-                if(singleStudent.length ===0) return;
+                if (singleStudent.length === 0) return;
                 const testData = {
                     student_id: testResult.student_id,
                     student_name: `${singleStudent[0]?.user_firstname} ${singleStudent[0]?.user_lastname}`,
@@ -483,7 +484,7 @@ const getRecentTest = async (testDetails) => {
 }
 
 const getRecentQuizForMe = async (quizDetails) => {
-    let recentQuiz ={quiz:[],quizResults:[]};
+    let recentQuiz = { quiz: [], quizResults: [] };
     for (const quiz of quizDetails) {
         const quizResults = await quizResultRepository.fetchStudentQuizResultMetadata3({ quiz_id: quiz.quiz_id });
         if (quizResults.length > 0) {
@@ -494,13 +495,13 @@ const getRecentQuizForMe = async (quizDetails) => {
 }
 
 const getRecentTestForMe = async (testDetails) => {
-    console.log({ testDetails});
-    let recentTest ={test:[],test_results:[]};
+    console.log({ testDetails });
+    let recentTest = { test: [], test_results: [] };
     for (const test of testDetails) {
         const test_results = await classRepository.fetchTestResultUsingClassTestId({ class_test_id: test.class_test_id });
-        console.log({ test_results});
+        console.log({ test_results });
         if (test_results.length > 0) {
-            console.log({ test_results , test});
+            console.log({ test_results, test });
             return { test, test_results };
         }
     }
@@ -620,6 +621,9 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
+                matchedTopics.sort((a, b) =>
+                    a.topic_title.localeCompare(b.topic_title, undefined, { numeric: true, sensitivity: 'base' })
+                );
                 console.log({ matchedTopics });
                 if (matchedTopics.length > 0) {
                     for (const topic of matchedTopics) {
@@ -739,6 +743,9 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
+                matchedTopics.sort((a, b) =>
+                    a.topic_title.localeCompare(b.topic_title, undefined, { numeric: true, sensitivity: 'base' })
+                );
                 if (matchedTopics.length > 0) {
                     for (const topic of matchedTopics) {
                         if (topic.concepts.length > 0) {
@@ -821,6 +828,9 @@ exports.studentChaptersPerformance = async (request) => {
                         }
                     }
                 }
+                matchedTopics.sort((a, b) =>
+                    a.topic_title.localeCompare(b.topic_title, undefined, { numeric: true, sensitivity: 'base' })
+                );
                 console.log({ matchedTopics });
                 if (matchedTopics.length > 0) {
                     for (const topic of matchedTopics) {
@@ -1450,11 +1460,11 @@ exports.sendEmailToParent = async (request) => {
                 let answerFileKey = worksheet.key_answer_template
                 const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
                 // const pdfBase64 = fileBuffer.toString("base64");
-                
+
                 const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
                 const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
                 const chapterNames = request?.data.chapter_name?.join(',')
-                const toMail = parentDetails?.user_email 
+                const toMail = parentDetails?.user_email
                 const mailPayload = {
                     subject: subject,
                     toMail: toMail,
