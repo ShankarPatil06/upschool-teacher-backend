@@ -37,6 +37,14 @@ exports.fetchTopicsBasedonChapterNew = async(request)=> {
     const finalPreTopicData = pre_topic_response.Items === undefined?await exports.appendPreTopicsArchivedStatus2(request, teacher_activity_details_res, pre_topic_response, constant.prePostConstans.preLearning):await exports.appendPreTopicsArchivedStatus2(request, teacher_activity_details_res, pre_topic_response.Items, constant.prePostConstans.preLearning)
     const finalPostTopicData = post_topic_response.Items === undefined? await exports.appendPostTopicsArchivedStatus2(request, teacher_activity_details_res, post_topic_response, constant.prePostConstans.postLearning): await exports.appendPostTopicsArchivedStatus2(request, teacher_activity_details_res, post_topic_response.Items, constant.prePostConstans.postLearning)
   
+    finalPreTopicData.sort((a, b) =>
+      a.display_name.localeCompare(b.display_name, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  
+    finalPostTopicData.sort((a, b) =>
+      a.display_name.localeCompare(b.display_name, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
     request.data.learningType = constant.prePostConstans.preLearningVal;
     const quizData_res = await quizRepository.fetchQuizData2(request);
   
