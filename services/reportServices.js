@@ -130,7 +130,7 @@ exports.getTargetedLearningExpectation = async (request) => {
     schoolDataRes.Items[0].post_quiz_config.class_percentage;
   const passPercentagePost =
     schoolDataRes.Items[0].post_quiz_config.pct_of_student_for_reteach;
-  console.log({classPercentagePre});
+  console.log({ classPercentagePre });
   if (!classPercentagePre || !classPercentagePost) return;
   const studentDataRes = await studentRepository.getStudentsData2(request);
   console.log("studentDataRes - ", studentDataRes);
@@ -139,9 +139,9 @@ exports.getTargetedLearningExpectation = async (request) => {
   const quizDataRes = await quizRepository.fetchAllQuizBasedonSubject2(request);
   console.log("quizDataRes - ", quizDataRes);
 
-  if(quizDataRes.Items.length === 0) return {totalTopics, reached: reachedTopics, classPercentagePre, classPercentagePost, totalStrength: classStrength};
+  if (quizDataRes.Items.length === 0) return { totalTopics, reached: reachedTopics, classPercentagePre, classPercentagePost, totalStrength: classStrength };
   const TargetedLearningExpectationData = await this.getTargetedLearningExpectationDetails(request);
- 
+
   const passedTopics = TargetedLearningExpectationData.flatMap(item =>
     item.data.flatMap(dataItem =>
       dataItem.selectedTopics.filter(topic => {
@@ -151,7 +151,7 @@ exports.getTargetedLearningExpectation = async (request) => {
           dataItem.learningType === "preLearning"
             ? item.classPercentagePre
             : item.classPercentagePost;
-  
+
         return (
           passPercentage &&
           passedStudents >= totalStrength * passPercentage * 0.01 &&
@@ -160,7 +160,7 @@ exports.getTargetedLearningExpectation = async (request) => {
       })
     )
   ).length; // Counting passed topics
-  
+
   const failedTopics = TargetedLearningExpectationData.flatMap(item =>
     item.data.flatMap(dataItem =>
       dataItem.selectedTopics.filter(topic => {
@@ -170,7 +170,7 @@ exports.getTargetedLearningExpectation = async (request) => {
           dataItem.learningType === "preLearning"
             ? item.classPercentagePre
             : item.classPercentagePost;
-  
+
         return !(
           passPercentage &&
           passedStudents >= totalStrength * passPercentage * 0.01 &&
@@ -180,9 +180,9 @@ exports.getTargetedLearningExpectation = async (request) => {
     )
   ).length;
 
-  console.log({passedTopics});
-  console.log({failedTopics});
-  
+  console.log({ passedTopics });
+  console.log({ failedTopics });
+
   reachedTopics = passedTopics;
   totalTopics = passedTopics + failedTopics;
 
@@ -254,18 +254,18 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
       selectedTopics: await Promise.all(
         val.selectedTopics.map(async (topic) => ({
           ...topic,
-          topicQuestionDetails: await calculateNumberOfQuestions(topic.topic_id,val),
+          topicQuestionDetails: await calculateNumberOfQuestions(topic.topic_id, val),
         }))
       ),
     }))
   );
-  async function calculateNumberOfQuestions(topicId,val) {
-    let topicQuestionDetails ={
-      noOfQuestions:0,
-      Questions:{
-        qp_set_a:[],
-        qp_set_b:[],
-        qp_set_c:[],
+  async function calculateNumberOfQuestions(topicId, val) {
+    let topicQuestionDetails = {
+      noOfQuestions: 0,
+      Questions: {
+        qp_set_a: [],
+        qp_set_b: [],
+        qp_set_c: [],
       }
     };
     val.question_track_details.qp_set_a.map((val) => {
@@ -364,7 +364,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
         (result) => result.quiz_id === quiz.quiz_id && result.evaluated == "Yes"
       );
       results.forEach((result) => {
-        set_key=result?.marks_details[0]?.set_key;
+        set_key = result?.marks_details[0]?.set_key;
         quiz.selectedTopics.forEach((topic) => {
           if (!topic.passedStudentsOfParticularQuizInTopic) {
             topic.passedStudentsOfParticularQuizInTopic = [];
@@ -387,24 +387,24 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
               console.warn(`Question not found for question_id: ${question_id}`);
               return;
             }
-        
+
             const studentQuestion = result.marks_details[0]?.qa_details.find(
               (qa) => qa.question_id === question_id
             );
-        
+
             console.log({ studentQuestion });
-        
+
             if (studentQuestion) {
               const obtainedMarks = studentQuestion.modified_marks === "N.A."
                 ? parseFloat(studentQuestion.obtained_marks)
                 : parseFloat(studentQuestion.modified_marks);
-        
+
               if (!isNaN(obtainedMarks)) {
                 studentMarks += obtainedMarks;
               } else {
                 console.warn(`Invalid marks data for studentQuestion:`, studentQuestion);
               }
-        
+
               topicTotalMarks += parseFloat(question.marks);
             }
           });
@@ -412,14 +412,14 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
           let topicPercentage = topicTotalMarks > 0 ? (studentMarks / topicTotalMarks) * 100 : 0;
 
           console.log({ topicPercentage });
-        
+
           const classPercentage = quiz.learningType === "preLearning" ? passPercentagePre : passPercentagePost;
-         
+
           if (topicPercentage >= classPercentage) {
             topic.passedStudentsOfParticularQuizInTopic.push(result.student_id);
           } else {
             topic.failedStudentsOfParticularQuizInTopic.push(result.student_id);
-          }  
+          }
         });
       });
     });
@@ -429,11 +429,11 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
   const chapterMap = new Map(
     chapterDataRes?.map((chapter) => [chapter.chapter_id, chapter.display_name])
   );
-  
+
   const topicMap = new Map(
     topicDataRes?.map((topic) => [topic.topic_id, topic.display_name])
   );
-  
+
   const studentMap = new Map(
     studentDataRes?.Items?.map((student) => [student.student_id, `${student.user_firstname} ${student.user_lastname}`])
   );
@@ -446,7 +446,7 @@ exports.getTargetedLearningExpectationDetails = async (request) => {
       const result = quizResultDataRes.find(
         (result) => result.quiz_id === quiz.quiz_id && result.evaluated === "Yes"
       );
-      
+
       const set_key = result?.marks_details?.[0]?.set_key;
 
       quiz.selectedTopics = quiz.selectedTopics.filter((topic) => {
@@ -947,6 +947,10 @@ exports.viewClassReportQuestions = async (request) => {
 
   let marksInTotal = 0;
   let possiblemarks = 0;
+  questions.sort((a, b) =>
+    a?.topic?.localeCompare(b?.topic, undefined, { numeric: true, sensitivity: 'base' }) ||
+    a?.question_content?.localeCompare(b?.question_content, undefined, { numeric: true, sensitivity: 'base' })
+  );  
   questions.map(async (question, i) => {
     // console.log("question", question);
     // console.log("questionSet", questionSet);
@@ -956,7 +960,7 @@ exports.viewClassReportQuestions = async (request) => {
     question.set = questionSet.find((q) => q.question_id == question.question_id).sets
 
     const allAnswers = quizResultMarksData.flat().filter(ans => ans.question_id === question.question_id)
-    question.cognitive_skill = cognitiveSkillNames.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;
+    question.cognitive_skill = cognitiveSkillNames?.find(e => e.cognitive_id == question.cognitive_skill).cognitive_name;
     //% of most common answer for objective (descriptive we wont show anything)
     question.answers_of_question.map(async (answer, i) => {
       let count = 0;
@@ -1153,9 +1157,7 @@ exports.viewClassReportQuestions = async (request) => {
     ]);
   }));
 
-  questions.sort((a, b) =>
-    a?.topic.localeCompare(b?.topic, undefined, { numeric: true, sensitivity: 'base' })
-  );
+  console.log({ firstttt: questions })
 
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
