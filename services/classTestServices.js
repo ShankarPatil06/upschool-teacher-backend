@@ -59,9 +59,9 @@ exports.addClassTest = async (request) => {
                 .catch(error => {
                     console.error("PDF Generation Error:", error);
                 });
-
-
             return 200;
+        } else {
+            throw helper.formatErrorResponse(constant.messages.CLASS_TEST_ALREADY_EXISTS, 400);
         }
     } catch (error) {
         console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
@@ -327,15 +327,15 @@ exports.startEvaluationProcess = async (request) => {
             For **all other question types**, perform a direct correctness-based comparison.
 
             Provide a similarity score between **0 and 100** for each question.\n\n` +
-            questionAnswerPairs.map((pair, index) => {
-            return `Question ${index + 1}:
+                questionAnswerPairs.map((pair, index) => {
+                    return `Question ${index + 1}:
             Question Type: "${pair.question_type}"
             Student Answer (Structured List):
             ${normalizeAnswer(pair.studentAnswer)}
 
             Correct Answers (Structured List):
             ${pair.correctAnswer}\n`;
-            }).join("\n") + `.
+                }).join("\n") + `.
 
             ### Response Format:
             **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
