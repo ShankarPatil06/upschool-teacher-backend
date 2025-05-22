@@ -60,7 +60,7 @@ exports.addClassTest = async (request) => {
                 });
             return 200;
         } else {
-            throw helper.formatErrorResponse(constant.messages.CLASS_TEST_ALREADY_EXISTS, 400);
+            return helper.formatErrorResponse(constant.messages.CLASS_TEST_ALREADY_EXISTS, 400);
         }
     } catch (error) {
         console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
