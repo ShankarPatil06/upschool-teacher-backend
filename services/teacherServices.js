@@ -2168,6 +2168,7 @@ exports.createPDFandUpdateTemplateDetails = (request, callback) => {
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     data: qs.stringify(request),
     url: process.env.PDF_GENERATION_URL + '/createQuizQuestionAndAnswerPapers',
+    // url: "http://localhost:3005/v1" + '/createQuizQuestionAndAnswerPapers',
   };
 
 
