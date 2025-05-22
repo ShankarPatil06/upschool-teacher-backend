@@ -121,7 +121,7 @@ exports.updateClassTest = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
         Key: {
-            "class_test_id" :request.data.class_test_id
+            "class_test_id": request.data.class_test_id
         },
         UpdateExpression: "set answer_sheet_template = :answer_sheet_template, question_paper_template = :question_paper_template, key_answer_template=:key_answer_template, updated_ts = :updated_ts",
         ExpressionAttributeValues: {
@@ -257,7 +257,7 @@ exports.getStudentInfo = async (request) => {
     }
 
     return await DATABASE_TABLE2.query(params);
-    
+
 
 }
 
@@ -284,15 +284,15 @@ exports.fetchClassTestDataById = function (request, callback) {
 }
 
 exports.fetchClassTestDataById2 = async (request) => {
-        const readParams = {
-            TableName: TABLE_NAMES.upschool_class_test_table,
-            Key: {
-                "class_test_id": request.data.class_test_id
-            }
-        };
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        Key: {
+            "class_test_id": request.data.class_test_id
+        }
+    };
 
-        const result = await DATABASE_TABLE2.getItem(readParams);
-        return result;
+    const result = await DATABASE_TABLE2.getItem(readParams);
+    return result;
 };
 
 
@@ -347,7 +347,7 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
         ":client_class_id": request.data.client_class_id,
-        ":class_test_status": "Active",
+        ":class_test_status": request.data.class_test_status || "Active",
     };
 
     if (request.data?.class_test_id) {
@@ -358,7 +358,7 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
         expressionAttributeValues[":start_date"] = request.data.start_date;
         expressionAttributeValues[":end_date"] = request.data.end_date;
-    }    
+    }
 
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,

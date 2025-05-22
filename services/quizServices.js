@@ -1009,7 +1009,9 @@ exports.startQuizEvaluationProcess = async (request) => {
                     { role: 'user', content: userPrompt }
                 ],
             });
-            console.log("response - ", response.choices[0].message);
+
+            console.log("prompt - ", userPrompt);
+            console.log("response - ", response);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
             console.log("scores - ", scores);

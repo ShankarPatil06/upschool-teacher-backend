@@ -42,7 +42,6 @@ exports.addClassTest = async (request) => {
                 .then(() => console.log("Class Test Inserted"))
                 .catch(err => console.error("DB Insert Error:", err));
 
-
             axios(options)
                 .then(response => {
                     console.log("PDF Data Received: ", response.data);
@@ -349,9 +348,12 @@ exports.startEvaluationProcess = async (request) => {
                 ],
             });
 
-            console.log("response - ", userPrompt, response.choices[0].message);
+            console.log("prompt - ", userPrompt);
+            console.log("response - ", response);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
+
+            console.log("scores - ", scores);
 
             let totalMarks = 0;
             let totalExpectedMarks = 0;
