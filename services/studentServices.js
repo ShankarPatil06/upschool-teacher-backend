@@ -1023,7 +1023,9 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     const questionPaper = await testQuestionPaperRepository.getTestQuestionPaperById3(request);
 
     const quiz_chapter_ids = [...new Set(allquizs.map(quiz => quiz.chapter_id))];
-    const test_chapter_ids = questionPaper?.data?.map(question => question.chapter_id).flat();
+    const test_chapter_ids = Array.isArray(questionPaper?.data)
+        ? questionPaper.data.map(question => question.chapter_id).flat()
+        : [];
 
     let chapter_Ids = [...new Set([...quiz_chapter_ids, ...test_chapter_ids])];
 
@@ -1035,7 +1037,6 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
     if (questionPaper?.data?.length > 0) {
         for (const paper of questionPaper.data) {
             if (paper.chapter_id && Array.isArray(paper.chapter_id)) {
-                // Find all matching test_ids for the question_paper_id
                 const matchingTests = testDetails.filter(test => test.question_paper_id === paper.question_paper_id);
 
                 for (const chapter of paper.chapter_id) {
@@ -1043,7 +1044,6 @@ exports.studentAvgVsClassAvgChapterWise = async (request) => {
                         testChapterMap[chapter] = new Set();
                     }
 
-                    // Add all test_ids linked to the question_paper_id
                     for (const test of matchingTests) {
                         testChapterMap[chapter].add(test.class_test_id);
                     }
