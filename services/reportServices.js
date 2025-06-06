@@ -950,7 +950,7 @@ exports.viewClassReportQuestions = async (request) => {
   questions.sort((a, b) =>
     a?.topic?.localeCompare(b?.topic, undefined, { numeric: true, sensitivity: 'base' }) ||
     a?.question_content?.localeCompare(b?.question_content, undefined, { numeric: true, sensitivity: 'base' })
-  );  
+  );
   questions.map(async (question, i) => {
     // console.log("question", question);
     // console.log("questionSet", questionSet);
