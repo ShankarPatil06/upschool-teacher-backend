@@ -590,8 +590,7 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
                 answers_of_question : contUrl
             },
             questionExistId: questionExistId
-        };
-               
+        }; 
     }
     else
     {
