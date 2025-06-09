@@ -560,7 +560,7 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
         quesObj: "N.A.",
         questionExistId: []
     };
-    let getQuestion = await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && (!blueQues.cognitive_id || blueQues.cognitive_id === "N.A." || Qs.cognitive_skill === blueQues.cognitive_id) && (!blueQues.difficulty_level || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
+    let getQuestion = await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && (!blueQues.cognitive_id || blueQues.cognitive_id === "N.A." || blueQues.cognitive_id === "Select Skill" || Qs.cognitive_skill === blueQues.cognitive_id) && (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
 
     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
 
