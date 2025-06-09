@@ -30,6 +30,7 @@ exports.getBlueprintByItsId = (request, callback) => {
                     {           
                         catIds = helper.removeDuplicates(catIds);
                         skillIds = helper.removeDuplicates(skillIds);
+                        skillIds = skillIds.filter(skill => skill != '');
 
                         console.log("CATEGORY ID: ", catIds);
                         console.log("SKILL IDS : ", skillIds);
@@ -57,15 +58,11 @@ exports.getBlueprintByItsId = (request, callback) => {
                                     projectionExp : ["cognitive_id", "cognitive_name"]
                                 }
                     
-                                commonRepository.fetchBulkDataWithProjection(fetchBulkCogReq, async function (cognData_err, cognData_res) {
-                                    if (cognData_err) {
-                                        console.log(cognData_err);
-                                        callback(cognData_err, cognData_res);
-                                    } else {
-                                        console.log("COGNITIVE DATA : ", cognData_res);                              
-
-                                        /** SET FINAL BLUEPRINT DATA **/
-                                        exports.setBlueprintFinalData(questionSection, cateData_res.Items, cognData_res.Items, (blueErr, blueData) => {
+                                let cognData_res = [];
+                                if(skillIds.length > 0){
+                                    cognData_res = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCogReq);
+                                }
+                                exports.setBlueprintFinalData(questionSection, cateData_res.Items, cognData_res?.Items || [], (blueErr, blueData) => {
                                             if(blueErr)
                                             {
                                                 console.log(blueErr);
@@ -77,11 +74,7 @@ exports.getBlueprintByItsId = (request, callback) => {
                                                 singleBlueprint_res.Items[0].sections = blueData
                                                 callback(blueErr, singleBlueprint_res);
                                             }
-                                        })
-                                        /** END SET FINAL BLUEPRINT DATA **/
-                                    }
                                 })
-                                /** END FETCH SKILL DATA **/
                             }
                         })
                         /** END FETCH CATEGORY DATA **/
@@ -364,9 +357,7 @@ exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topi
     {
         if(i < 3)
         {   
-            async function priLoop(j)
-            {       
-
+            async function priLoop(j){
                 if(j < priorities.length)
                 {
                     secPos = priorities[j].sec;
@@ -458,24 +449,18 @@ exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topi
                             })
                             /** END THIRD PRIORITY WITH CHAPTER IDS **/                            
                         }
-                    }       
-                    else
-                    {
+                    }else{
                         j++;
                         priLoop(j);
                     }
-                }
-                else
-                {
+                }else{
                     i++;
                     mainLoop(i);
                 }
             }
             priLoop(0);            
-        }
-        else
-        {
-            console.log("FINALLY GOT QUESTION :", responseData);
+        }else{
+            console.log("FINALLY GOT QUESTION :", responseData[0].questions[2]);
             callback(0, responseData);
         }
     }
@@ -575,9 +560,7 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
         quesObj: "N.A.",
         questionExistId: []
     };
-    let getQuestion = blueQues.cognitive_id != "N.A." ? 
-    await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && Qs.cognitive_skill === blueQues.cognitive_id && Qs.difficulty_level === blueQues.difficulty_level && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) : 
-    await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && Qs.difficulty_level === blueQues.difficulty_level && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type)
+    let getQuestion = await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && (!blueQues.cognitive_id || blueQues.cognitive_id === "N.A." || Qs.cognitive_skill === blueQues.cognitive_id) && (!blueQues.difficulty_level || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
 
     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
 
@@ -601,14 +584,13 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
                 question_name : blueQues.question_name,
                 question_type : blueQues.question_type,
                 marks : blueQues.marks,
-                difficulty_level : blueQues.difficulty_level,
+                difficulty_level : blueQues?.difficulty_level,
                 question_id : getQuestion[0].question_id,
                 question_content : getQuestion[0].question_content,
                 answers_of_question : contUrl
             },
             questionExistId: questionExistId
-        };
-               
+        }; 
     }
     else
     {
