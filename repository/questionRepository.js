@@ -2,6 +2,7 @@ const dynamoDbCon = require("../awsConfig");
 const { DATABASE_TABLE } = require("./baseRepository");
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
+const { chunkArray } = require("../helper/helper");
 
 
 exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request, callback) {
@@ -152,15 +153,6 @@ exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request,
 //     });
 // }
 
-
-const chunkArray = (array, size) => {
-    const result = [];
-    for (let i = 0; i < array.length; i += size) {
-        result.push(array.slice(i, i + size));
-    }
-    return result;
-};
-
 exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (request, callback) {
     try {
         const { IdArray, fetchIdName, TableName, projectionExp, questionStatus } = request;
@@ -186,7 +178,6 @@ exports.fetchBulkQuestionsWithPublishStatusAndProjection = async function (reque
             return callback(null, { Items: [] });
         }
 
-        // ** Split into batches of 100 to avoid AWS limit **
         const idChunks = chunkArray(uniqueIds, 100);
         let allItems = [];
 

@@ -87,7 +87,7 @@ const batchReadData = (docClient, params, callback) => {
             console.log(err);
             callback(err, data);
         } else {
-            // callback(0, 200);
+            callback(0, data);
         }
     });
 };

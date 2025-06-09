@@ -58,7 +58,6 @@ exports.updateQuizStatus = async (request) => {
     return statusRes;
 };
 
-
 const checkDuplicateTopics = async (resTopics, checkTopics) => {
     let dupTopics = [];
     await checkTopics.forEach(cArr => {
@@ -95,7 +94,6 @@ exports.getQuizResult = async (request) => {
         }));
     return result_response;
 }
-
 
 exports.editStudentQuizMarks = async (request) => {
     console.log("request000", request.data.marks_details[0].qa_details);
@@ -244,8 +242,6 @@ exports.editStudentQuizMarks = async (request) => {
     }
 };
 
-
-
 exports.viewQuizQuestionPaper = async (request) => {
     try {
         // Fetch quiz result data of student
@@ -286,7 +282,6 @@ exports.viewQuizQuestionPaper = async (request) => {
     }
 };
 
-
 exports.setQuestionPaperView = async (questionIDs, questionData) => {
 
     const individualQuestions = await Promise.all(
@@ -308,7 +303,6 @@ exports.setQuestionPaperView = async (questionIDs, questionData) => {
 
     return individualQuestions.filter(q => q !== null); // Remove null values (if any question IDs did not match)
 };
-
 
 exports.fetchQuizTemplates = async (request) => {
     try {
@@ -353,10 +347,7 @@ exports.fetchQuizTemplates = async (request) => {
     }
 };
 
-
-
 exports.resetQuizEvaluationStatus = async (request) => await quizResultRepository.resetQuizEvaluationStatus2(request)
-
 
 /** EVALUATION API'S **/
 const mergeStudentAnswers = (answerMetadata) => {
@@ -547,7 +538,6 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
     // request.data.individual_group_performance = individualGroupPerformance;
     return markAssignRes;
 }
-
 
 // exports.startQuizEvaluationProcess = async (request) => {
 //     try {
@@ -1179,7 +1169,6 @@ exports.assigningQuizMarks = async (studResultData, quizQuestionSets, quesAns, c
     }
 };
 
-
 exports.comparingQuizAnswer = async (studAns, markDetails, questionPaper, quesAns, classPassPercentage, group_pass_percentage, questionPaperTrack) => {
     return new Promise(async (resolve, reject) => {
         await helper.splitStudentQuizAnswer(studAns).then((splitedAns) => {
@@ -1220,7 +1209,6 @@ exports.comparingQuizAnswer = async (studAns, markDetails, questionPaper, quesAn
     });
 };
 
-
 exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack) => {
     try {
         for (let i = 0; i < qaDetails.length; i++) {
@@ -1242,7 +1230,6 @@ exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack)
         throw error;
     }
 };
-
 
 const knowPassOrFail = (marks_details, quesAndAns, classPercentage, individualPassPercentage = 50) => {
 
@@ -1282,7 +1269,6 @@ exports.fetchAllQuizDetails = function (request, callback) {
         }
     })
 }
-
 
 // exports.comparingQuizAnswer = async (markDetails, quesAns, individualPassPercentage) => {
 //     const qaDetails = markDetails.qa_details;
