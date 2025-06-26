@@ -7,8 +7,8 @@ provider:
   stage: ${opt:stage}
   environment:
     DB_PREFIX: ${self:provider.stage}_
-    ACCESS_KEY_ID: ${file(config/${self:provider.stage}-config.yml):data.config.accessKeyId}
-    SECRET_ACCESS_KEY: ${file(config/${self:provider.stage}-config.yml):data.config.secretAccessKey}
+    ACCESS_KEY_ID: ${env:AWS_ACCESS_KEY_ID}
+    SECRET_ACCESS_KEY: ${env:AWS_SECRET_ACCESS_KEY}
     REGION: ${self:provider.region}
     NODE_ENV: ${self:provider.stage}
     BUCKET_NAME: ${self:provider.stage}-upschool

@@ -1,10 +1,4 @@
 data:
-  config:
-    accessKeyId:
-      - AKIAQREMEI3PTKK4GBG5
-    secretAccessKey:
-      - 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
-
   randomSecretKey:
     secretKey:
       - Sotr07eb7iph1R+tAdOy  
