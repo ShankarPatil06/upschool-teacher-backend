@@ -20,7 +20,7 @@ exports.getSectionIdAndName = function (request, callback) {
                 ExpressionAttributeValues: {
                     ":section_id": request.data.section_id
                 },
-                ProjectionExpression: ["section_id", "section_name"] 
+                ProjectionExpression: ["section_id", "section_name"]
             }
 
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
@@ -52,7 +52,7 @@ exports.getSectionDetailsById = function (request, callback) {
     });
 }
 
-exports.updateActionAndRecommendations= async (request) => {
+exports.updateActionAndRecommendations = async (request) => {
 
     let params = {
         TableName: TABLE_NAMES.upschool_section_table,
@@ -68,4 +68,28 @@ exports.updateActionAndRecommendations= async (request) => {
     }
     const data = await DATABASE_TABLE2.updateService(params);
     return data;
+}
+
+exports.addAcademicPlanToSections = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+            "section_id": request.section_id
+        },
+        UpdateExpression: "set academic_plan = :academic_plan, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":academic_plan": request.academic_plan,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    }
+
+    return await DATABASE_TABLE2.updateService(params)
+}
+
+exports.getSectionById = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: { "section_id": request?.section_id },
+    }
+    return await DATABASE_TABLE2.getItem(params)
 }
