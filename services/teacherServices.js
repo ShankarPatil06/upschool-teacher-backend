@@ -7,6 +7,8 @@ const qs = require('qs');
 const axios = require('axios');
 let sendMail = require("./emailService");
 
+
+
 // const { callbackPromise } = require("nodemailer/lib/shared");
 
 exports.getTeacherClasses = async (request) => {
@@ -2212,3 +2214,12 @@ exports.sendMailtoTeacher = (request, callback) => {
   })
 
 }
+
+exports.upsertTeacherAttendance = function (request, callback) {
+    return teacherRepository.upsertTeacherAttendance(request, callback);
+};
+
+
+exports.fetchTeacherAttendance = function (request, callback) {
+    return teacherRepository.fetchTeacherAttendance(request, callback);
+};

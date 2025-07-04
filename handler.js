@@ -163,6 +163,10 @@ app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsCl
 
 app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
 
+// update attendence
+// app.post("/v1/updateAttendance", teacherController.updateAttendance);
+app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
+app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
