@@ -385,7 +385,15 @@ functions:
           method: POST
           cors: true  
       - http:
+          path: /v1/viewClassReportQuestionsTest
+          method: POST
+          cors: true 
+      - http:
           path: /v1/viewClassReportQuestions
+          method: POST
+          cors: true 
+      - http:
+          path: /v1/viewClassReportFocusAreaTest
           method: POST
           cors: true 
       - http:
