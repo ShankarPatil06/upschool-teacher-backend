@@ -373,3 +373,32 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
     );
     return sortedItems;
 }
+
+exports.fetchTestBasedOnQuestionPaper = async (request) => {
+    let filterConditions = [
+        "class_test_status = :class_test_status",
+        "question_paper_id = :question_paper_id",
+    ];
+    
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":class_test_status": request.data.class_test_status || "Active",
+        ":question_paper_id": request.data.question_paper_id,
+    };
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterConditions.join(" AND "),
+        ExpressionAttributeValues: expressionAttributeValues,
+    };
+
+    const result = await DATABASE_TABLE2.query(params);
+    
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+
+    return sortedItems;
+};
