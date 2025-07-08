@@ -165,6 +165,9 @@ app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsCl
 
 app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
 
+//Section
+app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
+
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
