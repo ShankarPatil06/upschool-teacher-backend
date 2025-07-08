@@ -1,6 +1,9 @@
 const { schoolRepository, studentRepository, subjectRepository, unitRepository, quizRepository, settingsRepository, questionRepository, quizResultRepository, classTestRepository, chapterRepository, topicRepository, conceptRepository, testResultRepository, testQuestionPaperRepository } = require("../repository");
 const { formatDate } = require("../helper/helper");
 const s3Services = require("./s3Service");
+const { fetchTestBasedOnQuestionPaper } = require("../repository/classTestRepository");
+const { getTestQuestionPaperById3 } = require("../repository/testQuestionPaperRepository");
+const { fetchStudentresultMetadata3 } = require("../repository/testResultRepository");
 
 exports.getAssessmentDetails = async (request) => {
   const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
@@ -861,6 +864,284 @@ exports.viewAnalysisIndividualReport = async (request) => {
   }
 };
 
+exports.viewClassReportQuestionsTest = async (request) => {
+  const testData = await fetchTestBasedOnQuestionPaper(request);
+  if (!testData || testData.length === 0) return [];
+
+  request["question_paper_ids"] = [request.data?.question_paper_id];
+  const questionPaperData = await getTestQuestionPaperById3(request);
+
+  const questionPaperQuestionIds = questionPaperData.data[0]?.questions.map(
+    (question) => question.question_id
+  ).flat();
+
+  request["class_test_id"] = [testData[0].class_test_id];
+  const testResultData = await fetchStudentresultMetadata3(request);
+
+  if (testResultData.length === 0) return [];
+
+  const testResultMarksData = testResultData
+    .filter((item) => item.evaluated === "Yes")
+    .map((item) => item.marks_details?.[0]?.qa_details);
+
+  const { totalMarkObtainedByStudents, totalMarkExpectedFromStudents } = testResultData.reduce(
+    (acc, item) => {
+      if (item.evaluated === "Yes") {
+        acc.totalMarkObtainedByStudents += item.marks_details[0].totalMark;
+        acc.totalMarkExpectedFromStudents += item.marks_details[0].expectedMarks;
+      }
+      return acc;
+    },
+    { totalMarkObtainedByStudents: 0, totalMarkExpectedFromStudents: 0 }
+  );
+
+  const totalStudents = testResultMarksData.length;
+
+  request["unit_chapter_id"] = questionPaperData.data[0]?.chapter_id;
+  const chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+
+  const chapter_array = chapter_details.map((val) => ({ "chapter_id": val.chapter_id }));
+  const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+  const testChapterMap = {};
+  if (chapter_response.Items.length > 0) {
+    for (const chapter of chapter_response.Items) {
+      testChapterMap[chapter.chapter_id] = [
+        ...(chapter.prelearning_topic_id || []),
+        ...(chapter.postlearning_topic_id || []),
+      ];
+    }
+  }
+
+  const topic_array = Object.values(testChapterMap).flat().map((val) => ({ topic_id: val }));
+  let concept_response = [];
+  let topic_response = { Items: [] };
+
+  if (topic_array.length > 0) {
+    topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+    if (topic_response?.Items?.length > 0) {
+      concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+    }
+  }
+
+  const questions = await questionRepository.fetchBulkQuestionsNameById2({
+    question_id: questionPaperQuestionIds,
+  });
+
+  if (questions.length === 0) return [];
+
+  const cognitive_id = questions.map((que) => que.cognitive_skill);
+  const cognitiveSkillNames = await new Promise((resolve, reject) => {
+    settingsRepository.fetchBulkCognitiveSkillNameById({ cognitive_id: cognitive_id }, (err, res) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(res);
+    });
+  });
+
+  let marksInTotal = 0;
+  let possiblemarks = 0;
+
+  questions.sort((a, b) =>
+    a?.topic?.localeCompare(b?.topic, undefined, { numeric: true, sensitivity: 'base' }) ||
+    a?.question_content?.localeCompare(b?.question_content, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  questions.map(async (question, i) => {
+    possiblemarks = possiblemarks + question.marks;
+    question.questionNo = (i + 1);
+
+    const allAnswers = testResultMarksData.flat().filter(ans => ans.question_id === question.question_id);
+    console.log({ firsttttt: allAnswers });
+    question.cognitive_skill = cognitiveSkillNames?.find(e => e.cognitive_id == question.cognitive_skill)?.cognitive_name;
+
+    question.answers_of_question.map(async (answer, i) => {
+      let count = 0;
+      allAnswers.map((eachAnswer) => {
+        if (eachAnswer.question_id == question.question_id) {
+          if (eachAnswer.student_answer === answer.answer_content) {
+            count++;
+          }
+        }
+      });
+      question.answers_of_question[i].mostCommonPercentage =
+        count > 0 ? (count / totalStudents) * 100 : 0;
+    });
+
+    if (allAnswers.length === 0) {
+      question.correctAnswerPercentage = 0;
+    } else {
+      const correct = allAnswers.reduce((total, answer) => {
+        if (String(answer.modified_marks) === "N.A.") {
+          let marks = String(answer.obtained_marks) !== "N.A."
+            ? Number(answer.obtained_marks)
+            : 0;
+          marksInTotal += marks;
+          return total + marks;
+        } else {
+          let marks = String(answer.modified_marks) !== "N.A."
+            ? Number(answer.modified_marks)
+            : String(answer.obtained_marks) !== "N.A."
+              ? Number(answer.obtained_marks)
+              : 0;
+          marksInTotal += marks;
+          return total + marks;
+        }
+      }, 0);
+
+      const totalMarks = allAnswers.reduce((total, answer) => {
+        let questionObj = questions.find(qtn => qtn.question_id === answer.question_id);
+        return questionObj ? total + questionObj?.marks : total;
+      }, 0);
+
+      const correctPercentage = ((correct / totalMarks) * 100).toFixed(2);
+      question.correctAnswerPercentage = correctPercentage;
+    }
+
+    const questionConcept = concept_response.find(concept =>
+      concept.concept_question_id && concept.concept_question_id.includes(question.question_id)
+    );
+
+    if (questionConcept) {
+      question.concept = questionConcept.display_name;
+
+      const questionTopic = topic_response.Items.find(topic =>
+        topic.topic_concept_id && topic.topic_concept_id.includes(questionConcept.concept_id)
+      );
+
+      if (questionTopic) {
+        question.topic = questionTopic.display_name;
+      }
+    }
+  });
+
+  const averageData = questions.map((question) => {
+    return {
+      skill: question.cognitive_skill,
+      percentage: question.correctAnswerPercentage,
+      level: question.difficulty_level,
+    }
+  });
+
+  let mergedData = averageData.reduce((acc, item) => {
+    const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
+    if (existingSkill) {
+      existingSkill.totalPercentage += item.percentage ? parseFloat(item.percentage) : 0;
+      existingSkill.count += 1;
+    } else {
+      acc.push({
+        skill: item.skill,
+        totalPercentage: parseFloat(item.percentage),
+        count: 1,
+        level: item.level
+      });
+    }
+    return acc;
+  }, []).map(skillItem => ({
+    skill: skillItem.skill,
+    percentage: (skillItem.totalPercentage / skillItem.count).toFixed(2),
+    level: skillItem.level
+  }));
+
+  let mergedDataForLevel = averageData.reduce((acc, item) => {
+    const existingLevel = acc.find(levelItem => levelItem.level === item.level);
+    if (existingLevel) {
+      existingLevel.totalPercentage += item.percentage ? parseFloat(item.percentage) : 0;
+      existingLevel.count += 1;
+    } else {
+      acc.push({
+        level: item.level,
+        totalPercentage: parseFloat(item.percentage),
+        count: 1,
+      });
+    }
+    return acc;
+  }, []);
+
+  const skillCounts = averageData.reduce((acc, item) => {
+    const existingSkill = acc.find(skillItem => skillItem.skill === item.skill);
+    if (existingSkill) {
+      existingSkill.count += 1;
+    } else {
+      acc.push({
+        skill: item.skill,
+        count: 1
+      });
+    }
+    return acc;
+  }, []);
+
+  const skillCountsArray = Object.values(skillCounts);
+  const skillTotals = {};
+  const levelTotals = {};
+
+  mergedData?.forEach(({ skill, percentage, level }) => {
+    if (!skillTotals[skill]) {
+      skillTotals[skill] = { total: 0, count: 0 };
+    }
+    const intelligenceCount = skillCountsArray.find(skills => skills.skill === skill);
+    skillTotals[skill].total = percentage;
+    skillTotals[skill].count += intelligenceCount?.count;
+  });
+
+  mergedDataForLevel?.forEach(({ level, totalPercentage, count }) => {
+    if (level !== "N.A") {
+      if (!levelTotals[level]) {
+        levelTotals[level] = { total: 0, count: 0 };
+      }
+      levelTotals[level].total += totalPercentage;
+      levelTotals[level].count += count;
+    }
+  });
+
+  const cognitiveResult = Object.keys(skillTotals).map((skill) => ({
+    skill,
+    averagePercentage: parseFloat(skillTotals[skill].total),
+    noOfQuestions: skillTotals[skill].count,
+  }));
+
+  const difficultyResult = Object.keys(levelTotals).map((level) => ({
+    level,
+    averagePercentage: parseFloat((levelTotals[level].total / levelTotals[level].count).toFixed(2)),
+    noOfQuestions: levelTotals[level].count,
+  }));
+
+  const pieValue = (totalMarkObtainedByStudents / totalMarkExpectedFromStudents) * 100;
+
+  await Promise.all(questions.map(async (question) => {
+    await Promise.all(
+      question.answers_of_question.map(async (ans) => {
+        if (ans.answer_type === "Image" || ans.answer_type === "Audio File") {
+          ans.answer_content = await s3Services.getS3SignedUrl(ans.answer_content);
+        }
+      })
+    );
+
+    await Promise.all([
+      (async () => {
+        const correctAnswer = question.answers_of_question.find(
+          (answer) => answer.answer_display === "Yes"
+        );
+
+        if (correctAnswer) {
+          question.correctAnswer = correctAnswer.answer_content;
+        } else {
+          question.correctAnswer = "N.A";
+        }
+      })()
+    ]);
+  }));
+
+  return {
+    questions: questions,
+    cognitiveSkillAverageData: cognitiveResult,
+    difficultyLevelAverageData: difficultyResult,
+    pie: pieValue
+  };
+};
+
 exports.viewClassReportQuestions = async (request) => {
 
   const [quizData, quizResult] = await Promise.all([
@@ -1161,6 +1442,238 @@ exports.viewClassReportQuestions = async (request) => {
 
   return { questions: questions, cognitiveSkillAverageData: cognitiveResult, difficultyLevelAverageData: difficultyResult, pie: pieValue }
 }
+
+exports.viewClassReportFocusAreaTest = async (request) => {
+  const testData = await fetchTestBasedOnQuestionPaper(request);
+  if (!testData || testData.length === 0) return [];
+
+  request["question_paper_ids"] = [request.data?.question_paper_id];
+  const questionPaperData = await getTestQuestionPaperById3(request);
+
+  const questionPaperQuestionIds = questionPaperData.data[0]?.questions.map(
+    (question) => question.question_id
+  ).flat();
+
+  request["class_test_id"] = [testData[0].class_test_id];
+  const testResultData = await fetchStudentresultMetadata3(request);
+
+  const [schoolDataRes, allStudentsData] = await Promise.all([
+    schoolRepository.getSchoolDetailsById2(request),
+    studentRepository.getStudentsData2(request)
+  ]);
+
+  const allStudentsCount = allStudentsData.Items.length;
+  console.log("allStudentsCount - ", allStudentsCount);
+
+  if (testResultData.length === 0) return [];
+
+  const testResultMarksData = testResultData
+    .filter(item => item.evaluated === "Yes")
+    .map(item => ({
+      marks: item.marks_details?.[0]?.qa_details || [],
+      studentId: item.student_id
+    }));
+
+  const totalStudents = testResultMarksData.length;
+
+  request["unit_chapter_id"] = questionPaperData.data[0]?.chapter_id;
+  const chapter_details = await chapterRepository.fetchBulkChaptersIDName2(request);
+
+  const chapter_array = chapter_details.map((val) => ({ "chapter_id": val.chapter_id }));
+  const chapter_response = await chapterRepository.fetchChaptersIDandChapterTopicID2({ items: chapter_array, condition: "OR" });
+
+  const testChapterMap = {};
+  if (chapter_response.Items.length > 0) {
+    for (const chapter of chapter_response.Items) {
+      testChapterMap[chapter.chapter_id] = [
+        ...(chapter.prelearning_topic_id || []),
+        ...(chapter.postlearning_topic_id || []),
+      ];
+    }
+  }
+
+  const topic_array = Object.values(testChapterMap).flat().map((val) => ({ topic_id: val }));
+  let concept_response = [];
+  let topic_response = { Items: [] };
+
+  if (topic_array.length > 0) {
+    topic_response = await topicRepository.fetchTopicIDDisplayTitleData2({ items: topic_array, condition: "OR" });
+
+    if (topic_response?.Items?.length > 0) {
+      concept_response = await conceptRepository.fetchConceptUsingTopicId(topic_response.Items);
+    }
+  }
+
+  const allConceptIds = new Set(concept_response.map(c => c.concept_id));
+
+  const conceptAndQuestions = concept_response.reduce((acc, concept) => {
+    const conceptQuestionIds = concept.concept_question_id.filter(qid => questionPaperQuestionIds.includes(qid));
+    if (concept.concept_question_id && conceptQuestionIds.length > 0) {
+      acc.push({
+        concept: concept.concept_id,
+        questions: conceptQuestionIds,
+      });
+    }
+    return acc;
+  }, []);
+
+  console.log("conceptAndQuestions - ", conceptAndQuestions);
+
+  const questions = await new Promise((resolve, reject) => {
+    questionRepository.fetchBulkQuestionsNameById3(
+      { question_id: questionPaperQuestionIds },
+      (err, res) => {
+        if (err) {
+          console.log(err);
+          return reject(err);
+        }
+        resolve(res);
+      }
+    );
+  });
+
+  const marksOfEachStudent = [];
+  testResultMarksData.map((qdata) => {
+    qdata.marks.map((marks) => {
+      Array.from(questionPaperQuestionIds).map((question) => {
+        if (question === marks.question_id) {
+          let marksValue;
+          if (marks.modified_marks === "N.A.") {
+            marksValue = marks.obtained_marks === "N.A." ? 0 : Number(marks.obtained_marks);
+          } else {
+            marksValue = Number(marks.modified_marks);
+          }
+
+          marksOfEachStudent.push({
+            studentid: qdata.studentId,
+            marks: marksValue,
+            questionId: question,
+          });
+        }
+      });
+    });
+  });
+
+  console.log("marksOfEachStudent - ", marksOfEachStudent);
+
+  const groupedMarks = marksOfEachStudent.reduce((acc, item) => {
+    const existingStudent = acc.find(
+      (student) => student.studentid === item.studentid
+    );
+
+    if (existingStudent) {
+      existingStudent.details.push({
+        marks: item.marks,
+        questionId: item.questionId,
+      });
+    } else {
+      acc.push({
+        studentid: item.studentid,
+        details: [
+          {
+            marks: item.marks,
+            questionId: item.questionId,
+          },
+        ],
+      });
+    }
+
+    return acc;
+  }, []);
+
+  const studentIds = groupedMarks.map((student) => student.studentid);
+  const students = studentIds.length && await studentRepository.getStudentsByIdName2({ student_id: studentIds });
+
+  const noOfQuestionsperConcept = concept_response.reduce((acc, concept) => {
+    const questionIds = concept.concept_question_id.filter(qid => questionPaperQuestionIds.includes(qid));
+    if (concept.concept_question_id && questionIds.length > 0) {
+      acc[concept.concept_id] = questionIds.length;
+    }
+    return acc;
+  }, {});
+
+  console.log("noOfQuestionsperConcept - ", noOfQuestionsperConcept);
+
+  const conceptNames = Array.from(allConceptIds).length &&
+    (await conceptRepository.fetchBulkConceptsIDName2({
+      unit_Concept_id: Array.from(allConceptIds),
+    }));
+
+  let conceptsToFocus = [];
+
+  let passPercentage = schoolDataRes.Items[0]?.test_config?.pct_of_student_for_reteach || 0;
+
+  let classPercentage = schoolDataRes.Items[0]?.test_config?.class_percentage || 0;
+
+  conceptAndQuestions.map(async (item) => {
+    item.numberOfQuestions = noOfQuestionsperConcept[item.concept] || 0;
+    item.name = conceptNames.find(
+      (c) => c.concept_id == item.concept
+    )?.display_name;
+
+    let studentsData = [];
+    item.passPercentage = passPercentage;
+    item.classPercentage = classPercentage;
+    item.allStudentsCount = allStudentsCount;
+
+    groupedMarks.map((student) => {
+      let marks = 0;
+      let totalconceptMarks = 0;
+
+      student.details.map((q) => {
+        questions.map((questionData, i) => {
+          if (q.questionId === questionData.question_id && item.questions.includes(q.questionId)) {
+            console.log(i);
+            totalconceptMarks = totalconceptMarks + questionData.marks;
+          }
+        });
+
+        item.questions.map((question) => {
+          if (q.questionId === question) {
+            marks = marks + Number(q.marks);
+          }
+        });
+      });
+
+      let finalMarks = totalconceptMarks > 0 ? (marks / totalconceptMarks) * 100 : 0;
+      console.log({ marks }, item.questions.length, totalconceptMarks, { finalMarks }, { passPercentage });
+
+      let passed = finalMarks >= passPercentage ? true : false;
+      studentsData.push({ student: student.studentid, passed: passed });
+    });
+
+    const countPassed = studentsData.filter(student => student.passed).length;
+    item.passed = (countPassed / allStudentsCount) * 100;
+    item.count = countPassed;
+    item.totalStudents = allStudentsCount;
+
+    let classPercentAchieved = (totalStudents / allStudentsCount) * 100;
+    if (item.passed >= classPercentage && classPercentAchieved >= classPercentage) {
+      item.successMatrix = "yes";
+    } else {
+      item.successMatrix = "no";
+      conceptsToFocus.push(item.name);
+    }
+
+    const studentFailed = studentsData.filter((student) => student.passed == false);
+
+    studentFailed.map((failedStudent) => {
+      students.map((student) => {
+        if (failedStudent.student === student.student_id) {
+          failedStudent.student_name = student.user_firstname + student.user_lastname;
+        }
+      });
+    });
+
+    item.failedStudent = studentFailed;
+  });
+
+  return {
+    conceptAndQuestions: conceptAndQuestions,
+    conceptsToFocus: conceptsToFocus,
+    testData: testData
+  };
+};
 
 exports.viewClassReportFocusArea = async (request) => {
   const [quizData, quizResult, schoolDataRes, allStudentsData] = await Promise.all([
