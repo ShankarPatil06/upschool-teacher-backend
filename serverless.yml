@@ -464,3 +464,7 @@ functions:
           path: /v1/removeUploadedAnswerData
           method: POST
           cors: true
+      - http:
+          path: /v1/saveTimetableConfiguration
+          method: POST
+          cors: true  
