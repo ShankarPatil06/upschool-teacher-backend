@@ -167,6 +167,7 @@ app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAnd
 // app.post("/v1/updateAttendance", teacherController.updateAttendance);
 app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
 app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
+// app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

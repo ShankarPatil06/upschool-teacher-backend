@@ -1,4 +1,5 @@
-const {studentServices} = require("../services");
+// const {studentServices} = require("../services");
+const { studentServices } = require("../services");
 
 exports.fetchIndividualDigiCard = (req, res, next) => {
     let request = req.body;
@@ -122,3 +123,21 @@ exports.sendEmailToParent = async (req, res, next) => {
         res.status(500).json({ message: "An error occurred while sending  email.", details: error.message });
     }
 };
+
+//  exports.sendWhatsAppToParent = async (req, res, next) => {
+//      console.log('Received request to send WhatsApp report.');
+//                const requestBody = JSON.parse(req.body);
+//                 console.log('Request Body:', requestBody);
+//          try {
+//              const request = {
+//                 data: req.body,
+//                  user: req.user,
+//                  headers: req.headers
+//              };
+//              console.log('Request Object:', request);
+//              const result = await studentServices.sendWhatsAppToParent(request);
+//             res.status(200).send(result);
+//        } catch (err) {
+//            next(err);
+//         }
+//    };
