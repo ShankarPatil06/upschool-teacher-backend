@@ -7,12 +7,10 @@ exports.updateActionAndRecommendations = async (request) => {
 
 exports.addAcademicPlanToSections = async (request) => {
 
-    const sections = request?.academic_plan?.selected_for?.map(section => {
-        let planDate = request.academic_plan
-        delete planDate?.selected_for ?? true
+    const sections = request?.selected_for?.map(section => {
         return {
             section_id: section?.value,
-            academic_plan: planDate
+            academic_plan: request.academic_plan
         }
     })
 
