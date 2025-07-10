@@ -30,3 +30,14 @@ exports.getSectionById = async (req, res, next) => {
         next(error);
     }
 }
+exports.saveTimetableConfiguration = (req, res, next) => {
+    let request = req.body;
+    sectionServices.saveTimetableConfiguration(request, function (err, response) {
+        if (err) {
+            res.status(err).json(response);
+        } else {
+            res.json(response);
+        }
+    });
+};
+

@@ -144,7 +144,9 @@ app.post("/v1/comprehensivePerformanceTopicWise", reportController.comprehensive
 app.post("/v1/comprehensivePerformanceTopicWiseForTest", reportController.comprehensivePerformanceTopicWiseForTest);
 app.post("/v1/comprehensivePerformanceConceptWise", reportController.comprehensivePerformanceConceptWise);
 app.post("/v1/comprehensivePerformanceConceptWiseForTest", reportController.comprehensivePerformanceConceptWiseForTest);
+app.post("/v1/viewClassReportQuestionsTest", reportController.viewClassReportQuestionsTest);
 app.post("/v1/viewClassReportQuestions", reportController.viewClassReportQuestions);
+app.post("/v1/viewClassReportFocusAreaTest", reportController.viewClassReportFocusAreaTest);
 app.post("/v1/viewClassReportFocusArea", reportController.viewClassReportFocusArea);
 app.post("/v1/viewChapterwisePerformanceTracking", reportController.viewChapterwisePerformanceTracking);
 app.post("/v1/getActionsAndRecommendations", reportController.getActionsAndRecommendations);
@@ -167,6 +169,8 @@ app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAnd
 
 app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSections)
 app.post("/v1/getSectionById", sectionController.getSectionById)
+//Section
+app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 
 
 function haltOnTimedout(req, res, next) {
