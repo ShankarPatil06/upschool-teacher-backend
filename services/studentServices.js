@@ -11,6 +11,7 @@ const { get, request } = require("http");
 const qs = require('qs');
 const axios = require('axios');
 const s3Services = require("./s3Service");
+const whatsappService = require("./whatsappService");
 let sendMail = require("./emailService");
 
 exports.fetchAllStudents = function (request, callback) {
@@ -1447,6 +1448,7 @@ exports.sendEmailToParent = async (request) => {
         const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
         const schoolName = schoolDetails.Items[0].school_name
         let worksheet = await exports.fetchCustomWorksheet(request);
+        console.log( 'student id' + worksheet);
         if (worksheet?.worksheet_template_url) {
             const studentDetails = await studentRepository.getAllStudents2(student_id);
             console.log({ studentDetails: studentDetails.Items[0] });
@@ -1454,6 +1456,7 @@ exports.sendEmailToParent = async (request) => {
                 request.data['parent_id'] = studentDetails.Items[0].parent_id;
                 const parentDetails = await studentRepository.getParentDetailsById(request)
                 console.log({ parentDetails });
+                console.log( 'parent details' + parentDetails);
                 if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
                 let fileKey = worksheet.question_paper_template
                 const fileLink = await s3Services.getFileBufferFromS3(fileKey);
@@ -1485,3 +1488,63 @@ exports.sendEmailToParent = async (request) => {
         throw error;
     }
 }
+
+// exports.sendWhatsAppToParent = async (request) => {
+//          try {
+//              const student_id = request.data.student_id;
+//              console.log( 'student id' + student_id);
+//              const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
+//       const schoolName = schoolDetails.Items[0].school_name;
+   
+// //          let worksheet = await exports.fetchCustomWorksheet(request);
+//             let worksheet = await exports.fetchCustomWorksheet(request);
+//             if (worksheet?.worksheet_template_url) {
+//                 const studentDetails = await studentRepository.getAllStudents2(student_id);
+//                 if (studentDetails?.Items?.[0]) {
+//                     request.data['parent_id'] = studentDetails.Items[0].parent_id;
+//                     const parentDetails = await studentRepository.getParentDetailsById(request);
+//                     console.log( 'parent details ph no' + parentDetails.phoneNumber);
+   
+//                     if (!parentDetails?.user_phone) {
+//                         throw new Error('There is no parent phone number associated with the student');
+//                     }
+   
+//                     const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`;
+//                     const chapterNames = request?.data.chapter_name?.join(', ');
+//                     const phoneNumber = parentDetails.user_phone; // Ensure this includes the country code
+   
+//                     // IMPORTANT: Replace with your actual, pre-approved template name from Meta
+//                     const templateName = 'student_progress_report';
+   
+//                     const components = [
+//                         {
+//                             "type": "header",
+//                             "parameters": [
+//                                 {
+//                                    "type": "document",
+//                                     "document": {
+//                                         "link": worksheet.worksheet_template_url,
+//                                         "filename": `${worksheet?.question_paper_name}.pdf`
+//                                     }
+//                                 }
+//                             ]
+//                         },
+//                         {
+//                             "type": "body",
+//                             "parameters": [
+//                                 { "type": "text", "text": studentName },
+//                                 { "type": "text", "text": chapterNames },
+//                                 { "type": "text", "text": schoolName }
+//                             ]
+//                         }
+//                     ];
+   
+//                     const whatsAppResponse = await whatsappService.sendTemplateMessage(phoneNumber, templateName, components);
+//                     return { httpStatusCode: 200, message: "WhatsApp message sent successfully.", details: whatsAppResponse };
+//                 }
+//             }
+//             throw new Error('There is no worksheet available for this student');
+//         } catch (error) {
+//             throw error;
+//         }
+//     };

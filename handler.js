@@ -172,6 +172,10 @@ app.post("/v1/getSectionById", sectionController.getSectionById)
 //Section
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 
+// update attendence
+app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
+app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
+// app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
