@@ -86,6 +86,38 @@ exports.addAcademicPlanToSections = async (request) => {
     return await DATABASE_TABLE2.updateService(params)
 }
 
+exports.addEvents = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+            "section_id": request.section_id
+        },
+        UpdateExpression: "set events = :events, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":events": request.events,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    }
+
+    return await DATABASE_TABLE2.updateService(params)
+}
+
+exports.addAdditionalSessions = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+            "section_id": request.section_id
+        },
+        UpdateExpression: "set additionalSessions = :additionalSessions, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":additionalSessions": request.additionalSessions,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    }
+
+    return await DATABASE_TABLE2.updateService(params)
+}
+
 exports.getSectionById = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_section_table,
@@ -93,6 +125,7 @@ exports.getSectionById = async (request) => {
     }
     return await DATABASE_TABLE2.getItem(params)
 }
+
 exports.saveTimetableConfiguration = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {

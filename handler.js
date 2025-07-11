@@ -169,6 +169,10 @@ app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAnd
 
 app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSections)
 app.post("/v1/getSectionById", sectionController.getSectionById)
+app.post("/v1/addAdditionalSessions", sectionController.addAdditionalSessions)
+app.post("/v1/addEvents", sectionController.addEvents)
+app.post("/v1/fetchTeachersBySchoolId", teacherController.fetchTeachersBySchoolId)
+
 //Section
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 

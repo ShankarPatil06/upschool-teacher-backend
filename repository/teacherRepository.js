@@ -135,7 +135,7 @@ exports.fetchTeacherSectionData2 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
         ProjectionExpression: "section_id, section_name"
     };
-    console.log({params});
+    console.log({ params });
     const data = await DATABASE_TABLE2.query(params);
     return data;
 
@@ -313,5 +313,20 @@ exports.fetchTeacherActivityDetails2 = async (request) => {
         }
     };
 
+    return await DATABASE_TABLE2.query(params);
+}
+
+exports.fetchTeachersBySchoolId = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "school_id = :school_id",
+        ExpressionAttributeValues: {
+            ":school_id": request,
+            ":common_id": constant.constValues.common_id
+        },
+        ProjectionExpression: "teacher_id, user_lastname, user_firstname"
+    }
     return await DATABASE_TABLE2.query(params);
 }
