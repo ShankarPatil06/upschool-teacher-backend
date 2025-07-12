@@ -73,3 +73,15 @@ exports.fetchTopicAndNoOfQuestions = async (req, res, next) => {
       next(error);
     }
 };
+
+exports.fetchAllChaptersBySubjectId = async(req, res, next) => {
+    console.log("Fetch all chapters by subject id");
+    console.log(req.body);
+    let request = req.body;
+    try {
+        const fetch_subjects_res = await subjectServices.getAllChaptersBySubjectId(request);
+        formatResponse(res, fetch_subjects_res);
+    } catch (error) {
+        next(error);
+    }
+};

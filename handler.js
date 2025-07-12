@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController } = require('./controller')
+const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController,  } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -46,6 +46,9 @@ app.post("/v1/fetchRelatedDigiCards", validator.validUser, digicardController.fe
 app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectController.fetchTopicAndNoOfQuestions);
 app.post("/v1/fetchAllStudents", studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
+
+app.post("/v1/fetchAllChaptersBySubjectId", subjectController.fetchAllChaptersBySubjectId); // IGNORE
+
 
 
 // app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning); 
@@ -176,6 +179,12 @@ app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionControlle
 app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
 app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
 // app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
+
+
+// CURRICULUM PLANNER
+// app.get("/v1/curriculum/terms", curriculumController.getTerms);
+// app.post("/v1/curriculum/plan", curriculumController.saveCurriculumPlan);
+// app.get("/v1/curriculum/plan/:planId", curriculumController.getCurriculumPlan);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
