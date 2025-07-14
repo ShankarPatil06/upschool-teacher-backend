@@ -71,38 +71,62 @@ exports.updateActionAndRecommendations= async (request) => {
 }
 
 exports.saveTimetableConfiguration = function (request, callback) {
-        dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-             if (DBErr) {
-                 console.log("Timetable Configuration Database Error");
-                 console.log(DBErr);
-                 callback(500, constant.messages.DATABASE_ERROR);
-             } else {
-                 let docClient = dynamoDBCall;
-                 let section_id = request.data.section_id;
-               let timetable_config = request.data.timetable_config;
-   
-                let update_params = {
-                    TableName: TABLE_NAMES.upschool_section_table,
-                    Key: {
-                        "section_id": section_id
-                    },
-                    UpdateExpression: "set timetable_config = :timetable_config, updated_ts = :updated_ts",
-                    ExpressionAttributeValues: {
-                       ":timetable_config": timetable_config,
-                       ":updated_ts": helper.getCurrentTimestamp(),
-                    },
-                    ReturnValues: "UPDATED_NEW"
-               };
-   
-                DATABASE_TABLE.updateRecord(docClient, update_params, function (err, data) {
-                    if (err) {
-                        console.error("Unable to update timetable configuration. Error JSON:", JSON.stringify(err, null,2));
-                        callback(500, err);
-                    } else {
-                        console.log("Timetable configuration updated successfully:", JSON.stringify(data, null, 2));
-                        callback(null, data);
-                    }
-                });
-            }
-        });
+    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+        if (DBErr) {
+            console.log("Timetable Configuration Database Error");
+            console.log(DBErr);
+            callback(500, constant.messages.DATABASE_ERROR);
+        } else {
+            let docClient = dynamoDBCall;
+            let section_id = request.data.section_id;
+            let new_timetable_config = request.data.timetable_config;
+
+            let read_params = {
+                TableName: TABLE_NAMES.upschool_section_table,
+                Key: {
+                    "section_id": section_id
+                }
+            };
+
+            DATABASE_TABLE.getRecord(docClient, read_params, function (err, data) {
+                if (err) {
+                    console.error("Unable to read timetable configuration. Error JSON:", JSON.stringify
+                        (err, null, 2));
+                    callback(500, err);
+                } else {
+                    let existing_timetable_config = data.Item ? data.Item.timetable_config : {};
+
+                    const updated_timetable_config = {
+                        ...existing_timetable_config,
+                        ...new_timetable_config
+                    };
+
+                    let update_params = {
+                        TableName: TABLE_NAMES.upschool_section_table,
+                        Key: {
+                            "section_id": section_id
+                        },
+                        UpdateExpression: "set timetable_config = :timetable_config, updated_ts =:updated_ts",
+                        ExpressionAttributeValues: {
+                            ":timetable_config": updated_timetable_config,
+                            ":updated_ts": helper.getCurrentTimestamp(),
+                        },
+                        ReturnValues: "UPDATED_NEW"
+                    };
+
+                    DATABASE_TABLE.updateRecord(docClient, update_params, function (err, data) {
+                        if (err) {
+                            console.error("Unable to update timetable configuration. Error JSON:", JSON.
+                                stringify(err, null, 2));
+                            callback(500, err);
+                        } else {
+                            console.log("Timetable configuration updated successfully:", JSON.stringify
+                                (data, null, 2));
+                            callback(null, data);
+                        }
+                    });
+                }
+            });
+        }
+    });
 };
