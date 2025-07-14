@@ -70,6 +70,22 @@ exports.updateActionAndRecommendations = async (request) => {
     return data;
 }
 
+exports.addHolidays = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+            "section_id": request.section_id
+        },
+        UpdateExpression: "set holidays = :holidays, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":holidays": request.holidays,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    }
+
+    return await DATABASE_TABLE2.updateService(params)
+}
+
 exports.addAcademicPlanToSections = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_section_table,

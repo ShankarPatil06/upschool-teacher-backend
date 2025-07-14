@@ -21,6 +21,16 @@ exports.addAcademicPlanToSections = async (req, res, next) => {
     }
 }
 
+exports.addHolidays = async (req, res, next) => {
+    try {
+        let request = req.body;
+        const update_section_res = await sectionServices.addHolidays(request);
+        return formatResponse(res, update_section_res);
+    } catch (error) {
+        next(error);
+    }
+}
+
 exports.addEvents = async (req, res, next) => {
     try {
         let request = req.body;

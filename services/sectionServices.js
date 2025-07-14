@@ -21,6 +21,22 @@ exports.addAcademicPlanToSections = async (request) => {
     return formatResponse2({ message: "academic plan saved" })
 }
 
+exports.addHolidays = async (request) => {
+
+    const holidays = request?.selected_for?.map(event => {
+        return {
+            section_id: event?.value,
+            holidays: request?.holidays
+        }
+    })
+
+    await holidays.forEach(async (event) => {
+        await sectionRepository.addHolidays(event)
+    })
+
+    return formatResponse2({ message: "Holidays saved" })
+}
+
 exports.addEvents = async (request) => {
 
     const events = request?.selected_for?.map(event => {

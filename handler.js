@@ -171,6 +171,7 @@ app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSec
 app.post("/v1/getSectionById", sectionController.getSectionById)
 app.post("/v1/addAdditionalSessions", sectionController.addAdditionalSessions)
 app.post("/v1/addEvents", sectionController.addEvents)
+app.post("/v1/addHolidays", sectionController.addHolidays)
 app.post("/v1/fetchTeachersBySchoolId", teacherController.fetchTeachersBySchoolId)
 
 //Section
