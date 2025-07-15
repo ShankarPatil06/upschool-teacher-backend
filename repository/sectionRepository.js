@@ -93,6 +93,7 @@ exports.getSectionById = async (request) => {
     }
     return await DATABASE_TABLE2.getItem(params)
 }
+
 exports.saveTimetableConfiguration = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {

@@ -47,7 +47,7 @@ app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectControlle
 app.post("/v1/fetchAllStudents", studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
-app.post("/v1/fetchAllChaptersBySubjectId", subjectController.fetchAllChaptersBySubjectId); // IGNORE
+app.post("/v1/fetchAllChaptersBySubjectId", subjectController.fetchAllChaptersBySubjectId); 
 
 
 
@@ -181,10 +181,6 @@ app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance)
 // app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
 
-// CURRICULUM PLANNER
-// app.get("/v1/curriculum/terms", curriculumController.getTerms);
-// app.post("/v1/curriculum/plan", curriculumController.saveCurriculumPlan);
-// app.get("/v1/curriculum/plan/:planId", curriculumController.getCurriculumPlan);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

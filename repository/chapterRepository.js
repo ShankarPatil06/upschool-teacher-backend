@@ -190,7 +190,7 @@ exports.fetchBulkChaptersIDName2 = async (request) => {
             ExpressionAttributeValues: {
                 ":chapter_id": unit_chapter_id[0]
             },
-            ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
+            ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id ,number_of_sessions ",
         };
 
         const chapterData = await DATABASE_TABLE2.query(params);
@@ -202,7 +202,7 @@ exports.fetchBulkChaptersIDName2 = async (request) => {
             RequestItems: {
                 [TABLE_NAMES.upschool_chapter_table]: {
                     Keys: keys,
-                    ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
+                    ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id , number_of_sessions",
                 },
             },
         };
