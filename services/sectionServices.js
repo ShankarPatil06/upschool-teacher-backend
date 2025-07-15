@@ -1,4 +1,4 @@
-const { formatResponse2 } = require("../helper/helper");
+const { formatResponse2, isEmptyArray } = require("../helper/helper");
 const { sectionRepository } = require("../repository")
 
 exports.updateActionAndRecommendations = async (request) => {
@@ -66,6 +66,18 @@ exports.addAdditionalSessions = async (request) => {
 }
 
 exports.getSectionById = async (request) => await sectionRepository.getSectionById(request);
+
+exports.getSectionByIds = async (request) => {
+    if (isEmptyArray(request)) return;
+
+    return sectionRepository.getSectionByIds(request)
+
+
+
+    // return {
+    //     Items: response?.map(e => e?.Item) ?? []
+    // }
+}
 
 exports.saveTimetableConfiguration = function (request, callback) {
     const section_ids = request.data.section_ids;

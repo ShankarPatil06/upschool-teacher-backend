@@ -41,6 +41,16 @@ exports.addEvents = async (req, res, next) => {
     }
 }
 
+exports.getSectionByIds = async (req, res, next) => {
+    try {
+        let request = req.body;
+        const update_section_res = await sectionServices.getSectionByIds(request);
+        return formatResponse(res, update_section_res);
+    } catch (error) {
+        next(error);
+    }
+}
+
 exports.getSectionById = async (req, res, next) => {
     try {
         let request = req.body;

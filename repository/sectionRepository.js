@@ -142,6 +142,18 @@ exports.getSectionById = async (request) => {
     return await DATABASE_TABLE2.getItem(params)
 }
 
+exports.getSectionByIds = async (request) => {
+    const params = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_section_table]: {
+                Keys: request?.map(e => ({ section_id: e }))
+            }
+        }
+    }
+
+    return (await DATABASE_TABLE2.getByObjects(params))?.Responses?.[TABLE_NAMES.upschool_section_table]
+}
+
 exports.saveTimetableConfiguration = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {
