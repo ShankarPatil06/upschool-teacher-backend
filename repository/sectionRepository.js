@@ -130,3 +130,27 @@ exports.saveTimetableConfiguration = function (request, callback) {
         }
     });
 };
+
+
+ exports.addCurriculumPlanToSection = async (request) => {
+        const { section_id, term_title, curriculum_plan_data } = request;
+    
+         let params = {
+             TableName: TABLE_NAMES.upschool_section_table,
+        Key: {
+                "section_id": section_id
+             },
+           UpdateExpression: "SET #cp = list_append(if_not_exists(#cp, :empty_list), :curriculum_plan_entry), updated_ts = :updated_ts",
+           ExpressionAttributeNames: {
+                "#cp": "curriculumPlan" 
+            },
+            ExpressionAttributeValues: {
+                ":curriculum_plan_entry": [{ [term_title]: curriculum_plan_data }], 
+                ":empty_list": [], 
+                ":updated_ts": helper.getCurrentTimestamp() 
+            },
+            ReturnValues: "UPDATED_NEW" 
+        };
+   
+        return await DATABASE_TABLE2.updateService(params);
+    };

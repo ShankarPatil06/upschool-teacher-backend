@@ -172,11 +172,12 @@ app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAnd
 
 app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSections)
 app.post("/v1/getSectionById", sectionController.getSectionById)
+app.post('/v1/addCurriculumPlanToSection', sectionController.addCurriculumPlanToSection);
 //Section
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 
 // update attendence
-app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
+app.post("/v1/upsertTeacherAttensssdance", teacherController.upsertTeacherAttendance);
 app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
 // app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
