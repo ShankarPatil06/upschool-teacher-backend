@@ -19,6 +19,7 @@ const subjectController = require('./subjectController')
 const teacherController = require('./teacherController')
 const testQuestionPaperController = require('./testQuestionPaperController')
 const topicController = require('./topicController')
+const lessonPlanController = require('./lessonPlanController')
 
 
 
@@ -43,6 +44,6 @@ module.exports = {
     subjectController,
     teacherController,
     testQuestionPaperController,
-    topicController
-    
+    topicController,
+    lessonPlanController,
 }

@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController } = require('./controller')
+const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController, lessonPlanController } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -177,6 +177,12 @@ app.post("/v1/fetchTeachersBySchoolId", teacherController.fetchTeachersBySchoolI
 
 //Section
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
+// 
+
+
+// lesson planner
+app.post("/v1/getLessonPlan", lessonPlanController.getLessonPlan)
+// app.post("/v1/getLessonPlan", express.raw(), lessonPlanController.getLessonPlan)
 
 
 function haltOnTimedout(req, res, next) {
