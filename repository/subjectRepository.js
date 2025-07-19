@@ -33,7 +33,7 @@ exports.getSubjetById2 = async (request) => {
             TableName: TABLE_NAMES.upschool_subject_table,
             KeyConditionExpression: "subject_id = :subject_id",
             ExpressionAttributeValues: {
-                ":subject_id": request.data.subject_id
+                ":subject_id": request.data?.subject_id
             }
         };
 
