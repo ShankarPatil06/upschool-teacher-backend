@@ -35,19 +35,19 @@ exports.fetchUserDataByEmail = function (request, callback) {
 
 exports.fetchUserDataByEmail2 = async (request) => {
 
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_email = :user_email",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_email": request.data.user_email.toLowerCase()
-            },
-        };
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_email = :user_email",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_email": request.data.user_email.toLowerCase()
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 
 };
 
@@ -86,20 +86,20 @@ exports.fetchUserDataByPhoneNo = function (request, callback) {
 
 exports.fetchUserDataByPhoneNo2 = async (request) => {
 
-    console.log("request - ",request);
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_phone_no = :user_phone_no",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_phone_no": request.data.user_email 
-            },
-        };
+    console.log("request - ", request);
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_phone_no = :user_phone_no",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_phone_no": request.data.user_email
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 };
 
 
@@ -138,19 +138,19 @@ exports.fetchUserDataByUserName = function (request, callback) {
 
 exports.fetchUserDataByUserName2 = async (request) => {
 
-        const queryParams = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_name = :user_name",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_name": request.data.user_email 
-            },
-        };
+    const queryParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_name = :user_name",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_name": request.data.user_email
+        },
+    };
 
-        const result = await DATABASE_TABLE2.query(queryParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(queryParams);
+    return result;
 };
 
 
@@ -220,20 +220,20 @@ exports.updateJwtToken = function (request, callback) {
 }
 
 exports.updateJwtToken2 = async (request) => {
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: {
-                "teacher_id": request.teacher_id
-            },
-            UpdateExpression: "set user_jwt = :user_jwt, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_jwt": request.user_jwt,
-                ":updated_ts": helper.getCurrentTimestamp(),
-            },
-        };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            "teacher_id": request.teacher_id
+        },
+        UpdateExpression: "set user_jwt = :user_jwt, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_jwt": request.user_jwt,
+            ":updated_ts": helper.getCurrentTimestamp(),
+        },
+    };
 
-        const result = await DATABASE_TABLE2.updateService(params);
-        return result;
+    const result = await DATABASE_TABLE2.updateService(params);
+    return result;
 };
 
 
@@ -266,20 +266,20 @@ exports.updateUserOtp = function (request, callback) {
 
 exports.updateUserOtp2 = async (request) => {
 
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: {
-                "teacher_id": request.data.teacher_id,
-            },
-            UpdateExpression: "set user_otp = :user_otp, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_otp": request.data.user_otp,
-                ":updated_ts": helper.getCurrentTimestamp(),
-            },
-        };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            "teacher_id": request.data.teacher_id,
+        },
+        UpdateExpression: "set user_otp = :user_otp, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_otp": request.data.user_otp,
+            ":updated_ts": helper.getCurrentTimestamp(),
+        },
+    };
 
-        await DATABASE_TABLE2.updateService(params);
-        return { statusCode: 200, body: "OTP updated successfully." };
+    await DATABASE_TABLE2.updateService(params);
+    return { statusCode: 200, body: "OTP updated successfully." };
 };
 
 
@@ -323,7 +323,7 @@ exports.resetUserOtp2 = async (request) => {
         },
     };
 
-    await DATABASE_TABLE2.updateService(params); 
+    await DATABASE_TABLE2.updateService(params);
     return { statusCode: 200, message: "OTP updated successfully" };
 
 };
@@ -359,21 +359,21 @@ exports.resetPassword = function (request, callback) {
 }
 
 exports.resetPassword2 = async (request) => {
- 
-        const params = {
-            TableName: TABLE_NAMES.upschool_teacher_info,
-            Key: { "teacher_id": request.data.teacher_id },
-            UpdateExpression: "set user_jwt = :user_jwt, user_salt = :user_salt, user_pwd = :user_pwd, updated_ts = :updated_ts",
-            ExpressionAttributeValues: {
-                ":user_jwt": request.data.user_jwt,
-                ":user_salt": request.data.user_salt,
-                ":user_pwd": request.data.user_pwd,
-                ":updated_ts": helper.getCurrentTimestamp()
-            },
-        };
 
-        await DATABASE_TABLE2.updateService(params);
-        return { statusCode: 200, message: "Password reset successfully" };
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: { "teacher_id": request.data.teacher_id },
+        UpdateExpression: "set user_jwt = :user_jwt, user_salt = :user_salt, user_pwd = :user_pwd, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_jwt": request.data.user_jwt,
+            ":user_salt": request.data.user_salt,
+            ":user_pwd": request.data.user_pwd,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    };
+
+    await DATABASE_TABLE2.updateService(params);
+    return { statusCode: 200, message: "Password reset successfully" };
 };
 
 
@@ -497,3 +497,116 @@ exports.fetchBulkUserssData = function (request, callback) {
         }
     });
 }
+
+
+
+
+//chunk
+// exports.fetchBulkUserssData = function (request, callback) {
+//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log(constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
+//             console.log(DBErr);
+//             return callback(500, constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
+//         }
+
+//         let userIdArray = request.data.userIdArray;
+//         let tableUserID = request.data.tableUserID;
+//         let userTableName = request.data.userTableName;
+
+//         // Deduplicate user IDs to avoid processing duplicates
+//         userIdArray = [...new Set(userIdArray)];
+//         console.log("User ID Array:", userIdArray);
+
+//         if (userIdArray.length === 0) {
+//             console.log("EMPTY BULK USER ID");
+//             return callback(0, { Items: [] });
+//         }
+
+//         let docClient = dynamoDBCall;
+
+//         if (userIdArray.length === 1) {
+//             // Single user ID - use query operation for better performance
+//             let expAttributeVal = {};
+//             expAttributeVal[':' + tableUserID] = userIdArray[0];
+
+//             let read_params = {
+//                 TableName: userTableName,
+//                 KeyConditionExpression: tableUserID + " = :" + tableUserID,
+//                 ExpressionAttributeValues: expAttributeVal,
+//             };
+
+//             console.log("READ PARAMS : ", read_params);
+//             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//         } else {
+//             // Multiple user IDs - use chunking strategy
+//             const CHUNK_SIZE = 25; // Optimal chunk size for scan operations
+//             const userIdChunks = helper.chunkArray(userIdArray, CHUNK_SIZE);
+
+//             console.log(`Processing ${userIdChunks.length} chunks of max ${CHUNK_SIZE} items each`);
+
+//             let allResults = [];
+//             let completedChunks = 0;
+//             let hasError = false;
+
+//             // Process each chunk sequentially to avoid overwhelming DynamoDB
+//             const processChunk = (chunkIndex) => {
+//                 if (hasError || chunkIndex >= userIdChunks.length) {
+//                     // All chunks processed successfully
+//                     if (!hasError && chunkIndex >= userIdChunks.length) {
+//                         console.log(`Total users retrieved: ${allResults.length}`);
+//                         return callback(0, { Items: allResults });
+//                     }
+//                     return;
+//                 }
+
+//                 const chunk = userIdChunks[chunkIndex];
+//                 let FilterExpressionDynamic = "";
+//                 let ExpressionAttributeValuesDynamic = {};
+
+//                 // Build filter expression for this chunk
+//                 chunk.forEach((element, index) => {
+//                     FilterExpressionDynamic += tableUserID + " = :" + tableUserID + index;
+//                     ExpressionAttributeValuesDynamic[':' + tableUserID + index] = element;
+
+//                     if (index < chunk.length - 1) {
+//                         FilterExpressionDynamic += " OR ";
+//                     }
+//                 });
+
+//                 let read_params = {
+//                     TableName: userTableName,
+//                     FilterExpression: FilterExpressionDynamic,
+//                     ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//                 };
+
+//                 console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${userIdChunks.length}:`, JSON.stringify(read_params, null, 2));
+
+//                 // Process this chunk
+//                 DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
+//                     if (hasError) return; // Skip if another chunk already failed
+
+//                     if (err) {
+//                         console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
+//                         hasError = true;
+//                         return callback(500, `Error fetching users data: ${err}`);
+//                     }
+
+//                     // Add this chunk's results to total results
+//                     if (data && data.Items) {
+//                         allResults = allResults.concat(data.Items);
+//                     }
+
+//                     completedChunks++;
+//                     console.log(`Completed chunk ${completedChunks}/${userIdChunks.length}`);
+
+//                     // Process next chunk
+//                     processChunk(chunkIndex + 1);
+//                 });
+//             };
+
+//             // Start processing from first chunk
+//             processChunk(0);
+//         }
+//     });
+// };

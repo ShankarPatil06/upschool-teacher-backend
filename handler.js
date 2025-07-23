@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController,topicController,chapterController,blueprintController,conceptController,subjectController,teacherController,questionController,testQuestionPaperController,classTestController,scannerController,quizController,schoolAdminController,reportController, schoolController, sectionController } = require('./controller')
+const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -44,7 +44,7 @@ app.post("/v1/fetchDigicardsBasedonTopic", validator.validUser, topicController.
 app.post("/v1/fetchIndividualDigiCard", validator.validUser, digicardController.fetchIndividualDigiCard);
 app.post("/v1/fetchRelatedDigiCards", validator.validUser, digicardController.fetchRelatedDigiCards);
 app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectController.fetchTopicAndNoOfQuestions);
-app.post("/v1/fetchAllStudents",  studentController.fetchAllStudents);
+app.post("/v1/fetchAllStudents", studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
 
@@ -69,6 +69,10 @@ app.post("/v1/generatePrePostQuiz", teacherController.generatePrePostQuiz); // v
 app.post("/v1/reArrangeDigiCardOrder", validator.validUser, teacherController.reArrangeDigiCardOrder);
 app.post("/v1/toggleDigicardsInTopic", validator.validUser, teacherController.toggleDigicardsInTopic);
 app.post("/v1/fetchDigiCardstoReorder", validator.validUser, teacherController.fetchDigiCardstoReorder);
+app.post("/v1/fetchDigiCardstoReorder", validator.validUser, teacherController.fetchDigiCardstoReorder);
+app.post("/v1/fetchTodayAttendanceByUserId", validator.validUser, teacherController.getTodayAttendance);
+app.post("/v1/insertClockInRecord", validator.validUser, teacherController.clockIn);
+app.post("/v1/updateClockOutTime", validator.validUser, teacherController.clockOut);
 
 /** DIGICARD EXTENSION **/
 app.post("/v1/fetchAllPreTopicDigicards", validator.validUser, digicardController.fetchAllPreTopicDigicards);
@@ -91,9 +95,9 @@ app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionB
 app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints);
 
 // CLASS TEST : 
-app.post("/v1/addClassTest",validator.validUser, classTestController.addClassTest);
-app.post("/v1/fetchClassTestsBasedonStatus",validator.validUser, classTestController.fetchClassTestsBasedonStatus);
-app.post("/v1/fetchClassTestById",  classTestController.fetchClassTestById);
+app.post("/v1/addClassTest", validator.validUser, classTestController.addClassTest);
+app.post("/v1/fetchClassTestsBasedonStatus", validator.validUser, classTestController.fetchClassTestsBasedonStatus);
+app.post("/v1/fetchClassTestById", classTestController.fetchClassTestById);
 app.post("/v1/fetchQuestionsBasedonQuestionPaper", validator.validUser, classTestController.fetchQuestionsBasedonQuestionPaper);
 app.post("/v1/startEvaluation", validator.validUser, classTestController.startEvaluation);
 app.post("/v1/getStudentsBasedOnSection", validator.validUser, classTestController.getStudentsBasedOnSection);
@@ -113,17 +117,17 @@ app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2
 app.post("/v1/removeUploadedAnswerData", scannerController.removeUploadedAnswerData); // Quiz  validator.validScannerUser,
 
 // Quiz
-app.post("/v1/checkDuplicateQuizName",  validator.validUser, quizController.checkDuplicateQuizName);
-app.post("/v1/toggleQuizStatus", validator.validUser, quizController.toggleQuizStatus); 
-app.post("/v1/fetchQuizBasedonStatus", validator.validUser, quizController.fetchQuizBasedonStatus); 
-app.post("/v1/viewQuizQuestionPaper", validator.validUser, quizController.viewQuizQuestionPaper); 
-app.post("/v1/getStudentQuizResultData",  validator.validUser, quizController.getStudentQuizResultData);
+app.post("/v1/checkDuplicateQuizName", validator.validUser, quizController.checkDuplicateQuizName);
+app.post("/v1/toggleQuizStatus", validator.validUser, quizController.toggleQuizStatus);
+app.post("/v1/fetchQuizBasedonStatus", validator.validUser, quizController.fetchQuizBasedonStatus);
+app.post("/v1/viewQuizQuestionPaper", validator.validUser, quizController.viewQuizQuestionPaper);
+app.post("/v1/getStudentQuizResultData", validator.validUser, quizController.getStudentQuizResultData);
 app.post("/v1/updateStudentQuizMarks", quizController.updateStudentQuizMarks); // validator.validUser,
 app.post("/v1/fetchQuizTemplates", validator.validUser, quizController.fetchQuizTemplates);
 app.post("/v1/resetQuizEvaluationStatus", validator.validUser, quizController.resetQuizEvaluationStatus);
 app.post("/v1/startQuizEvaluation", quizController.startQuizEvaluation); // validator.validUser,
 
-app.post("/v1/getIndividualQuizReport",reportController.getIndividualQuizReport)
+app.post("/v1/getIndividualQuizReport", reportController.getIndividualQuizReport)
 
 // School admin
 app.post("/v1/createSchoolAdmin", validator.validUser, schoolAdminController.createSchoolAdmin);
@@ -132,32 +136,32 @@ app.post("/v1/toggleSchoolAdminStatus", validator.validUser, schoolAdminControll
 
 // Dashboard Reports
 app.post("/v1/fetchAssessmentSummary", reportController.fetchAssessmentSummary);
-app.post("/v1/getTargetedLearningExpectation",reportController.getTargetedLearningExpectation);
-app.post("/v1/getTargetedLearningExpectationDetails",reportController.getTargetedLearningExpectationDetails);
-app.post("/v1/preLearningSummaryDetails",reportController.preLearningSummaryDetails);
-app.post("/v1/postLearningSummaryDetails",reportController.postLearningSummaryDetails);
-app.post("/v1/preLearningBlueprintDetails",reportController.preLearningBlueprintDetails);
-app.post("/v1/viewAnalysisIndividualReport",reportController.viewAnalysisIndividualReport);
-app.post("/v1/comprehensivePerformanceChapterWise",reportController.comprehensivePerformanceChapterWise);
-app.post("/v1/comprehensivePerformanceChapterWiseForTest",reportController.comprehensivePerformanceChapterWiseForTest);
-app.post("/v1/comprehensivePerformanceTopicWise",reportController.comprehensivePerformanceTopicWise);
-app.post("/v1/comprehensivePerformanceTopicWiseForTest",reportController.comprehensivePerformanceTopicWiseForTest);
-app.post("/v1/comprehensivePerformanceConceptWise",reportController.comprehensivePerformanceConceptWise);
-app.post("/v1/comprehensivePerformanceConceptWiseForTest",reportController.comprehensivePerformanceConceptWiseForTest);
-app.post("/v1/viewClassReportQuestions",reportController.viewClassReportQuestions);
-app.post("/v1/viewClassReportFocusArea",reportController.viewClassReportFocusArea);
-app.post("/v1/viewChapterwisePerformanceTracking",reportController.viewChapterwisePerformanceTracking);
-app.post("/v1/getActionsAndRecommendations",reportController.getActionsAndRecommendations);
-app.post("/v1/getActionsAndRecommendationDetail",reportController.getActionsAndRecommendationDetail);
-app.post("/v1/fetchSchoolDetails",schoolController.fetchSchoolDetails);
+app.post("/v1/getTargetedLearningExpectation", reportController.getTargetedLearningExpectation);
+app.post("/v1/getTargetedLearningExpectationDetails", reportController.getTargetedLearningExpectationDetails);
+app.post("/v1/preLearningSummaryDetails", reportController.preLearningSummaryDetails);
+app.post("/v1/postLearningSummaryDetails", reportController.postLearningSummaryDetails);
+app.post("/v1/preLearningBlueprintDetails", reportController.preLearningBlueprintDetails);
+app.post("/v1/viewAnalysisIndividualReport", reportController.viewAnalysisIndividualReport);
+app.post("/v1/comprehensivePerformanceChapterWise", reportController.comprehensivePerformanceChapterWise);
+app.post("/v1/comprehensivePerformanceChapterWiseForTest", reportController.comprehensivePerformanceChapterWiseForTest);
+app.post("/v1/comprehensivePerformanceTopicWise", reportController.comprehensivePerformanceTopicWise);
+app.post("/v1/comprehensivePerformanceTopicWiseForTest", reportController.comprehensivePerformanceTopicWiseForTest);
+app.post("/v1/comprehensivePerformanceConceptWise", reportController.comprehensivePerformanceConceptWise);
+app.post("/v1/comprehensivePerformanceConceptWiseForTest", reportController.comprehensivePerformanceConceptWiseForTest);
+app.post("/v1/viewClassReportQuestions", reportController.viewClassReportQuestions);
+app.post("/v1/viewClassReportFocusArea", reportController.viewClassReportFocusArea);
+app.post("/v1/viewChapterwisePerformanceTracking", reportController.viewChapterwisePerformanceTracking);
+app.post("/v1/getActionsAndRecommendations", reportController.getActionsAndRecommendations);
+app.post("/v1/getActionsAndRecommendationDetail", reportController.getActionsAndRecommendationDetail);
+app.post("/v1/fetchSchoolDetails", schoolController.fetchSchoolDetails);
 
 // Student Dashboard
 app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers);
-app.post("/v1/needAttention",studentController.needAttention);
-app.post("/v1/studentChaptersPerformance",studentController.studentChaptersPerformance);
-app.post("/v1/customWorksheetGenerated",studentController.customWorksheetGenerated);
-app.post("/v1/fetchCustomWorksheet",studentController.fetchCustomWorksheet);
-app.post("/v1/sendEmailToParent",studentController.sendEmailToParent);
+app.post("/v1/needAttention", studentController.needAttention);
+app.post("/v1/studentChaptersPerformance", studentController.studentChaptersPerformance);
+app.post("/v1/customWorksheetGenerated", studentController.customWorksheetGenerated);
+app.post("/v1/fetchCustomWorksheet", studentController.fetchCustomWorksheet);
+app.post("/v1/sendEmailToParent", studentController.sendEmailToParent);
 app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);
 app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise);
 

@@ -60,6 +60,119 @@ exports.fetchBulkData = function (request, callback) {
   });
 };
 
+
+
+////chunking
+// exports.fetchBulkData = function (request, callback) {
+//   dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//     if (DBErr) {
+//       console.log(constant.messages.DATABASE_ERROR);
+//       console.log(DBErr);
+//       return callback(500, constant.messages.DATABASE_ERROR);
+//     }
+
+//     let IdArray = request.IdArray;
+//     let fetchIdName = request.fetchIdName;
+//     let TableName = request.TableName;
+
+//     // Deduplicate IDs to avoid processing duplicates
+//     IdArray = [...new Set(IdArray)];
+//     console.log("ID Array:", IdArray);
+
+//     if (IdArray.length === 0) {
+//       console.log("EMPTY BULK ID");
+//       return callback(0, { Items: [] });
+//     }
+
+//     let docClient = dynamoDBCall;
+
+//     if (IdArray.length === 1) {
+//       // Single ID - use query operation for better performance
+//       let expAttributeVal = {};
+//       expAttributeVal[":" + fetchIdName] = IdArray[0];
+
+//       let read_params = {
+//         TableName: TableName,
+//         KeyConditionExpression: fetchIdName + " = :" + fetchIdName,
+//         ExpressionAttributeValues: expAttributeVal,
+//       };
+
+//       console.log("READ PARAMS : ", read_params);
+//       DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//     } else {
+//       // Multiple IDs - use chunking strategy
+//       const CHUNK_SIZE = 25; // Optimal chunk size for scan operations
+//       const idChunks = helper.chunkArray(IdArray, CHUNK_SIZE);
+
+//       console.log(`Processing ${idChunks.length} chunks of max ${CHUNK_SIZE} items each`);
+
+//       let allResults = [];
+//       let completedChunks = 0;
+//       let hasError = false;
+
+//       // Process each chunk sequentially to avoid overwhelming DynamoDB
+//       const processChunk = (chunkIndex) => {
+//         if (hasError || chunkIndex >= idChunks.length) {
+//           // All chunks processed successfully
+//           if (!hasError && chunkIndex >= idChunks.length) {
+//             console.log(`Total items retrieved: ${allResults.length}`);
+//             return callback(0, { Items: allResults });
+//           }
+//           return;
+//         }
+
+//         const chunk = idChunks[chunkIndex];
+//         let FilterExpressionDynamic = "";
+//         let ExpressionAttributeValuesDynamic = {};
+
+//         // Build filter expression for this chunk
+//         chunk.forEach((element, index) => {
+//           FilterExpressionDynamic += fetchIdName + " = :" + fetchIdName + index;
+//           ExpressionAttributeValuesDynamic[":" + fetchIdName + index] = element;
+
+//           if (index < chunk.length - 1) {
+//             FilterExpressionDynamic += " OR ";
+//           }
+//         });
+
+//         let read_params = {
+//           TableName: TableName,
+//           FilterExpression: FilterExpressionDynamic,
+//           ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//         };
+
+//         console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${idChunks.length}:`, JSON.stringify(read_params, null, 2));
+
+//         // Process this chunk
+//         DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
+//           if (hasError) return; // Skip if another chunk already failed
+
+//           if (err) {
+//             console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
+//             hasError = true;
+//             return callback(500, `Error fetching bulk data: ${err}`);
+//           }
+
+//           // Add this chunk's results to total results
+//           if (data && data.Items) {
+//             allResults = allResults.concat(data.Items);
+//           }
+
+//           completedChunks++;
+//           console.log(`Completed chunk ${completedChunks}/${idChunks.length}, items so far: ${allResults.length}`);
+
+//           // Process next chunk
+//           processChunk(chunkIndex + 1);
+//         });
+//       };
+
+//       // Start processing from first chunk
+//       processChunk(0);
+//     }
+//   });
+// };
+
+
 exports.fetchBulkData2 = async function (request) {
   const { IdArray, fetchIdName, TableName } = request;
 
@@ -285,7 +398,9 @@ exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
     };
 
     return await DATABASE_TABLE2.query(readParams);
-  } else {
+  }
+
+  else {
     IdArray.forEach((element, index) => {
       FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
       ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
@@ -310,6 +425,90 @@ exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
     return await DATABASE_TABLE2.query(readParams);
   }
 };
+
+// ///////////////chunk
+// exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
+//   let { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
+
+//   // Deduplicate IDs to avoid processing duplicates
+//   IdArray = [...new Set(IdArray)];
+//   console.log("IdArray : ", IdArray);
+
+//   if (IdArray.length === 0) {
+//     console.log("EMPTY BULK ID");
+//     return { Items: [] };
+//   } else if (IdArray.length === 1) {
+//     let ExpressionAttributeValuesDynamic = {};
+//     ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
+//     ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+//     ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
+
+//     const readParams = {
+//       TableName: TableName,
+//       IndexName: Indexes.common_id_index,
+//       KeyConditionExpression: "common_id = :common_id",
+//       FilterExpression: `${fetchIdName} = :${fetchIdName} AND ${isActiveFieldName} = :${isActiveFieldName}`,
+//       ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//     };
+
+//     console.log("READ PARAMS : ", readParams);
+//     const result = await DATABASE_TABLE2.query(readParams);
+//     return result.Items || [];
+//   } else {
+//     // Use chunking to optimize large ID arrays
+//     // Smaller chunk size for query operations due to filter expression complexity
+//     const idChunks = helper.chunkArray(IdArray, 100);
+//     let allResponses = [];
+
+//     console.log(`Processing ${idChunks.length} chunks of max 25 items each`);
+
+//     // Process chunks sequentially to avoid overwhelming DynamoDB
+//     for (const chunk of idChunks) {
+//       let FilterExpressionDynamic = "";
+//       let ExpressionAttributeValuesDynamic = {};
+
+//       // Build OR condition for this chunk
+//       chunk.forEach((element, index) => {
+//         FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
+//         ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
+
+//         if (index < chunk.length - 1) {
+//           FilterExpressionDynamic += " OR ";
+//         }
+//       });
+
+//       // Add active status filter and common_id
+//       FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
+//       ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
+//       ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+//       const readParams = {
+//         TableName: TableName,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: FilterExpressionDynamic,
+//         ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//       };
+
+//       console.log(`QUERY PARAMS for chunk: `, JSON.stringify(readParams, null, 2));
+
+//       try {
+//         const response = await DATABASE_TABLE2.query(readParams);
+//         if (response.Items && response.Items.length > 0) {
+//           allResponses = allResponses.concat(response.Items);
+//         }
+//       } catch (error) {
+//         console.error(`Error processing chunk:`, error);
+//         throw error;
+//       }
+//     }
+
+//     console.log(`Total items retrieved: ${allResponses.length}`);
+//     return allResponses;
+//   }
+// };
+
+
 
 
 exports.fetchBulkDataWithProjection = function (request, callback) {
