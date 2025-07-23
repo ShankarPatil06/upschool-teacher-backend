@@ -2,46 +2,47 @@ const dynamoDbCon = require('../awsConfig');
 const { DATABASE_TABLE } = require('./baseRepository');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
+const { isEmptyArray } = require('../helper/helper');
 
 
 exports.fetchGroupsData = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) { 
+        if (DBErr) {
             console.log("DigiCard Data Database Error");
-            console.log(DBErr); 
+            console.log(DBErr);
             callback(500, constant.messages.DATABASE_ERROR);
-        } else { 
+        } else {
             let docClient = dynamoDBCall;
             let FilterExpressionDynamic = "";
-            let ExpressionAttributeValuesDynamic = {}; 
-            let group_array = request.group_array; 
-            
-            if (group_array.length === 0) { 
+            let ExpressionAttributeValuesDynamic = {};
+            let group_array = request.group_array;
 
-                callback(400, constant.messages.NO_RELATED_DIGICARDS); 
+            if (group_array.length === 0) {
 
-            } else if (group_array.length === 1){ 
-                let read_params = { 
+                callback(400, constant.messages.NO_RELATED_DIGICARDS);
+
+            } else if (group_array.length === 1) {
+                let read_params = {
                     TableName: TABLE_NAMES.upschool_group_table,
-                    KeyConditionExpression: "group_id = :group_id", 
+                    KeyConditionExpression: "group_id = :group_id",
                     ExpressionAttributeValues: {
                         ":group_id": group_array[0],
-                    }, 
+                    },
                 }
-    
+
                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
-            } else { 
-                group_array.forEach((element, index) => { 
-                    if(index < group_array.length-1){ 
-                        FilterExpressionDynamic = FilterExpressionDynamic + "(group_id = :group_id"+ index +") OR "
-                        ExpressionAttributeValuesDynamic[':group_id'+ index] = element + '' 
-                    } else{
-                        FilterExpressionDynamic = FilterExpressionDynamic + "(group_id = :group_id"+ index +")"
-                        ExpressionAttributeValuesDynamic[':group_id'+ index] = element;
+            } else {
+                group_array.forEach((element, index) => {
+                    if (index < group_array.length - 1) {
+                        FilterExpressionDynamic = FilterExpressionDynamic + "(group_id = :group_id" + index + ") OR "
+                        ExpressionAttributeValuesDynamic[':group_id' + index] = element + ''
+                    } else {
+                        FilterExpressionDynamic = FilterExpressionDynamic + "(group_id = :group_id" + index + ")"
+                        ExpressionAttributeValuesDynamic[':group_id' + index] = element;
                     }
-                }); 
+                });
 
                 let read_params = {
                     TableName: TABLE_NAMES.upschool_group_table,
@@ -110,4 +111,18 @@ exports.fetchGroupsData2 = async (request) => {
         console.error("Error in fetchGroupsData:", error);
         throw new Error(error.message || "Failed to fetch groups data");
     }
+}
+
+exports.getGroupByIds = async (request) => {
+    if (isEmptyArray(request)) return [];
+
+    const groupDetailsParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_group_table]: {
+                Keys: request?.map(e => ({ group_id: e }))
+            }
+        }
+    }
+
+    return (await DATABASE_TABLE2.getByObjects(groupDetailsParams))?.Responses[TABLE_NAMES.upschool_group_table] ?? [];
 }

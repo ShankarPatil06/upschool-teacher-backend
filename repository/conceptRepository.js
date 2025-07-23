@@ -355,3 +355,17 @@ exports.fetchConceptUsingTopicId = async (request) => {
         throw new Error(`Failed to fetch concepts: ${error.message}`);
     }
 };
+
+exports.getConceptsByIds = async (request) => {
+    if (helper.isEmptyArray(request)) return [];
+
+    const conceptsParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_concept_blocks_table]: {
+                Keys: request?.map(e => ({ concept_id: e }))
+            }
+        }
+    }
+
+    return (await DATABASE_TABLE2.getByObjects(conceptsParams))?.Responses[TABLE_NAMES.upschool_concept_blocks_table] ?? [];
+}

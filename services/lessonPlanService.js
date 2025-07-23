@@ -2,7 +2,8 @@ const fs = require('fs')
 const { OpenAI } = require('openai');
 const PDFDocument = require('pdfkit');
 
-const { } = require("../repository");
+const { chapterRepository, classRepository, sectionRepository, topicRepository, schoolAdminRepository, conceptRepository, unitRepository, subjectRepository, groupRepository, schoolRepository, teachingActivityRepository } = require("../repository");
+const { TABLE_NAMES } = require('../constants/tables');
 
 const openAiClient = new OpenAI({
     apiKey: process.env.OPEN_AI_LESSON_PLANNER_KEY
@@ -26,75 +27,106 @@ const createPdf = (lessonData, outputPath = "lesson_plan.pdf") => {
     // return doc
 }
 
+const chapterIds = [
+    "89d03a7b-fa31-5fef-a81d-fc9ca017c131",
+    "88f9fa55-7ec8-5ee7-906d-8669f6562900",
+    "6308f5f6-caa3-5e23-9b5e-7f0a0077211e",
+    "6001ea53-6c33-5224-ab0a-331d761886f5",
+    "1d7c7c8d-47d6-5404-9e49-8b7eb14471ff"
+];
+
 exports.generateLessonPlan = async (data) => {
-    const systemPrompt = `
-    Create a lesson plan session-wise based on the following details:
 
-    - Board: ${data.board}
-    - Grade: ${data.grade}
-    - Subject: ${data.subject}
-    - Sub-Subject: ${data.subSubject}
-    - Unit: ${data.unit}
-    - Chapter: ${data.chapter}
-    - Topics: ${data.topics.map(t => t.topic).join(', ')}
-    - Session Type: ${data.sessionType}
-    - Number of Sessions: ${data.noOfSession}
-    - Duration per Session: ${data.duration} minutes
+    const school_id = data?.school_id;
 
-    Ensure the plan is structured and ready for teaching, adhering to the guidelines.
+    const schoolDetails = await schoolRepository.getSchoolById(school_id);
+    const school_board = schoolDetails?.school_board[0] ?? '';
+    const schoolPrompt = schoolDetails?.schoolPrompt ?? "";
+
+    // data need to be collected from principle
+
+    const subject = "maths";
+    const forClass = "10";
+    const numberOfSessions = 30;
+    const timePerSession = "45 minutes";
+
+    const chapterDetails = await chapterRepository.getChapterDetailsByIds(chapterIds);
+    // const topicIds = (chapterDetails?.map(e => ([...(e?.postlearning_topic_id ?? []), ...(e?.prelearning_topic_id ?? [])])))?.flat();
+    const topicIds = (chapterDetails?.map(e => ([...(e?.postlearning_topic_id ?? [])])))?.flat();
+    const nonDuplicateTopicIds = [...(new Set(topicIds ?? []))]
+
+    const topicDetails = await topicRepository.getTopicDetailsByIds(nonDuplicateTopicIds);
+    const topicDetailsMap = new Map(topicDetails?.map(e => [e?.topic_id, e]))
+    const conceptIds = (topicDetails?.map(topic => ([...(topic?.topic_concept_id ?? [])])))?.flat();
+    const nonDuplicateConceptIds = [...new Set(conceptIds ?? [])]
+
+    const conceptDetails = await conceptRepository.getConceptsByIds(nonDuplicateConceptIds);
+    const conceptsDetailsMap = new Map(conceptDetails?.map(e => [e?.concept_id, e]))
+    // const groupIds = (conceptDetails?.map(e => [...(e?.concept_group_id?.basic ?? []), ...(e?.concept_group_id?.intermediate ?? []), ...(e?.concept_group_id?.advanced ?? [])]))?.flat();
+    // const nonDuplicateGroupIds = [...new Set(groupIds ?? [])]
+
+    // const groupDetails = await groupRepository.getGroupByIds(nonDuplicateGroupIds);
+
+
+    const prompts = await teachingActivityRepository.getAdminPrompt();
+    const upperPrompt = prompts?.prompts ?? "Create a lesson plan session-wise based on the following details: ";
+    const bottomPrompt = prompts?.bottomPrompt ?? "Ensure the plan is structured and ready for teaching, adhering to the guidelines.";
+
+    const stringFormat = chapterDetails?.map((chap, chapterIndex) => {
+        let chapterTitle = chap?.chapter_title;
+        let topicIds = chap?.postlearning_topic_id;
+        let topicDetails = topicIds?.map((topic, topicIndex) => {
+            const topicDetail = topicDetailsMap.get(topic)
+            const topicTitle = topicDetail?.topic_title;
+
+            const conceptIds = topicDetail?.topic_concept_id;
+
+            const conceptDetails = conceptIds?.map((e, conceptIndex) => {
+                let concept = conceptsDetailsMap?.get(e);
+                let conceptDetail = concept?.concept_details ?? "concept description";
+                let conceptTitle = concept?.concept_title
+                return `
+                    concept ${conceptIndex + 1} :  ${conceptTitle}
+                    description : ${conceptDetail}
+                `
+            })
+
+            return `
+                topic ${topicIndex + 1} : ${topicTitle}
+                concepts : ${conceptDetails}
+            `
+        })
+
+        return `
+            chapter ${chapterIndex + 1} : ${chapterTitle}
+            topics : ${topicDetails}
+        `
+    });
+
+    const otherDetails = `
+        board : ${school_board}
+        subject : ${subject}
+        class : ${forClass}
+        number of session : ${numberOfSessions}
+        time per session : ${timePerSession}
     `;
 
-    // const systemPrompt = `
-    // Create a detailed, session-wise lesson plan based on the following input data.
-    // The response must be formatted in the exact structure shown below, ready for direct use in a document or PDF:
+    const finalPrompt = `
+        ${upperPrompt}
 
-    // Board: ${data.board}
-    // Grade: ${data.grade}
-    // Subject: ${data.subject}
-    // Sub-Subject: ${data.subSubject}
-    // Unit: ${data.unit}
-    // Chapter: ${data.chapter}
-    // Topics: ${data.topics.map(t => t.topic).join(', ')}
-    // Session Type: ${data.sessionType}
-    // Number of Sessions: ${data.noOfSession}
-    // Duration per Session: ${data.duration} minutes
+        ${schoolPrompt}
 
-    // Provide the lesson plan in a session-wise format with the following subheadings for each session:
+        ${otherDetails}
 
-    // Session [number]: [Topic or Title]
+        ${stringFormat?.join(", ")}
 
-    // Objective
-
-    // Materials Required
-
-    // Teaching Process
-
-    // Warm-up
-
-    // Introduction
-
-    // Guided Practice
-
-    // Student Activity
-
-    // Recap and Conclusion
-
-    // Assessment
-
-    // Homework
-
-    // Include Final Notes at the end.
-    // If topic names are missing or placeholders, assume a relevant Grade-${data.grade} topic appropriate for ${data.subject}, and proceed accordingly. Keep the language teacher-friendly and the format printable.
-    // `;
+        ${bottomPrompt}
+    `;
 
     try {
         const completion = await openAiClient.chat.completions.create({
             model: "chatgpt-4o-latest",
-            messages: [
-                {
-                    role: "user", content: systemPrompt
-                }
-            ]
+            messages: [{ role: "user", content: finalPrompt }]
         })
 
         console.log({ lessonPlannerUsage: completion?.usage ?? {} });
@@ -102,13 +134,8 @@ exports.generateLessonPlan = async (data) => {
         let response = completion?.choices[0]?.message?.content ?? ""
 
         if (!!response) {
-            // Generate PDF and get the file path
-            // const pdfPath = createPdf(response);
-
-            // Return both lesson plan content and PDF path
             return {
                 lesson_plan: response,
-                // pdf_path: pdfPath
                 pdf_path: null
             }
         } else {

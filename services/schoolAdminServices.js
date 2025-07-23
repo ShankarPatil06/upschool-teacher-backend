@@ -42,3 +42,7 @@ exports.changeSchoolAdminStatus = async function (request) {
     }
 };
 
+exports.updateSchoolPrompt = async (request) => {
+    return await schoolAdminRepository.updateSchoolPrompt(request);
+}
+

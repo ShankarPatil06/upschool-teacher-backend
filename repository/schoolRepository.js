@@ -38,3 +38,12 @@ exports.getSchoolDetailsById2 = async (request) => {
 
     return await DATABASE_TABLE2.query(params);
 }
+
+exports.getSchoolById = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_school_info_table,
+        Key: { school_id: request }
+    }
+
+    return (await DATABASE_TABLE2.getItem(params))?.Item
+}

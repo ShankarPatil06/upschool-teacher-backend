@@ -2,13 +2,13 @@ let DBEnvPrefix = process.env.DB_PREFIX;
 let DBNamePrefix = `${DBEnvPrefix}upschool_`;
 
 exports.TABLE_NAMES = {
-    upschool_users_table: `${DBNamePrefix}users_table`,  
-    upschool_digi_card_table: `${DBNamePrefix}digi_card_table`,  
-    upschool_topic_table: `${DBNamePrefix}topic_table`,  
-    upschool_chapter_table: `${DBNamePrefix}chapter_table`,  
-    upschool_unit_table: `${DBNamePrefix}unit_table`,  
-    upschool_standard_table: `${DBNamePrefix}standard_table`,  
-    
+    upschool_users_table: `${DBNamePrefix}users_table`,
+    upschool_digi_card_table: `${DBNamePrefix}digi_card_table`,
+    upschool_topic_table: `${DBNamePrefix}topic_table`,
+    upschool_chapter_table: `${DBNamePrefix}chapter_table`,
+    upschool_unit_table: `${DBNamePrefix}unit_table`,
+    upschool_standard_table: `${DBNamePrefix}standard_table`,
+
     upschool_parent_info: `${DBNamePrefix}parent_info`,
     upschool_student_info: `${DBNamePrefix}student_info`,
     upschool_teacher_info: `${DBNamePrefix}teacher_info`,
@@ -33,5 +33,6 @@ exports.TABLE_NAMES = {
     upschool_test_result: `${DBNamePrefix}test_result`,
     upschool_quiz_result: `${DBNamePrefix}quiz_result`,
     upschool_presets_table: `${DBNamePrefix}presets_table`,
+    upschool_question_count_info: `${DBNamePrefix}question_count_info`,
 
 }

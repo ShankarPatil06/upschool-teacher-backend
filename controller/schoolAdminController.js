@@ -1,4 +1,4 @@
-const {schoolAdminServices} = require("../services");
+const { schoolAdminServices } = require("../services");
 const { formatResponse } = require("../helper/helper");
 
 exports.createSchoolAdmin = async (req, res, next) => {
@@ -21,11 +21,20 @@ exports.updateSchoolAdmin = async (req, res, next) => {
     }
 };
 
-
 exports.toggleSchoolAdminStatus = async (req, res, next) => {
     try {
         const request = req.body;
         const reportData = await schoolAdminServices.changeSchoolAdminStatus(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
+
+exports.updateSchoolPrompt = async (req, res, next) => {
+    try {
+        const request = req.body;
+        const reportData = await schoolAdminServices.updateSchoolPrompt(request);
         return formatResponse(res, reportData);
     } catch (error) {
         next(error)

@@ -70,43 +70,43 @@ exports.fetchPreTopicData = function (request, callback) {
 
 exports.fetchPreTopicData2 = async (request) => {
 
-        const chapterTopicIds = request.prelearning_topic_id;
+    const chapterTopicIds = request.prelearning_topic_id;
 
-        if (chapterTopicIds.length === 1) {
-            const readParams = {
-                TableName: TABLE_NAMES.upschool_topic_table,
-                KeyConditionExpression: "topic_id = :topic_id",
-                FilterExpression: "topic_status = :topic_status AND pre_post_learning = :pre_post_learning",
-                ExpressionAttributeValues: {
-                    ":topic_id": chapterTopicIds[0],
-                    ":topic_status": "Active",
-                    ":pre_post_learning": "Pre-Learning"
-                },
-                ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status",
-            };
-            return await DATABASE_TABLE2.query(readParams);
-        }
-
-        const keys = chapterTopicIds.map((id) => ({
-            topic_id: id,
-        }));
-
+    if (chapterTopicIds.length === 1) {
         const readParams = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_topic_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status"
-                }
-            }
+            TableName: TABLE_NAMES.upschool_topic_table,
+            KeyConditionExpression: "topic_id = :topic_id",
+            FilterExpression: "topic_status = :topic_status AND pre_post_learning = :pre_post_learning",
+            ExpressionAttributeValues: {
+                ":topic_id": chapterTopicIds[0],
+                ":topic_status": "Active",
+                ":pre_post_learning": "Pre-Learning"
+            },
+            ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status",
         };
+        return await DATABASE_TABLE2.query(readParams);
+    }
 
-        const data = await DATABASE_TABLE2.getByObjects(readParams);
+    const keys = chapterTopicIds.map((id) => ({
+        topic_id: id,
+    }));
 
-        const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
-            item => item.topic_status === "Active" && item.pre_post_learning === "Pre-Learning"
-        );
+    const readParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_topic_table]: {
+                Keys: keys,
+                ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status"
+            }
+        }
+    };
 
-        return filteredData;
+    const data = await DATABASE_TABLE2.getByObjects(readParams);
+
+    const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
+        item => item.topic_status === "Active" && item.pre_post_learning === "Pre-Learning"
+    );
+
+    return filteredData;
 
 };
 
@@ -170,7 +170,7 @@ exports.fetchPostTopicData = function (request, callback) {
     });
 }
 
-exports.fetchPostTopicData2 = async (request) => { 
+exports.fetchPostTopicData2 = async (request) => {
     console.log("request.postlearning_topic_id - ", request.postlearning_topic_id);
     const chapter_topic_ids = request.postlearning_topic_id;
     let params;
@@ -406,7 +406,7 @@ exports.fetchTopicIDandTopicConceptID2 = async (request) => {
             ProjectionExpression: "topic_id, topic_concept_id",
         };
 
-        const data =  await DATABASE_TABLE2.query(readParams);
+        const data = await DATABASE_TABLE2.query(readParams);
         return data.Items;
     } else {
         const keys = topic_array.map(id => ({
@@ -428,7 +428,7 @@ exports.fetchTopicIDandTopicConceptID2 = async (request) => {
             item => item.topic_status === "Active"
         );
 
-        return filteredData; 
+        return filteredData;
     }
 };
 
@@ -559,13 +559,13 @@ exports.fetchBulkTopicsIDName2 = async (request) => {
 };
 
 exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
-    const questionIds = topicids; 
+    const questionIds = topicids;
     console.log("Searching for question IDs:", questionIds);
 
     const queryParams = {
         TableName: TABLE_NAMES.upschool_topic_table,
         IndexName: Indexes.common_id_index,
-        KeyConditionExpression: "common_id = :common_id", 
+        KeyConditionExpression: "common_id = :common_id",
         ExpressionAttributeValues: {
             ":common_id": constant.constValues.common_id,
         },
@@ -573,13 +573,13 @@ exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
     };
 
     const result = await DATABASE_TABLE2.query(queryParams);
-    
+
     const filteredGroups = result.Items.filter(group => {
-        
+
         return group.topic_concept_id.some(questionId => questionIds.includes(questionId));
     });
     console.log(filteredGroups)
-   
+
     return filteredGroups || [];
 };
 
@@ -615,3 +615,17 @@ exports.fetchBulkTopicsIDNameBlueprint = async (request) => {
         return data.Responses[TABLE_NAMES.upschool_topic_table]; // Return the fetched chapters
     }
 };
+
+exports.getTopicDetailsByIds = async (request) => {
+    if (helper.isEmptyArray(request)) return [];
+
+    const topicDetailsParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_topic_table]: {
+                Keys: request?.map(id => ({ topic_id: id }))
+            }
+        }
+    }
+
+    return (await DATABASE_TABLE2.getByObjects(topicDetailsParams))?.Responses[TABLE_NAMES.upschool_topic_table] ?? []
+}

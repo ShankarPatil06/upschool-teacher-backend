@@ -37,16 +37,16 @@ exports.fetchTeachingActivity = function (request, callback) {
 exports.fetchTeachingActivity2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_teaching_activity,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND activity_status = :activity_status",
-                ExpressionAttributeValues: {
-                    ":common_id": constant.constValues.common_id,
-                    ":client_class_id": request.data.client_class_id,
-                    ":section_id": request.data.section_id,
-                    ":subject_id": request.data.subject_id,
-                    ":activity_status": "Active"
-                }
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND activity_status = :activity_status",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":client_class_id": request.data.client_class_id,
+            ":section_id": request.data.section_id,
+            ":subject_id": request.data.subject_id,
+            ":activity_status": "Active"
+        }
     };
     return await DATABASE_TABLE2.query(params);
 }
@@ -68,8 +68,8 @@ exports.updateTeachingActivity = function (request, callback) {
                     "activity_id": request.data.activity_id
                 },
                 UpdateExpression: "set chapter_data = :chapter_data, updated_ts = :updated_ts, updated_by = :updated_by",
-                ExpressionAttributeValues: { 
-                    ":chapter_data": request.data.chapter_data, 
+                ExpressionAttributeValues: {
+                    ":chapter_data": request.data.chapter_data,
                     ":updated_by": request.data.teacher_id,
                     ":updated_ts": helper.getCurrentTimestamp()
                 },
@@ -81,17 +81,17 @@ exports.updateTeachingActivity = function (request, callback) {
 exports.updateTeachingActivity2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_teaching_activity,
-                Key: {
-                    "activity_id": request.data.activity_id
-                },
-                UpdateExpression: "set chapter_data = :chapter_data, updated_ts = :updated_ts, updated_by = :updated_by",
-                ExpressionAttributeValues: { 
-                    ":chapter_data": request.data.chapter_data, 
-                    ":updated_by": request.data.teacher_id,
-                    ":updated_ts": helper.getCurrentTimestamp()
-                },
+        Key: {
+            "activity_id": request.data.activity_id
+        },
+        UpdateExpression: "set chapter_data = :chapter_data, updated_ts = :updated_ts, updated_by = :updated_by",
+        ExpressionAttributeValues: {
+            ":chapter_data": request.data.chapter_data,
+            ":updated_by": request.data.teacher_id,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
     };
- return await DATABASE_TABLE2.updateService(params);
+    return await DATABASE_TABLE2.updateService(params);
 }
 exports.updateTeachingDigiCardActivity = function (request, callback) {
 
@@ -110,8 +110,8 @@ exports.updateTeachingDigiCardActivity = function (request, callback) {
                     "activity_id": request.data.activity_id
                 },
                 UpdateExpression: "set digicard_activities = :digicard_activities, updated_ts = :updated_ts, updated_by = :updated_by",
-                ExpressionAttributeValues: { 
-                    ":digicard_activities": request.data.digicard_activities, 
+                ExpressionAttributeValues: {
+                    ":digicard_activities": request.data.digicard_activities,
                     ":updated_by": request.data.teacher_id,
                     ":updated_ts": helper.getCurrentTimestamp()
                 },
@@ -128,13 +128,13 @@ exports.updateTeachingDigiCardActivity2 = async (request) => {
             "activity_id": request.data.activity_id
         },
         UpdateExpression: "set digicard_activities = :digicard_activities, updated_ts = :updated_ts, updated_by = :updated_by",
-        ExpressionAttributeValues: { 
-            ":digicard_activities": request.data.digicard_activities, 
+        ExpressionAttributeValues: {
+            ":digicard_activities": request.data.digicard_activities,
             ":updated_by": request.data.teacher_id,
             ":updated_ts": helper.getCurrentTimestamp()
         },
     };
- return await DATABASE_TABLE2.updateService(params);
+    return await DATABASE_TABLE2.updateService(params);
 }
 exports.addTeachingActivity = function (request, callback) {
 
@@ -153,11 +153,11 @@ exports.addTeachingActivity = function (request, callback) {
                     "activity_id": helper.getRandomString(),
                     "client_class_id": request.data.client_class_id,
                     "section_id": request.data.section_id,
-                    "subject_id" : request.data.subject_id,
+                    "subject_id": request.data.subject_id,
                     "chapter_data": request.data.chapter_data,
                     "digicard_activities": request.data.digicard_activities,
                     "activity_status": "Active",
-                    "updated_by": request.data.teacher_id, 
+                    "updated_by": request.data.teacher_id,
                     "common_id": constant.constValues.common_id,
                     "created_ts": helper.getCurrentTimestamp(),
                     "updated_ts": helper.getCurrentTimestamp(),
@@ -172,21 +172,29 @@ exports.addTeachingActivity2 = async (request) => {
 
     let params = {
         TableName: TABLE_NAMES.upschool_teaching_activity,
-                Item: {
-                    "activity_id": helper.getRandomString(),
-                    "client_class_id": request.data.client_class_id,
-                    "section_id": request.data.section_id,
-                    "subject_id" : request.data.subject_id,
-                    "chapter_data": request.data.chapter_data,
-                    "digicard_activities": request.data.digicard_activities,
-                    "activity_status": "Active",
-                    "updated_by": request.data.teacher_id, 
-                    "common_id": constant.constValues.common_id,
-                    "created_ts": helper.getCurrentTimestamp(),
-                    "updated_ts": helper.getCurrentTimestamp(),
-                }
+        Item: {
+            "activity_id": helper.getRandomString(),
+            "client_class_id": request.data.client_class_id,
+            "section_id": request.data.section_id,
+            "subject_id": request.data.subject_id,
+            "chapter_data": request.data.chapter_data,
+            "digicard_activities": request.data.digicard_activities,
+            "activity_status": "Active",
+            "updated_by": request.data.teacher_id,
+            "common_id": constant.constValues.common_id,
+            "created_ts": helper.getCurrentTimestamp(),
+            "updated_ts": helper.getCurrentTimestamp(),
+        }
 
     }
     return (await DATABASE_TABLE2.putItem(params)).$metadata.httpStatusCode;
-   
+
+}
+
+exports.getAdminPrompt = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_question_count_info,
+        Key: { question_count_id: "2" }
+    };
+    return (await DATABASE_TABLE2.getItem(params))?.Item;
 }

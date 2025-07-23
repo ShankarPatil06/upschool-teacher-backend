@@ -129,6 +129,7 @@ app.post("/v1/getIndividualQuizReport", reportController.getIndividualQuizReport
 app.post("/v1/createSchoolAdmin", validator.validUser, schoolAdminController.createSchoolAdmin);
 app.post("/v1/updateSchoolAdmin", validator.validUser, schoolAdminController.updateSchoolAdmin);
 app.post("/v1/toggleSchoolAdminStatus", validator.validUser, schoolAdminController.toggleSchoolAdminStatus);
+app.post("/v1/updateSchoolPrompt", schoolAdminController.updateSchoolPrompt);
 
 // Dashboard Reports
 app.post("/v1/fetchAssessmentSummary", reportController.fetchAssessmentSummary);

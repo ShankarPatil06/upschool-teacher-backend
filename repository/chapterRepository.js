@@ -33,10 +33,10 @@ exports.fetchChapterByID2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_chapter_table,
 
-                KeyConditionExpression: "chapter_id = :chapter_id",
-                ExpressionAttributeValues: {
-                    ":chapter_id": request.data.chapter_id
-                }
+        KeyConditionExpression: "chapter_id = :chapter_id",
+        ExpressionAttributeValues: {
+            ":chapter_id": request.data.chapter_id
+        }
     };
 
     return await DATABASE_TABLE2.query(params);
@@ -94,34 +94,34 @@ exports.fetchChapterData = function (request, callback) {
     });
 }
 exports.fetchChapterData2 = async (request) => {
-  
-        const { unit_chapter_id } = request;
 
-        if (unit_chapter_id.length === 1) {
-            const readParams = {
-                TableName: TABLE_NAMES.upschool_chapter_table,
-                KeyConditionExpression: "chapter_id = :chapter_id",
-                ExpressionAttributeValues: {
-                    ":chapter_id": unit_chapter_id[0]
-                },
-                ProjectionExpression: "chapter_id, display_name, chapter_status, chapter_updated_ts",
-            };
+    const { unit_chapter_id } = request;
 
-            const result = await DATABASE_TABLE2.query(readParams);
-            return result.Items;
-        } else {
-            const readParams = {
-                RequestItems: {
-                    [TABLE_NAMES.upschool_chapter_table]: {
-                        Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
-                        ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
-                    }
+    if (unit_chapter_id.length === 1) {
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_chapter_table,
+            KeyConditionExpression: "chapter_id = :chapter_id",
+            ExpressionAttributeValues: {
+                ":chapter_id": unit_chapter_id[0]
+            },
+            ProjectionExpression: "chapter_id, display_name, chapter_status, chapter_updated_ts",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result.Items;
+    } else {
+        const readParams = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_chapter_table]: {
+                    Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
+                    ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
                 }
-            };
+            }
+        };
 
-            const result = await DATABASE_TABLE2.getByObjects(readParams);
-            return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
-        }
+        const result = await DATABASE_TABLE2.getByObjects(readParams);
+        return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
+    }
 };
 
 exports.fetchBulkChaptersIDName = function (request, callback) {
@@ -273,9 +273,23 @@ exports.fetchChaptersIDandChapterTopicID2 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
         ProjectionExpression: "chapter_id, prelearning_topic_id, postlearning_topic_id"
     };
-    console.log({params});
+    console.log({ params });
     const data = await DATABASE_TABLE2.query(params);
-    console.log({data});
+    console.log({ data });
     return data;
 
 };
+
+exports.getChapterDetailsByIds = async (request) => {
+    if (helper.isEmptyArray(request)) return [];
+
+    const chaptersParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_chapter_table]: {
+                Keys: request?.map(id => ({ chapter_id: id }))
+            }
+        }
+    }
+
+    return (await DATABASE_TABLE2.getByObjects(chaptersParams))?.Responses[TABLE_NAMES.upschool_chapter_table] ?? []
+}

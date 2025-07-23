@@ -41,7 +41,7 @@ exports.checkDuplicateAdminEmail2 = async (request) => {
             ":user_email": request.data.school_admin_email
         }
     };
-    return await DATABASE_TABLE2.query(params); 
+    return await DATABASE_TABLE2.query(params);
 };
 
 exports.insertSchoolAdmin = function (request, callback) {
@@ -89,7 +89,7 @@ exports.insertSchoolAdmin2 = async (request) => {
 
     }
     return (await DATABASE_TABLE2.putItem(params)).$metadata.httpStatusCode;
-   
+
 }
 exports.updateSchoolAdmin = function (request, callback) {
 
@@ -122,14 +122,29 @@ exports.updateSchoolAdmin = function (request, callback) {
 exports.updateSchoolAdmin2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_teacher_info,
-                Key: {
-                    "teacher_id": request.data.school_admin_id
-                },
-                UpdateExpression: "set user_email = :user_email, updated_ts = :updated_ts",
-                ExpressionAttributeValues: {
-                    ":user_email": request.data.school_admin_email.toLowerCase(),
-                    ":updated_ts": helper.getCurrentTimestamp()
-                },
+        Key: {
+            "teacher_id": request.data.school_admin_id
+        },
+        UpdateExpression: "set user_email = :user_email, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":user_email": request.data.school_admin_email.toLowerCase(),
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
     };
- return await DATABASE_TABLE2.updateService(params);
+    return await DATABASE_TABLE2.updateService(params);
+}
+
+exports.updateSchoolPrompt = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_school_info_table,
+        Key: {
+            "school_id": request.school_id
+        },
+        UpdateExpression: "set schoolPrompt = :schoolPrompt, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":schoolPrompt": request.schoolPrompt,
+            ":updated_ts": helper.getCurrentTimestamp()
+        },
+    };
+    return await DATABASE_TABLE2.updateService(params);
 }
