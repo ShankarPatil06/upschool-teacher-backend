@@ -43,7 +43,7 @@ app.post("/v1/fetchTopicsBasedonChapter", validator.validUser, chapterController
 app.post("/v1/fetchDigicardsBasedonTopic", validator.validUser, topicController.fetchDigicardsBasedonTopic);
 app.post("/v1/fetchIndividualDigiCard", validator.validUser, digicardController.fetchIndividualDigiCard);
 app.post("/v1/fetchRelatedDigiCards", validator.validUser, digicardController.fetchRelatedDigiCards);
-app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectController.fetchTopicAndNoOfQuestions);
+app.post("/v1/fetchTopicAndNoOfQuestions", validator.validUser, subjectController.fetchTopicAndNoOfQuestions); //ch 
 app.post("/v1/fetchAllStudents", studentController.fetchAllStudents);
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 
@@ -52,7 +52,7 @@ app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails);
 // app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock); // removed beacuse of not used
 app.post("/v1/topicUnlock", validator.validUser, topicController.topicUnlock);
 app.post("/v1/digicardUnlock", validator.validUser, digicardController.digicardUnlock);
-app.post("/v1/fetchAvailableNumOfQuestions", validator.validUser, questionController.fetchAvailableNumOfQuestions);
+app.post("/v1/fetchAvailableNumOfQuestions", validator.validUser, questionController.fetchAvailableNumOfQuestions); //ch
 
 app.post("/v1/fetchTeacherClasses", validator.validUser, teacherController.fetchTeacherClasses);
 app.post("/v1/fetchTeacherSectionsBasedonClass", validator.validUser, teacherController.fetchTeacherSectionsBasedonClass);
@@ -76,29 +76,29 @@ app.post("/v1/updateClockOutTime", validator.validUser, teacherController.clockO
 
 /** DIGICARD EXTENSION **/
 app.post("/v1/fetchAllPreTopicDigicards", validator.validUser, digicardController.fetchAllPreTopicDigicards);
-app.post("/v1/fetchAllPostTopicDigicards", validator.validUser, digicardController.fetchAllPostTopicDigicards);
+app.post("/v1/fetchAllPostTopicDigicards", validator.validUser, digicardController.fetchAllPostTopicDigicards);  //ch 
 app.post("/v1/addDigicardExtension", validator.validUser, teacherController.addDigicardExtension);
 app.post("/v1/fetchDigicardExtension", validator.validUser, digicardController.fetchDigicardExtension);
 app.post("/v1/fetchQuestionSourceandChapters", validator.validUser, teacherController.fetchQuestionSourceandChapters);
 
 // TEST QUESTION PAPER : 
-app.post("/v1/fetchTestQuestionPapersBasedonStatus", validator.validUser, testQuestionPaperController.fetchTestQuestionPapersBasedonStatus);
-app.post("/v1/addTestQuestionPaper", validator.validUser, testQuestionPaperController.addTestQuestionPaper);
-app.post("/v1/validateQuestionPaperName", validator.validUser, testQuestionPaperController.validateQuestionPaperName);
-app.post("/v1/viewTestQuestionPaper", validator.validUser, testQuestionPaperController.viewTestQuestionPaper);
-app.post("/v1/toggleQuestionPaper", validator.validUser, testQuestionPaperController.toggleQuestionPaper);
+app.post("/v1/fetchTestQuestionPapersBasedonStatus", validator.validUser, testQuestionPaperController.fetchTestQuestionPapersBasedonStatus);  //ch
+app.post("/v1/addTestQuestionPaper", validator.validUser, testQuestionPaperController.addTestQuestionPaper); //nud
+app.post("/v1/validateQuestionPaperName", validator.validUser, testQuestionPaperController.validateQuestionPaperName); //nud
+app.post("/v1/viewTestQuestionPaper", validator.validUser, testQuestionPaperController.viewTestQuestionPaper); //ch done a
+app.post("/v1/toggleQuestionPaper", validator.validUser, testQuestionPaperController.toggleQuestionPaper); //nud
 
 /** BLUE PRINT **/
-app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);
+app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);  //ch done a
 app.post("/v1/fetchBlueprintDetailsBasedonId", blueprintController.fetchBlueprintDetailsBasedonId);
-app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionBasedOnBlueprint); // validator.validUser,
-app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints);
+app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionBasedOnBlueprint); // validator.validUser,  //ch done a
+app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints); // nud
 
 // CLASS TEST : 
 app.post("/v1/addClassTest", validator.validUser, classTestController.addClassTest);
 app.post("/v1/fetchClassTestsBasedonStatus", validator.validUser, classTestController.fetchClassTestsBasedonStatus);
 app.post("/v1/fetchClassTestById", classTestController.fetchClassTestById);
-app.post("/v1/fetchQuestionsBasedonQuestionPaper", validator.validUser, classTestController.fetchQuestionsBasedonQuestionPaper);
+app.post("/v1/fetchQuestionsBasedonQuestionPaper", validator.validUser, classTestController.fetchQuestionsBasedonQuestionPaper); //ch
 app.post("/v1/startEvaluation", validator.validUser, classTestController.startEvaluation);
 app.post("/v1/getStudentsBasedOnSection", validator.validUser, classTestController.getStudentsBasedOnSection);
 app.post("/v1/getStudentResultData", validator.validUser, classTestController.getStudentResultData);
@@ -117,12 +117,12 @@ app.post("/v1/uploadQuizAnswerSheets", scannerController.uploadQuizAnswerSheets2
 app.post("/v1/removeUploadedAnswerData", scannerController.removeUploadedAnswerData); // Quiz  validator.validScannerUser,
 
 // Quiz
-app.post("/v1/checkDuplicateQuizName", validator.validUser, quizController.checkDuplicateQuizName);
-app.post("/v1/toggleQuizStatus", validator.validUser, quizController.toggleQuizStatus);
-app.post("/v1/fetchQuizBasedonStatus", validator.validUser, quizController.fetchQuizBasedonStatus);
-app.post("/v1/viewQuizQuestionPaper", validator.validUser, quizController.viewQuizQuestionPaper);
-app.post("/v1/getStudentQuizResultData", validator.validUser, quizController.getStudentQuizResultData);
-app.post("/v1/updateStudentQuizMarks", quizController.updateStudentQuizMarks); // validator.validUser,
+app.post("/v1/checkDuplicateQuizName", validator.validUser, quizController.checkDuplicateQuizName); //nud
+app.post("/v1/toggleQuizStatus", validator.validUser, quizController.toggleQuizStatus); //nud
+app.post("/v1/fetchQuizBasedonStatus", validator.validUser, quizController.fetchQuizBasedonStatus); //nud
+app.post("/v1/viewQuizQuestionPaper", validator.validUser, quizController.viewQuizQuestionPaper);  //ch done a
+app.post("/v1/getStudentQuizResultData", validator.validUser, quizController.getStudentQuizResultData);  //nud
+app.post("/v1/updateStudentQuizMarks", quizController.updateStudentQuizMarks); // validator.validUser,  //chneed fet
 app.post("/v1/fetchQuizTemplates", validator.validUser, quizController.fetchQuizTemplates);
 app.post("/v1/resetQuizEvaluationStatus", validator.validUser, quizController.resetQuizEvaluationStatus);
 app.post("/v1/startQuizEvaluation", quizController.startQuizEvaluation); // validator.validUser,
@@ -141,7 +141,7 @@ app.post("/v1/getTargetedLearningExpectationDetails", reportController.getTarget
 app.post("/v1/preLearningSummaryDetails", reportController.preLearningSummaryDetails);
 app.post("/v1/postLearningSummaryDetails", reportController.postLearningSummaryDetails);
 app.post("/v1/preLearningBlueprintDetails", reportController.preLearningBlueprintDetails);
-app.post("/v1/viewAnalysisIndividualReport", reportController.viewAnalysisIndividualReport);
+app.post("/v1/viewAnalysisIndividualReport", reportController.viewAnalysisIndividualReport); //ch
 app.post("/v1/comprehensivePerformanceChapterWise", reportController.comprehensivePerformanceChapterWise);
 app.post("/v1/comprehensivePerformanceChapterWiseForTest", reportController.comprehensivePerformanceChapterWiseForTest);
 app.post("/v1/comprehensivePerformanceTopicWise", reportController.comprehensivePerformanceTopicWise);
@@ -150,22 +150,22 @@ app.post("/v1/comprehensivePerformanceConceptWise", reportController.comprehensi
 app.post("/v1/comprehensivePerformanceConceptWiseForTest", reportController.comprehensivePerformanceConceptWiseForTest);
 app.post("/v1/viewClassReportQuestions", reportController.viewClassReportQuestions);
 app.post("/v1/viewClassReportFocusArea", reportController.viewClassReportFocusArea);
-app.post("/v1/viewChapterwisePerformanceTracking", reportController.viewChapterwisePerformanceTracking);
-app.post("/v1/getActionsAndRecommendations", reportController.getActionsAndRecommendations);
-app.post("/v1/getActionsAndRecommendationDetail", reportController.getActionsAndRecommendationDetail);
-app.post("/v1/fetchSchoolDetails", schoolController.fetchSchoolDetails);
+app.post("/v1/viewChapterwisePerformanceTracking", reportController.viewChapterwisePerformanceTracking); //chneed fet
+app.post("/v1/getActionsAndRecommendations", reportController.getActionsAndRecommendations); //ch
+app.post("/v1/getActionsAndRecommendationDetail", reportController.getActionsAndRecommendationDetail);//chneed fet
+app.post("/v1/fetchSchoolDetails", schoolController.fetchSchoolDetails); //nnd
 
 // Student Dashboard
-app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers);
-app.post("/v1/needAttention", studentController.needAttention);
-app.post("/v1/studentChaptersPerformance", studentController.studentChaptersPerformance);
-app.post("/v1/customWorksheetGenerated", studentController.customWorksheetGenerated);
-app.post("/v1/fetchCustomWorksheet", studentController.fetchCustomWorksheet);
-app.post("/v1/sendEmailToParent", studentController.sendEmailToParent);
-app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);
-app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise);
+app.post("/v1/topAndBottomPerformers", studentController.topAndBottomPerformers); //ch
+app.post("/v1/needAttention", studentController.needAttention);//ch
+app.post("/v1/studentChaptersPerformance", studentController.studentChaptersPerformance);  //ch
+app.post("/v1/customWorksheetGenerated", studentController.customWorksheetGenerated); //ch
+app.post("/v1/fetchCustomWorksheet", studentController.fetchCustomWorksheet); // nud
+app.post("/v1/sendEmailToParent", studentController.sendEmailToParent); //nud
+app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);  //ch
+app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise); //ch op
 
-app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
+app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations); //nud
 
 
 function haltOnTimedout(req, res, next) {

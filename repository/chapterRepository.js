@@ -33,10 +33,10 @@ exports.fetchChapterByID2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_chapter_table,
 
-                KeyConditionExpression: "chapter_id = :chapter_id",
-                ExpressionAttributeValues: {
-                    ":chapter_id": request.data.chapter_id
-                }
+        KeyConditionExpression: "chapter_id = :chapter_id",
+        ExpressionAttributeValues: {
+            ":chapter_id": request.data.chapter_id
+        }
     };
 
     return await DATABASE_TABLE2.query(params);
@@ -94,34 +94,34 @@ exports.fetchChapterData = function (request, callback) {
     });
 }
 exports.fetchChapterData2 = async (request) => {
-  
-        const { unit_chapter_id } = request;
 
-        if (unit_chapter_id.length === 1) {
-            const readParams = {
-                TableName: TABLE_NAMES.upschool_chapter_table,
-                KeyConditionExpression: "chapter_id = :chapter_id",
-                ExpressionAttributeValues: {
-                    ":chapter_id": unit_chapter_id[0]
-                },
-                ProjectionExpression: "chapter_id, display_name, chapter_status, chapter_updated_ts",
-            };
+    const { unit_chapter_id } = request;
 
-            const result = await DATABASE_TABLE2.query(readParams);
-            return result.Items;
-        } else {
-            const readParams = {
-                RequestItems: {
-                    [TABLE_NAMES.upschool_chapter_table]: {
-                        Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
-                        ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
-                    }
+    if (unit_chapter_id.length === 1) {
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_chapter_table,
+            KeyConditionExpression: "chapter_id = :chapter_id",
+            ExpressionAttributeValues: {
+                ":chapter_id": unit_chapter_id[0]
+            },
+            ProjectionExpression: "chapter_id, display_name, chapter_status, chapter_updated_ts",
+        };
+
+        const result = await DATABASE_TABLE2.query(readParams);
+        return result.Items;
+    } else {
+        const readParams = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_chapter_table]: {
+                    Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
+                    ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
                 }
-            };
+            }
+        };
 
-            const result = await DATABASE_TABLE2.getByObjects(readParams);
-            return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
-        }
+        const result = await DATABASE_TABLE2.getByObjects(readParams);
+        return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
+    }
 };
 
 exports.fetchBulkChaptersIDName = function (request, callback) {
@@ -177,13 +177,51 @@ exports.fetchBulkChaptersIDName = function (request, callback) {
 }
 
 
-exports.fetchBulkChaptersIDName2 = async (request) => {
-    const unit_chapter_id = request.unit_chapter_id;
+// exports.fetchBulkChaptersIDName2 = async (request) => {
+//     const unit_chapter_id = request.unit_chapter_id;
 
-    console.log("unit_chapter_id34", unit_chapter_id);
+//     console.log("unit_chapter_id34", unit_chapter_id);
+
+//     if (unit_chapter_id.length === 1) {
+
+//         const params = {
+//             TableName: TABLE_NAMES.upschool_chapter_table,
+//             KeyConditionExpression: "chapter_id = :chapter_id",
+//             ExpressionAttributeValues: {
+//                 ":chapter_id": unit_chapter_id[0]
+//             },
+//             ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
+//         };
+
+//         const chapterData = await DATABASE_TABLE2.query(params);
+//         return chapterData.Items;
+//     } else {
+//         // Use BatchGetCommand for multiple chapter IDs
+//         const keys = unit_chapter_id.map((id) => ({ chapter_id: id }));
+//         const params = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_chapter_table]: {
+//                     Keys: keys,
+//                     ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
+//                 },
+//             },
+//         };
+
+//         const data = await DATABASE_TABLE2.getByObjects(params);
+//         return data.Responses[TABLE_NAMES.upschool_chapter_table]; // Return the fetched chapters
+//     }
+// };
+
+
+
+//chunk
+exports.fetchBulkChaptersIDName2 = async (request) => {
+    const unit_chapter_id = [...new Set(request.unit_chapter_id)]; // Remove duplicates for efficiency
+
+    // console.log("unit_chapter_id34", unit_chapter_id);
 
     if (unit_chapter_id.length === 1) {
-
+        // Single chapter ID - use query for better performance
         const params = {
             TableName: TABLE_NAMES.upschool_chapter_table,
             KeyConditionExpression: "chapter_id = :chapter_id",
@@ -194,21 +232,41 @@ exports.fetchBulkChaptersIDName2 = async (request) => {
         };
 
         const chapterData = await DATABASE_TABLE2.query(params);
-        return chapterData.Items;
+        return chapterData.Items || [];
     } else {
-        // Use BatchGetCommand for multiple chapter IDs
-        const keys = unit_chapter_id.map((id) => ({ chapter_id: id }));
-        const params = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_chapter_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
-                },
-            },
-        };
+        // Multiple chapter IDs - use parallel chunking
+        const CHUNK_SIZE = 100; // DynamoDB batch limit
+        const chunks = helper.chunkArray(unit_chapter_id, CHUNK_SIZE);
+        const allChapters = [];
 
-        const data = await DATABASE_TABLE2.getByObjects(params);
-        return data.Responses[TABLE_NAMES.upschool_chapter_table]; // Return the fetched chapters
+        // Process chunks in parallel for better performance
+        const chunkPromises = chunks.map(async (chunk) => {
+            const keys = chunk.map((id) => ({ chapter_id: id }));
+
+            const params = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_chapter_table]: {
+                        Keys: keys,
+                        ProjectionExpression: "chapter_id, chapter_title, display_name, prelearning_topic_id, postlearning_topic_id",
+                    },
+                },
+            };
+
+            const data = await DATABASE_TABLE2.getByObjects(params);
+            return data.Responses && data.Responses[TABLE_NAMES.upschool_chapter_table]
+                ? data.Responses[TABLE_NAMES.upschool_chapter_table]
+                : [];
+        });
+
+        // Wait for all chunks to complete and flatten results
+        const chunkResults = await Promise.all(chunkPromises);
+
+        // Flatten all results from all chunks
+        for (const chunkResult of chunkResults) {
+            allChapters.push(...chunkResult);
+        }
+
+        return allChapters;
     }
 };
 
@@ -273,9 +331,9 @@ exports.fetchChaptersIDandChapterTopicID2 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
         ProjectionExpression: "chapter_id, prelearning_topic_id, postlearning_topic_id"
     };
-    console.log({params});
+    console.log({ params });
     const data = await DATABASE_TABLE2.query(params);
-    console.log({data});
+    console.log({ data });
     return data;
 
 };

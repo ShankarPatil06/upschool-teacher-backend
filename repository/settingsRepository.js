@@ -777,6 +777,42 @@ exports.fetchBulkCognitiveSkillNameById = function (request, callback) {
     });
 };
 
+// exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
+//     const cognitive_ids = [...new Set(request.cognitive_id)]; // Remove duplicates
+
+//     if (cognitive_ids.length === 1) {
+//         // When there is only one cognitive ID
+//         const params = {
+//             TableName: TABLE_NAMES.upschool_cognitive_skill,
+//             KeyConditionExpression: "cognitive_id = :cognitive_id",
+//             ExpressionAttributeValues: {
+//                 ":cognitive_id": cognitive_ids[0]
+//             }
+//         };
+
+//         const result = await DATABASE_TABLE2.query(params);
+//         return result.Items;
+//     } else {
+//         // When there are multiple cognitive IDs
+//         const keys = cognitive_ids.map((id) => ({
+//             cognitive_id: id
+//         }));
+
+//         const params = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_cognitive_skill]: {
+//                     Keys: keys
+//                 }
+//             }
+//         };
+
+//         const result = await DATABASE_TABLE2.getByObjects(params);
+//         return result.Responses[TABLE_NAMES.upschool_cognitive_skill];
+//     }
+// };
+
+
+////chunk
 exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
     const cognitive_ids = [...new Set(request.cognitive_id)]; // Remove duplicates
 
@@ -793,23 +829,37 @@ exports.fetchBulkCognitiveSkillNameById2 = async (request) => {
         const result = await DATABASE_TABLE2.query(params);
         return result.Items;
     } else {
-        // When there are multiple cognitive IDs
-        const keys = cognitive_ids.map((id) => ({
-            cognitive_id: id
-        }));
+        // When there are multiple cognitive IDs - use chunking
+        const CHUNK_SIZE = 100; // DynamoDB batch limit is 100 items
+        const chunks = helper.chunkArray(cognitive_ids, CHUNK_SIZE);
+        const allResults = [];
 
-        const params = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_cognitive_skill]: {
-                    Keys: keys
+        // Process chunks in parallel for better performance
+        const chunkPromises = chunks.map(async (chunk) => {
+            const keys = chunk.map((id) => ({
+                cognitive_id: id
+            }));
+
+            const params = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_cognitive_skill]: {
+                        Keys: keys
+                    }
                 }
-            }
-        };
+            };
 
-        const result = await DATABASE_TABLE2.getByObjects(params);
-        return result.Responses[TABLE_NAMES.upschool_cognitive_skill];
+            const result = await DATABASE_TABLE2.getByObjects(params);
+            return result.Responses[TABLE_NAMES.upschool_cognitive_skill] || [];
+        });
+
+        const chunkResults = await Promise.all(chunkPromises);
+
+        // Flatten all results
+        for (const chunkResult of chunkResults) {
+            allResults.push(...chunkResult);
+        }
+
+        return allResults;
     }
 };
-
-
-
+/////

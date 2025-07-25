@@ -25,7 +25,7 @@ exports.fetchActiveBluePrints = function (request, callback) {
                     ":common_id": constant.constValues.common_id,
                     ":blueprint_status": request.data.blueprint_status
                 },
-                ProjectionExpression: ["blueprint_id", "blueprint_name", "description", "test_duration", "display_name"], 
+                ProjectionExpression: ["blueprint_id", "blueprint_name", "description", "test_duration", "display_name"],
             }
             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
         }
@@ -34,18 +34,18 @@ exports.fetchActiveBluePrints = function (request, callback) {
 exports.fetchActiveBluePrints2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_blueprint_table,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "blueprint_status = :blueprint_status AND blueprint_type = :blueprint_type",
-                ExpressionAttributeValues: {
-                    ":common_id": constant.constValues.common_id,
-                    ":blueprint_status": "Active",
-                    ":blueprint_type" : request.data.blueprint_type
-                },
-                ProjectionExpression: "blueprint_id, blueprint_name, description, test_duration, display_name",
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "blueprint_status = :blueprint_status AND blueprint_type = :blueprint_type",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":blueprint_status": "Active",
+            ":blueprint_type": request.data.blueprint_type
+        },
+        ProjectionExpression: "blueprint_id, blueprint_name, description, test_duration, display_name",
 
     };
-    const data= await DATABASE_TABLE2.query(params);
+    const data = await DATABASE_TABLE2.query(params);
     return data.Items;
 }
 exports.fetchBlueprintById = function (request, callback) {
@@ -82,34 +82,34 @@ exports.fetchBluePrintData = function (request, callback) {
         } else {
             let docClient = dynamoDBCall;
             let FilterExpressionDynamic = "";
-            let ExpressionAttributeValuesDynamic = {}; 
+            let ExpressionAttributeValuesDynamic = {};
 
             let blueprint_array = request.blueprint_array;
             console.log("blueprint_array : ", blueprint_array);
 
-            if(blueprint_array.length === 1){
+            if (blueprint_array.length === 1) {
                 let read_params = {
                     TableName: TABLE_NAMES.upschool_blueprint_table,
                     KeyConditionExpression: "blueprint_id = :blueprint_id",
-                    ExpressionAttributeValues: { 
+                    ExpressionAttributeValues: {
                         ":blueprint_id": blueprint_array[0]
                     },
                     ProjectionExpression: ["blueprint_id", "blueprint_name"],
                 }
-    
+
                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
-            }else{
+            } else {
                 console.log(" Chapter Else");
-                blueprint_array.forEach((element, index) => { 
+                blueprint_array.forEach((element, index) => {
                     console.log("element : ", element);
 
-                    if(index < blueprint_array.length-1){ 
-                        FilterExpressionDynamic = FilterExpressionDynamic + "blueprint_id = :blueprint_id"+ index +" OR "
-                        ExpressionAttributeValuesDynamic[':blueprint_id'+ index] = element
-                    } else{
-                        FilterExpressionDynamic = FilterExpressionDynamic + "blueprint_id = :blueprint_id"+ index
-                        ExpressionAttributeValuesDynamic[':blueprint_id'+ index] = element;
+                    if (index < blueprint_array.length - 1) {
+                        FilterExpressionDynamic = FilterExpressionDynamic + "blueprint_id = :blueprint_id" + index + " OR "
+                        ExpressionAttributeValuesDynamic[':blueprint_id' + index] = element
+                    } else {
+                        FilterExpressionDynamic = FilterExpressionDynamic + "blueprint_id = :blueprint_id" + index
+                        ExpressionAttributeValuesDynamic[':blueprint_id' + index] = element;
                     }
                 });
 
@@ -125,16 +125,53 @@ exports.fetchBluePrintData = function (request, callback) {
     });
 }
 
+// exports.fetchBluePrintData3 = async function (request) {
+//     const blueprintArray = request.blueprint_array;
+//     console.log("blueprint_array : ", blueprintArray);
+
+//     if (blueprintArray.length === 1) {
+
+//         const readParams = {
+//             TableName: TABLE_NAMES.upschool_blueprint_table,
+//             KeyConditionExpression: "blueprint_id = :blueprint_id",
+//             ExpressionAttributeValues: {
+//                 ":blueprint_id": blueprintArray[0]
+//             },
+//             ProjectionExpression: "blueprint_id, blueprint_name",
+//         };
+
+//         const result = await DATABASE_TABLE2.query(readParams);
+//         return result.Items;
+
+//     } else {
+
+//         const batchGetParams = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_blueprint_table]: {
+//                     Keys: blueprintArray.map(id => ({ blueprint_id: id })),
+//                     ProjectionExpression: "blueprint_id, blueprint_name",
+//                 }
+//             }
+//         };
+
+//         const result = await DATABASE_TABLE2.getByObjects(batchGetParams);
+//         return result.Responses[TABLE_NAMES.upschool_blueprint_table] || [];
+//     }
+// };
+
+
+
+
+////////////////////////////////////////////////////////////////chunking
 exports.fetchBluePrintData3 = async function (request) {
     const blueprintArray = request.blueprint_array;
     console.log("blueprint_array : ", blueprintArray);
 
     if (blueprintArray.length === 1) {
-
         const readParams = {
             TableName: TABLE_NAMES.upschool_blueprint_table,
             KeyConditionExpression: "blueprint_id = :blueprint_id",
-            ExpressionAttributeValues: { 
+            ExpressionAttributeValues: {
                 ":blueprint_id": blueprintArray[0]
             },
             ProjectionExpression: "blueprint_id, blueprint_name",
@@ -142,22 +179,38 @@ exports.fetchBluePrintData3 = async function (request) {
 
         const result = await DATABASE_TABLE2.query(readParams);
         return result.Items;
-
     } else {
+        const chunkSize = 100;
+        const chunks = [];
 
-        const batchGetParams = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_blueprint_table]: {
-                    Keys: blueprintArray.map(id => ({ blueprint_id: id })),
-                    ProjectionExpression: "blueprint_id, blueprint_name",
+        for (let i = 0; i < blueprintArray.length; i += chunkSize) {
+            chunks.push(blueprintArray.slice(i, i + chunkSize));
+        }
+
+        const allResults = [];
+
+        // Process each chunk
+        for (const chunk of chunks) {
+            const batchGetParams = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_blueprint_table]: {
+                        Keys: chunk.map(id => ({ blueprint_id: id })),
+                        ProjectionExpression: "blueprint_id, blueprint_name",
+                    }
                 }
-            }
-        };
+            };
 
-        const result = await DATABASE_TABLE2.getByObjects(batchGetParams);
-        return result.Responses[TABLE_NAMES.upschool_blueprint_table] || [];
+            const result = await DATABASE_TABLE2.getByObjects(batchGetParams);
+            const items = result.Responses[TABLE_NAMES.upschool_blueprint_table] || [];
+            allResults.push(...items);
+        }
+
+        return allResults;
     }
 };
+
+
+
 exports.fetchBluePrintData2 = async (request) => {
     const fromatedRequest = await helper.getDataByFilterKey(request);
     let params = {

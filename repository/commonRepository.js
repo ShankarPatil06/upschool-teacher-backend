@@ -5,174 +5,214 @@ const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
 
 
-exports.fetchBulkData = function (request, callback) {
-  dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-    if (DBErr) {
-      console.log(constant.messages.DATABASE_ERROR);
-      console.log(DBErr);
-      callback(500, constant.messages.DATABASE_ERROR);
-    } else {
-      let IdArray = request.IdArray;
-      let fetchIdName = request.fetchIdName;
-      let TableName = request.TableName;
-
-      let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
-      let expAttributeVal = {};
-
-      let docClient = dynamoDBCall;
-      let FilterExpressionDynamic = "";
-      let ExpressionAttributeValuesDynamic = {};
-
-      if (IdArray.length === 1) {
-        expAttributeVal[":" + fetchIdName] = IdArray[0];
-
-        let read_params = {
-          TableName: TableName,
-          KeyConditionExpression: "" + fetchIdName + " = :" + fetchIdName + "",
-          ExpressionAttributeValues: expAttributeVal,
-        };
-
-        console.log("READ PARAMS : ", read_params);
-
-        DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-      } else {
-        IdArray.forEach((element, index) => {
-          if (index < IdArray.length - 1) {
-            FilterExpressionDynamic =
-              FilterExpressionDynamic + filterExpDynamic + index + " OR ";
-            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
-              element + "";
-          } else {
-            FilterExpressionDynamic =
-              FilterExpressionDynamic + filterExpDynamic + index + "";
-            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
-              element;
-          }
-        });
-        let read_params = {
-          TableName: TableName,
-          FilterExpression: FilterExpressionDynamic,
-          ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-        };
-        DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-      }
-    }
-  });
-};
-
-
-
-////chunking
 // exports.fetchBulkData = function (request, callback) {
 //   dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
 //     if (DBErr) {
 //       console.log(constant.messages.DATABASE_ERROR);
 //       console.log(DBErr);
-//       return callback(500, constant.messages.DATABASE_ERROR);
-//     }
-
-//     let IdArray = request.IdArray;
-//     let fetchIdName = request.fetchIdName;
-//     let TableName = request.TableName;
-
-//     // Deduplicate IDs to avoid processing duplicates
-//     IdArray = [...new Set(IdArray)];
-//     console.log("ID Array:", IdArray);
-
-//     if (IdArray.length === 0) {
-//       console.log("EMPTY BULK ID");
-//       return callback(0, { Items: [] });
-//     }
-
-//     let docClient = dynamoDBCall;
-
-//     if (IdArray.length === 1) {
-//       // Single ID - use query operation for better performance
-//       let expAttributeVal = {};
-//       expAttributeVal[":" + fetchIdName] = IdArray[0];
-
-//       let read_params = {
-//         TableName: TableName,
-//         KeyConditionExpression: fetchIdName + " = :" + fetchIdName,
-//         ExpressionAttributeValues: expAttributeVal,
-//       };
-
-//       console.log("READ PARAMS : ", read_params);
-//       DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//       callback(500, constant.messages.DATABASE_ERROR);
 //     } else {
-//       // Multiple IDs - use chunking strategy
-//       const CHUNK_SIZE = 25; // Optimal chunk size for scan operations
-//       const idChunks = helper.chunkArray(IdArray, CHUNK_SIZE);
+//       let IdArray = request.IdArray;
+//       let fetchIdName = request.fetchIdName;
+//       let TableName = request.TableName;
 
-//       console.log(`Processing ${idChunks.length} chunks of max ${CHUNK_SIZE} items each`);
+//       let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
+//       let expAttributeVal = {};
 
-//       let allResults = [];
-//       let completedChunks = 0;
-//       let hasError = false;
+//       let docClient = dynamoDBCall;
+//       let FilterExpressionDynamic = "";
+//       let ExpressionAttributeValuesDynamic = {};
 
-//       // Process each chunk sequentially to avoid overwhelming DynamoDB
-//       const processChunk = (chunkIndex) => {
-//         if (hasError || chunkIndex >= idChunks.length) {
-//           // All chunks processed successfully
-//           if (!hasError && chunkIndex >= idChunks.length) {
-//             console.log(`Total items retrieved: ${allResults.length}`);
-//             return callback(0, { Items: allResults });
-//           }
-//           return;
-//         }
+//       if (IdArray.length === 1) {
+//         expAttributeVal[":" + fetchIdName] = IdArray[0];
 
-//         const chunk = idChunks[chunkIndex];
-//         let FilterExpressionDynamic = "";
-//         let ExpressionAttributeValuesDynamic = {};
+//         let read_params = {
+//           TableName: TableName,
+//           KeyConditionExpression: "" + fetchIdName + " = :" + fetchIdName + "",
+//           ExpressionAttributeValues: expAttributeVal,
+//         };
 
-//         // Build filter expression for this chunk
-//         chunk.forEach((element, index) => {
-//           FilterExpressionDynamic += fetchIdName + " = :" + fetchIdName + index;
-//           ExpressionAttributeValuesDynamic[":" + fetchIdName + index] = element;
+//         console.log("READ PARAMS : ", read_params);
 
-//           if (index < chunk.length - 1) {
-//             FilterExpressionDynamic += " OR ";
+//         DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//       } else {
+//         IdArray.forEach((element, index) => {
+//           if (index < IdArray.length - 1) {
+//             FilterExpressionDynamic =
+//               FilterExpressionDynamic + filterExpDynamic + index + " OR ";
+//             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+//               element + "";
+//           } else {
+//             FilterExpressionDynamic =
+//               FilterExpressionDynamic + filterExpDynamic + index + "";
+//             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+//               element;
 //           }
 //         });
-
 //         let read_params = {
 //           TableName: TableName,
 //           FilterExpression: FilterExpressionDynamic,
 //           ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
 //         };
-
-//         console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${idChunks.length}:`, JSON.stringify(read_params, null, 2));
-
-//         // Process this chunk
-//         DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
-//           if (hasError) return; // Skip if another chunk already failed
-
-//           if (err) {
-//             console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
-//             hasError = true;
-//             return callback(500, `Error fetching bulk data: ${err}`);
-//           }
-
-//           // Add this chunk's results to total results
-//           if (data && data.Items) {
-//             allResults = allResults.concat(data.Items);
-//           }
-
-//           completedChunks++;
-//           console.log(`Completed chunk ${completedChunks}/${idChunks.length}, items so far: ${allResults.length}`);
-
-//           // Process next chunk
-//           processChunk(chunkIndex + 1);
-//         });
-//       };
-
-//       // Start processing from first chunk
-//       processChunk(0);
+//         DATABASE_TABLE.scanRecord(docClient, read_params, callback);
+//       }
 //     }
 //   });
 // };
 
 
+
+////chunking
+exports.fetchBulkData = function (request, callback) {
+  dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+    if (DBErr) {
+      console.log(constant.messages.DATABASE_ERROR);
+      console.log(DBErr);
+      return callback(500, constant.messages.DATABASE_ERROR);
+    }
+
+    let IdArray = request.IdArray;
+    let fetchIdName = request.fetchIdName;
+    let TableName = request.TableName;
+
+    // Deduplicate IDs to avoid processing duplicates
+    IdArray = [...new Set(IdArray)];
+    console.log("ID Arrayrid:", IdArray);
+
+    if (IdArray.length === 0) {
+      console.log("EMPTY BULK ID");
+      return callback(0, { Items: [] });
+    }
+
+    let docClient = dynamoDBCall;
+
+    if (IdArray.length === 1) {
+      // Single ID - use query operation for better performance
+      let expAttributeVal = {};
+      expAttributeVal[":" + fetchIdName] = IdArray[0];
+
+      let read_params = {
+        TableName: TableName,
+        KeyConditionExpression: fetchIdName + " = :" + fetchIdName,
+        ExpressionAttributeValues: expAttributeVal,
+      };
+
+      console.log("READ PARAMS : ", read_params);
+      DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+    } else {
+      // Multiple IDs - use chunking strategy
+      const CHUNK_SIZE = 100; // Optimal chunk size for scan operations
+      const idChunks = helper.chunkArray(IdArray, CHUNK_SIZE);
+
+      console.log(`Processing ${idChunks.length} chunks of max ${CHUNK_SIZE} items each`);
+
+      let allResults = [];
+      let completedChunks = 0;
+      let hasError = false;
+
+      // Process each chunk sequentially to avoid overwhelming DynamoDB
+      const processChunk = (chunkIndex) => {
+        if (hasError || chunkIndex >= idChunks.length) {
+          // All chunks processed successfully
+          if (!hasError && chunkIndex >= idChunks.length) {
+            console.log(`Total items retrieved: ${allResults.length}`);
+            return callback(0, { Items: allResults });
+          }
+          return;
+        }
+
+        const chunk = idChunks[chunkIndex];
+        let FilterExpressionDynamic = "";
+        let ExpressionAttributeValuesDynamic = {};
+
+        // Build filter expression for this chunk
+        chunk.forEach((element, index) => {
+          FilterExpressionDynamic += fetchIdName + " = :" + fetchIdName + index;
+          ExpressionAttributeValuesDynamic[":" + fetchIdName + index] = element;
+
+          if (index < chunk.length - 1) {
+            FilterExpressionDynamic += " OR ";
+          }
+        });
+
+        let read_params = {
+          TableName: TableName,
+          FilterExpression: FilterExpressionDynamic,
+          ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+        };
+
+        console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${idChunks.length}:`, JSON.stringify(read_params, null, 2));
+
+        // Process this chunk
+        DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
+          if (hasError) return; // Skip if another chunk already failed
+
+          if (err) {
+            console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
+            hasError = true;
+            return callback(500, `Error fetching bulk data: ${err}`);
+          }
+
+          // Add this chunk's results to total results
+          if (data && data.Items) {
+            allResults = allResults.concat(data.Items);
+          }
+
+          completedChunks++;
+          console.log(`Completed chunk ${completedChunks}/${idChunks.length}, items so far: ${allResults.length}`);
+
+          // Process next chunk
+          processChunk(chunkIndex + 1);
+        });
+      };
+
+      // Start processing from first chunk
+      processChunk(0);
+    }
+  });
+};
+
+
+// exports.fetchBulkData2 = async function (request) {
+//   const { IdArray, fetchIdName, TableName } = request;
+
+//   if (!IdArray || IdArray.length === 0) {
+//     throw new Error(constant.messages.INVALID_PARAMETERS);
+//   }
+
+//   let response = { data: [] };
+
+//   if (IdArray.length === 1) {
+//     const readParams = {
+//       TableName,
+//       KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
+//       ExpressionAttributeValues: {
+//         [`:${fetchIdName}`]: IdArray[0]
+//       }
+//     };
+
+//     const result = await DATABASE_TABLE2.query(readParams);
+//     response.data = result.Items || [];
+//   } else {
+//     const keys = IdArray.map(id => ({ [fetchIdName]: id }));
+//     const readParams = {
+//       RequestItems: {
+//         [TableName]: {
+//           Keys: keys
+//         }
+//       }
+//     };
+
+//     const result = await DATABASE_TABLE2.getByObjects(readParams);
+//     response.data = result.Responses ? result.Responses[TableName] : [];
+//   }
+
+//   return response;
+// };
+
+
+
+///chunk
 exports.fetchBulkData2 = async function (request) {
   const { IdArray, fetchIdName, TableName } = request;
 
@@ -183,6 +223,7 @@ exports.fetchBulkData2 = async function (request) {
   let response = { data: [] };
 
   if (IdArray.length === 1) {
+    // Single ID - use query for better performance
     const readParams = {
       TableName,
       KeyConditionExpression: `${fetchIdName} = :${fetchIdName}`,
@@ -194,23 +235,41 @@ exports.fetchBulkData2 = async function (request) {
     const result = await DATABASE_TABLE2.query(readParams);
     response.data = result.Items || [];
   } else {
-    const keys = IdArray.map(id => ({ [fetchIdName]: id }));
-    const readParams = {
-      RequestItems: {
-        [TableName]: {
-          Keys: keys
-        }
-      }
-    };
+    // Multiple IDs - use chunking to handle large batches
+    const CHUNK_SIZE = 100; // DynamoDB batch limit is 100 items
+    const chunks = helper.chunkArray(IdArray, CHUNK_SIZE);
+    const allResults = [];
 
-    const result = await DATABASE_TABLE2.getByObjects(readParams);
-    response.data = result.Responses ? result.Responses[TableName] : [];
+    // Process chunks in parallel for better performance
+    const chunkPromises = chunks.map(async (chunk) => {
+      const keys = chunk.map(id => ({ [fetchIdName]: id }));
+      const readParams = {
+        RequestItems: {
+          [TableName]: {
+            Keys: keys
+          }
+        }
+      };
+
+      const result = await DATABASE_TABLE2.getByObjects(readParams);
+      return result.Responses ? result.Responses[TableName] : [];
+    });
+
+    const chunkResults = await Promise.all(chunkPromises);
+
+    // Flatten all results
+    for (const chunkResult of chunkResults) {
+      allResults.push(...chunkResult);
+    }
+
+    response.data = allResults;
   }
 
   return response;
 };
 
 
+////
 exports.BulkInsert = function (final_data, userTable, callback) {
   if (final_data.length > 0) {
     dynamoDbCon.getDB(async function (DBErr, dynamoDBCall) {
@@ -306,6 +365,80 @@ exports.fetchBulkDataUsingIndex = function (request, callback) {
   });
 };
 
+// exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
+//   dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//     if (DBErr) {
+//       console.log(constant.messages.DATABASE_ERROR);
+//       console.log(DBErr);
+//       callback(500, constant.messages.DATABASE_ERROR);
+//     } else {
+//       let { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
+//       //   let IdArray = request.IdArray;
+//       //   let fetchIdName = request.fetchIdName;
+//       //   let TableName = request.TableName;
+//       //   let isActiveFieldName = request.isActiveFieldName;
+//       //   let isActive = request.isActive;
+
+//       let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
+//       let expAttributeVal = {};
+
+//       let docClient = dynamoDBCall;
+//       let FilterExpressionDynamic = "";
+//       let ExpressionAttributeValuesDynamic = {};
+
+//       if (IdArray.length === 1) {
+//         expAttributeVal[":" + fetchIdName] = IdArray[0];
+//         expAttributeVal[":common_id"] = constant.constValues.common_id;
+
+//         let read_params = {
+//           TableName: TableName,
+//           IndexName: Indexes.common_id_index,
+//           KeyConditionExpression: "common_id = :common_id",
+//           FilterExpression: "" + fetchIdName + " = :" + fetchIdName + "",
+//           ExpressionAttributeValues: expAttributeVal,
+//         };
+
+//         DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//       } else {
+//         IdArray.forEach((element, index) => {
+//           if (index < IdArray.length - 1) {
+//             FilterExpressionDynamic =
+//               FilterExpressionDynamic + filterExpDynamic + index + " OR ";
+//             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+//               element + "";
+//           } else {
+//             FilterExpressionDynamic =
+//               FilterExpressionDynamic + filterExpDynamic + index + "";
+//             ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+//               element;
+//           }
+//         });
+//         FilterExpressionDynamic =
+//           FilterExpressionDynamic +
+//           " AND " +
+//           isActiveFieldName +
+//           "= :" +
+//           isActiveFieldName;
+//         ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
+//         ExpressionAttributeValuesDynamic[":common_id"] =
+//           constant.constValues.common_id;
+
+//         let read_params = {
+//           TableName: TableName,
+//           IndexName: Indexes.common_id_index,
+//           KeyConditionExpression: "common_id = :common_id",
+//           FilterExpression: FilterExpressionDynamic,
+//           ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//         };
+
+//         DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//       }
+//     }
+//   });
+// };
+
+////chunk
+
 exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
   dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
     if (DBErr) {
@@ -314,20 +447,21 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
       callback(500, constant.messages.DATABASE_ERROR);
     } else {
       let { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
-      //   let IdArray = request.IdArray;
-      //   let fetchIdName = request.fetchIdName;
-      //   let TableName = request.TableName;
-      //   let isActiveFieldName = request.isActiveFieldName;
-      //   let isActive = request.isActive;
 
-      let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
-      let expAttributeVal = {};
+      // Remove duplicates
+      IdArray = [...new Set(IdArray)];
+      console.log("IdArray : ", IdArray);
+
+      if (IdArray.length === 0) {
+        console.log("EMPTY BULK ID");
+        callback(null, []);
+        return;
+      }
 
       let docClient = dynamoDBCall;
-      let FilterExpressionDynamic = "";
-      let ExpressionAttributeValuesDynamic = {};
 
       if (IdArray.length === 1) {
+        let expAttributeVal = {};
         expAttributeVal[":" + fetchIdName] = IdArray[0];
         expAttributeVal[":common_id"] = constant.constValues.common_id;
 
@@ -341,172 +475,221 @@ exports.getBulkDataUsingIndexWithActiveStatus = function (request, callback) {
 
         DATABASE_TABLE.queryRecord(docClient, read_params, callback);
       } else {
-        IdArray.forEach((element, index) => {
-          if (index < IdArray.length - 1) {
-            FilterExpressionDynamic =
-              FilterExpressionDynamic + filterExpDynamic + index + " OR ";
-            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
-              element + "";
-          } else {
-            FilterExpressionDynamic =
-              FilterExpressionDynamic + filterExpDynamic + index + "";
-            ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
-              element;
-          }
-        });
-        FilterExpressionDynamic =
-          FilterExpressionDynamic +
-          " AND " +
-          isActiveFieldName +
-          "= :" +
-          isActiveFieldName;
-        ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
-        ExpressionAttributeValuesDynamic[":common_id"] =
-          constant.constValues.common_id;
+        // Apply chunking for large arrays
+        const idChunks = helper.chunkArray(IdArray, 100);
+        let allResponses = [];
+        let completedChunks = 0;
 
-        let read_params = {
-          TableName: TableName,
-          IndexName: Indexes.common_id_index,
-          KeyConditionExpression: "common_id = :common_id",
-          FilterExpression: FilterExpressionDynamic,
-          ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+        const processChunk = (chunk, chunkIndex) => {
+          let FilterExpressionDynamic = "";
+          let ExpressionAttributeValuesDynamic = {};
+          let filterExpDynamic = fetchIdName + "= :" + fetchIdName;
+
+          chunk.forEach((element, index) => {
+            if (index < chunk.length - 1) {
+              FilterExpressionDynamic =
+                FilterExpressionDynamic + filterExpDynamic + index + " OR ";
+              ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+                element + "";
+            } else {
+              FilterExpressionDynamic =
+                FilterExpressionDynamic + filterExpDynamic + index + "";
+              ExpressionAttributeValuesDynamic[":" + fetchIdName + "" + index] =
+                element;
+            }
+          });
+
+          FilterExpressionDynamic =
+            FilterExpressionDynamic +
+            " AND " +
+            isActiveFieldName +
+            "= :" +
+            isActiveFieldName;
+          ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
+          ExpressionAttributeValuesDynamic[":common_id"] =
+            constant.constValues.common_id;
+
+          let read_params = {
+            TableName: TableName,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: FilterExpressionDynamic,
+            ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+          };
+
+          console.log(`CHUNK ${chunkIndex + 1} PARAMS:`, JSON.stringify(read_params, null, 2));
+
+          DATABASE_TABLE.queryRecord(docClient, read_params, (err, result) => {
+            if (err) {
+              callback(err);
+              return;
+            }
+
+            if (result && result.Items) {
+              allResponses = allResponses.concat(result.Items);
+            }
+
+            completedChunks++;
+
+            // If all chunks are processed, return the combined results
+            if (completedChunks === idChunks.length) {
+              callback(null, allResponses);
+            }
+          });
         };
 
-        DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+        // Process all chunks
+        idChunks.forEach((chunk, index) => {
+          processChunk(chunk, index);
+        });
       }
     }
   });
 };
+////
 
-exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
 
-  const { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
 
-  let FilterExpressionDynamic = "";
-  let ExpressionAttributeValuesDynamic = {};
 
-  if (IdArray.length === 1) {
-    ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
-    ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
 
-    const readParams = {
-      TableName: TableName,
-      IndexName: Indexes.common_id_index,
-      KeyConditionExpression: "common_id = :common_id",
-      FilterExpression: `${fetchIdName} = :${fetchIdName}`,
-      ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-    };
 
-    return await DATABASE_TABLE2.query(readParams);
-  }
 
-  else {
-    IdArray.forEach((element, index) => {
-      FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
-      ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
 
-      if (index < IdArray.length - 1) {
-        FilterExpressionDynamic += " OR ";
-      }
-    });
 
-    FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
-    ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
-    ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
 
-    const readParams = {
-      TableName: TableName,
-      IndexName: Indexes.common_id_index,
-      KeyConditionExpression: "common_id = :common_id",
-      FilterExpression: FilterExpressionDynamic,
-      ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-    };
 
-    return await DATABASE_TABLE2.query(readParams);
-  }
-};
 
-// ///////////////chunk
 // exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
-//   let { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
 
-//   // Deduplicate IDs to avoid processing duplicates
-//   IdArray = [...new Set(IdArray)];
-//   console.log("IdArray : ", IdArray);
+//   const { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
 
-//   if (IdArray.length === 0) {
-//     console.log("EMPTY BULK ID");
-//     return { Items: [] };
-//   } else if (IdArray.length === 1) {
-//     let ExpressionAttributeValuesDynamic = {};
+//   let FilterExpressionDynamic = "";
+//   let ExpressionAttributeValuesDynamic = {};
+
+//   if (IdArray.length === 1) {
 //     ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
 //     ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
-//     ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
 
 //     const readParams = {
 //       TableName: TableName,
 //       IndexName: Indexes.common_id_index,
 //       KeyConditionExpression: "common_id = :common_id",
-//       FilterExpression: `${fetchIdName} = :${fetchIdName} AND ${isActiveFieldName} = :${isActiveFieldName}`,
+//       FilterExpression: `${fetchIdName} = :${fetchIdName}`,
 //       ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
 //     };
 
-//     console.log("READ PARAMS : ", readParams);
-//     const result = await DATABASE_TABLE2.query(readParams);
-//     return result.Items || [];
-//   } else {
-//     // Use chunking to optimize large ID arrays
-//     // Smaller chunk size for query operations due to filter expression complexity
-//     const idChunks = helper.chunkArray(IdArray, 100);
-//     let allResponses = [];
+//     return await DATABASE_TABLE2.query(readParams);
+//   }
 
-//     console.log(`Processing ${idChunks.length} chunks of max 25 items each`);
+//   else {
+//     IdArray.forEach((element, index) => {
+//       FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
+//       ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
 
-//     // Process chunks sequentially to avoid overwhelming DynamoDB
-//     for (const chunk of idChunks) {
-//       let FilterExpressionDynamic = "";
-//       let ExpressionAttributeValuesDynamic = {};
-
-//       // Build OR condition for this chunk
-//       chunk.forEach((element, index) => {
-//         FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
-//         ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
-
-//         if (index < chunk.length - 1) {
-//           FilterExpressionDynamic += " OR ";
-//         }
-//       });
-
-//       // Add active status filter and common_id
-//       FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
-//       ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
-//       ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
-
-//       const readParams = {
-//         TableName: TableName,
-//         IndexName: Indexes.common_id_index,
-//         KeyConditionExpression: "common_id = :common_id",
-//         FilterExpression: FilterExpressionDynamic,
-//         ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-//       };
-
-//       console.log(`QUERY PARAMS for chunk: `, JSON.stringify(readParams, null, 2));
-
-//       try {
-//         const response = await DATABASE_TABLE2.query(readParams);
-//         if (response.Items && response.Items.length > 0) {
-//           allResponses = allResponses.concat(response.Items);
-//         }
-//       } catch (error) {
-//         console.error(`Error processing chunk:`, error);
-//         throw error;
+//       if (index < IdArray.length - 1) {
+//         FilterExpressionDynamic += " OR ";
 //       }
-//     }
+//     });
 
-//     console.log(`Total items retrieved: ${allResponses.length}`);
-//     return allResponses;
+//     FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
+//     ExpressionAttributeValuesDynamic[":" + isActiveFieldName] = isActive;
+//     ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+//     const readParams = {
+//       TableName: TableName,
+//       IndexName: Indexes.common_id_index,
+//       KeyConditionExpression: "common_id = :common_id",
+//       FilterExpression: FilterExpressionDynamic,
+//       ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//     };
+
+//     return await DATABASE_TABLE2.query(readParams);
 //   }
 // };
+
+// ///////////////chunk
+exports.getBulkDataUsingIndexWithActiveStatus2 = async (request) => {
+  let { IdArray, fetchIdName, TableName, isActiveFieldName, isActive } = request;
+  console.log("requestIdArray : ", request);
+
+
+  // Deduplicate IDs to avoid processing duplicates
+  IdArray = [...new Set(IdArray)];
+  console.log("IdArray : ", IdArray);
+
+  if (IdArray.length === 0) {
+    console.log("EMPTY BULK ID");
+    return { Items: [] };
+  } else if (IdArray.length === 1) {
+    let ExpressionAttributeValuesDynamic = {};
+    ExpressionAttributeValuesDynamic[`:${fetchIdName}`] = IdArray[0];
+    ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+    ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
+
+    const readParams = {
+      TableName: TableName,
+      IndexName: Indexes.common_id_index,
+      KeyConditionExpression: "common_id = :common_id",
+      FilterExpression: `${fetchIdName} = :${fetchIdName} AND ${isActiveFieldName} = :${isActiveFieldName}`,
+      ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+    };
+
+    console.log("READ PARAMS : ", readParams);
+    const result = await DATABASE_TABLE2.query(readParams);
+    return result.Items || [];
+  } else {
+    // Use chunking to optimize large ID arrays
+    // Smaller chunk size for query operations due to filter expression complexity
+    const idChunks = helper.chunkArray(IdArray, 100);
+    let allResponses = [];
+
+    console.log(`Processing ${idChunks.length} chunks of max 25 items each`);
+
+    // Process chunks sequentially to avoid overwhelming DynamoDB
+    for (const chunk of idChunks) {
+      let FilterExpressionDynamic = "";
+      let ExpressionAttributeValuesDynamic = {};
+
+      // Build OR condition for this chunk
+      chunk.forEach((element, index) => {
+        FilterExpressionDynamic += `${fetchIdName} = :${fetchIdName}${index}`;
+        ExpressionAttributeValuesDynamic[`:${fetchIdName}${index}`] = element;
+
+        if (index < chunk.length - 1) {
+          FilterExpressionDynamic += " OR ";
+        }
+      });
+
+      // Add active status filter and common_id
+      FilterExpressionDynamic += ` AND ${isActiveFieldName} = :${isActiveFieldName}`;
+      ExpressionAttributeValuesDynamic[`:${isActiveFieldName}`] = isActive;
+      ExpressionAttributeValuesDynamic[":common_id"] = constant.constValues.common_id;
+
+      const readParams = {
+        TableName: TableName,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: FilterExpressionDynamic,
+        ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+      };
+
+      console.log(`QUERY PARAMS for chunk: `, JSON.stringify(readParams, null, 2));
+
+      try {
+        const response = await DATABASE_TABLE2.query(readParams);
+        if (response.Items && response.Items.length > 0) {
+          allResponses = allResponses.concat(response.Items);
+        }
+      } catch (error) {
+        console.error(`Error processing chunk:`, error);
+        throw error;
+      }
+    }
+
+    console.log(`Total items retrieved: ${allResponses.length}`);
+    return allResponses;
+  }
+};
 
 
 
@@ -567,52 +750,41 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
   });
 };
 
+
+
 // exports.fetchBulkDataWithProjection2 = async (request) => {
-//   // const fromatedRequest = await helper.getDataByFilterKey(request);
-//   // const params = {
-//   //   TableName: TABLE_NAMES.upschool_question_table,
-//   //   IndexName: Indexes.common_id_index,
-//   //   KeyConditionExpression: "common_id = :common_id",
-//   //   FilterExpression: fromatedRequest.FilterExpression,
-//   //   ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-//   // };
-//   // try {
-//   //   console.log("params",params)
-//   //   return await DATABASE_TABLE2.query(params);    
-//   // } catch (error) {
-//   //   console.error(`Error fetching quiz results:`, error);
-//   //   throw error;
-//   // }
-//   const unit_Quiz_id = [...new Set(request.items)]; // Remove duplicates
+//   try {
+//     const question_ids = [...new Set(request.items.map((item) => item.question_id))];
 
-//   const common_id = constant.constValues.common_id;
+//     if (question_ids.length === 0) {
+//       throw new Error("No question IDs provided.");
+//     }
 
-//   // Create filter expression for multiple quiz_id
-//   const filterExpression = unit_Quiz_id.map((_, index) => `question_id = :question_id${index}`).join(" OR ");
-//   console.log("filterExpression",filterExpression);
+//     const queries = question_ids.map((question_id) => {
+//       const params = {
+//         TableName: TABLE_NAMES.upschool_question_table,
+//         KeyConditionExpression: "question_id = :question_id",
+//         ExpressionAttributeValues: {
+//           ":question_id": question_id
+//         }
+//       };
+//       return DATABASE_TABLE2.query(params);
+//     });
 
-//   const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
-//       acc[`:question_id${index}`] = quizId.question_id;
-//       return acc;
-//   },
-//    { ":common_id": common_id });
-//   console.log("expressionAttributeValues",expressionAttributeValues);
+//     const results = await Promise.all(queries);
 
+//     const allResults = results.flatMap(result => result.Items || []);
 
-//   const params = {
-//       TableName: TABLE_NAMES.upschool_question_table,
-//       IndexName: Indexes.common_id_index,
-//       KeyConditionExpression: "common_id = :common_id",
-//       FilterExpression: filterExpression,
-//       ExpressionAttributeValues: expressionAttributeValues,
-//       // ProjectionExpression:["question_id","question_type","marks","answers_of_question"]
-//   };
-//   // console.log("params",params)
-
-//       const result = await DATABASE_TABLE2.query(params);
-//       return result.Items;
+//     return allResults;
+//   } catch (error) {
+//     throw new Error("Failed to fetch bulk data.");
+//   }
 // };
 
+
+
+
+///chunk
 exports.fetchBulkDataWithProjection2 = async (request) => {
   try {
     const question_ids = [...new Set(request.items.map((item) => item.question_id))];
@@ -621,20 +793,27 @@ exports.fetchBulkDataWithProjection2 = async (request) => {
       throw new Error("No question IDs provided.");
     }
 
-    const queries = question_ids.map((question_id) => {
-      const params = {
-        TableName: TABLE_NAMES.upschool_question_table,
-        KeyConditionExpression: "question_id = :question_id",
-        ExpressionAttributeValues: {
-          ":question_id": question_id
-        }
-      };
-      return DATABASE_TABLE2.query(params);
-    });
+    const CHUNK_SIZE = 100; // Process 10 queries at a time
+    const chunks = chunkArray(question_ids, CHUNK_SIZE);
+    const allResults = [];
 
-    const results = await Promise.all(queries);
+    // Process each chunk sequentially
+    for (const chunk of chunks) {
+      const queries = chunk.map((question_id) => {
+        const params = {
+          TableName: TABLE_NAMES.upschool_question_table,
+          KeyConditionExpression: "question_id = :question_id",
+          ExpressionAttributeValues: {
+            ":question_id": question_id
+          }
+        };
+        return DATABASE_TABLE2.query(params);
+      });
 
-    const allResults = results.flatMap(result => result.Items || []);
+      const results = await Promise.all(queries);
+      const chunkResults = results.flatMap(result => result.Items || []);
+      allResults.push(...chunkResults);
+    }
 
     return allResults;
   } catch (error) {

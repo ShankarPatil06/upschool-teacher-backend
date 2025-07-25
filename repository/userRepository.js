@@ -444,169 +444,169 @@ exports.changeUserStatus2 = async (request) => {
     return await DATABASE_TABLE2.updateService(params);
 }
 
-exports.fetchBulkUserssData = function (request, callback) {
+// exports.fetchBulkUserssData = function (request, callback) {
 
-    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-        if (DBErr) {
-            console.log(constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
-            console.log(DBErr);
-            callback(500, constant.messages.UPSCHOOL_USER_DATABASE_ERROR)
-        } else {
-            let userIdArray = request.data.userIdArray;
-            let tableUserID = request.data.tableUserID;
-            let userTableName = request.data.userTableName;
+//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log(constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
+//             console.log(DBErr);
+//             callback(500, constant.messages.UPSCHOOL_USER_DATABASE_ERROR)
+//         } else {
+//             let userIdArray = request.data.userIdArray;
+//             let tableUserID = request.data.tableUserID;
+//             let userTableName = request.data.userTableName;
 
-            let filterExpDynamic = tableUserID + "= :" + tableUserID;
-            let expAttributeVal = {};
+//             let filterExpDynamic = tableUserID + "= :" + tableUserID;
+//             let expAttributeVal = {};
 
-            let docClient = dynamoDBCall;
-            let FilterExpressionDynamic = "";
-            let ExpressionAttributeValuesDynamic = {};
+//             let docClient = dynamoDBCall;
+//             let FilterExpressionDynamic = "";
+//             let ExpressionAttributeValuesDynamic = {};
 
-            if (userIdArray.length === 1) {
+//             if (userIdArray.length === 1) {
 
-                expAttributeVal[':' + tableUserID] = userIdArray[0];
+//                 expAttributeVal[':' + tableUserID] = userIdArray[0];
 
-                let read_params = {
-                    TableName: userTableName,
-                    KeyConditionExpression: "" + tableUserID + " = :" + tableUserID + "",
-                    ExpressionAttributeValues: expAttributeVal,
-                }
+//                 let read_params = {
+//                     TableName: userTableName,
+//                     KeyConditionExpression: "" + tableUserID + " = :" + tableUserID + "",
+//                     ExpressionAttributeValues: expAttributeVal,
+//                 }
 
-                console.log("READ PARAMS : ", read_params);
+//                 console.log("READ PARAMS : ", read_params);
 
-                DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-            }
-            else {
-                userIdArray.forEach((element, index) => {
-                    if (index < userIdArray.length - 1) {
-                        FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " OR "
-                        ExpressionAttributeValuesDynamic[':' + tableUserID + '' + index] = element + ''
-                    } else {
-                        FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + ""
-                        ExpressionAttributeValuesDynamic[':' + tableUserID + '' + index] = element;
-                    }
-                });
-                let read_params = {
-                    TableName: userTableName,
-                    FilterExpression: FilterExpressionDynamic,
-                    ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-                }
-                DATABASE_TABLE.scanRecord(docClient, read_params, callback);
-            }
-        }
-    });
-}
+//                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+//             }
+//             else {
+//                 userIdArray.forEach((element, index) => {
+//                     if (index < userIdArray.length - 1) {
+//                         FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + " OR "
+//                         ExpressionAttributeValuesDynamic[':' + tableUserID + '' + index] = element + ''
+//                     } else {
+//                         FilterExpressionDynamic = FilterExpressionDynamic + filterExpDynamic + index + ""
+//                         ExpressionAttributeValuesDynamic[':' + tableUserID + '' + index] = element;
+//                     }
+//                 });
+//                 let read_params = {
+//                     TableName: userTableName,
+//                     FilterExpression: FilterExpressionDynamic,
+//                     ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+//                 }
+//                 DATABASE_TABLE.scanRecord(docClient, read_params, callback);
+//             }
+//         }
+//     });
+// }
 
 
 
 
 //chunk
-// exports.fetchBulkUserssData = function (request, callback) {
-//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
-//         if (DBErr) {
-//             console.log(constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
-//             console.log(DBErr);
-//             return callback(500, constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
-//         }
+exports.fetchBulkUserssData = function (request, callback) {
+    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+        if (DBErr) {
+            console.log(constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
+            console.log(DBErr);
+            return callback(500, constant.messages.UPSCHOOL_USER_DATABASE_ERROR);
+        }
 
-//         let userIdArray = request.data.userIdArray;
-//         let tableUserID = request.data.tableUserID;
-//         let userTableName = request.data.userTableName;
+        let userIdArray = request.data.userIdArray;
+        let tableUserID = request.data.tableUserID;
+        let userTableName = request.data.userTableName;
 
-//         // Deduplicate user IDs to avoid processing duplicates
-//         userIdArray = [...new Set(userIdArray)];
-//         console.log("User ID Array:", userIdArray);
+        // Deduplicate user IDs to avoid processing duplicates
+        userIdArray = [...new Set(userIdArray)];
+        console.log("User ID Array:", userIdArray);
 
-//         if (userIdArray.length === 0) {
-//             console.log("EMPTY BULK USER ID");
-//             return callback(0, { Items: [] });
-//         }
+        if (userIdArray.length === 0) {
+            console.log("EMPTY BULK USER ID");
+            return callback(0, { Items: [] });
+        }
 
-//         let docClient = dynamoDBCall;
+        let docClient = dynamoDBCall;
 
-//         if (userIdArray.length === 1) {
-//             // Single user ID - use query operation for better performance
-//             let expAttributeVal = {};
-//             expAttributeVal[':' + tableUserID] = userIdArray[0];
+        if (userIdArray.length === 1) {
+            // Single user ID - use query operation for better performance
+            let expAttributeVal = {};
+            expAttributeVal[':' + tableUserID] = userIdArray[0];
 
-//             let read_params = {
-//                 TableName: userTableName,
-//                 KeyConditionExpression: tableUserID + " = :" + tableUserID,
-//                 ExpressionAttributeValues: expAttributeVal,
-//             };
+            let read_params = {
+                TableName: userTableName,
+                KeyConditionExpression: tableUserID + " = :" + tableUserID,
+                ExpressionAttributeValues: expAttributeVal,
+            };
 
-//             console.log("READ PARAMS : ", read_params);
-//             DATABASE_TABLE.queryRecord(docClient, read_params, callback);
-//         } else {
-//             // Multiple user IDs - use chunking strategy
-//             const CHUNK_SIZE = 25; // Optimal chunk size for scan operations
-//             const userIdChunks = helper.chunkArray(userIdArray, CHUNK_SIZE);
+            console.log("READ PARAMS : ", read_params);
+            DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+        } else {
+            // Multiple user IDs - use chunking strategy
+            const CHUNK_SIZE = 25; // Optimal chunk size for scan operations
+            const userIdChunks = helper.chunkArray(userIdArray, CHUNK_SIZE);
 
-//             console.log(`Processing ${userIdChunks.length} chunks of max ${CHUNK_SIZE} items each`);
+            console.log(`Processing ${userIdChunks.length} chunks of max ${CHUNK_SIZE} items each`);
 
-//             let allResults = [];
-//             let completedChunks = 0;
-//             let hasError = false;
+            let allResults = [];
+            let completedChunks = 0;
+            let hasError = false;
 
-//             // Process each chunk sequentially to avoid overwhelming DynamoDB
-//             const processChunk = (chunkIndex) => {
-//                 if (hasError || chunkIndex >= userIdChunks.length) {
-//                     // All chunks processed successfully
-//                     if (!hasError && chunkIndex >= userIdChunks.length) {
-//                         console.log(`Total users retrieved: ${allResults.length}`);
-//                         return callback(0, { Items: allResults });
-//                     }
-//                     return;
-//                 }
+            // Process each chunk sequentially to avoid overwhelming DynamoDB
+            const processChunk = (chunkIndex) => {
+                if (hasError || chunkIndex >= userIdChunks.length) {
+                    // All chunks processed successfully
+                    if (!hasError && chunkIndex >= userIdChunks.length) {
+                        console.log(`Total users retrieved: ${allResults.length}`);
+                        return callback(0, { Items: allResults });
+                    }
+                    return;
+                }
 
-//                 const chunk = userIdChunks[chunkIndex];
-//                 let FilterExpressionDynamic = "";
-//                 let ExpressionAttributeValuesDynamic = {};
+                const chunk = userIdChunks[chunkIndex];
+                let FilterExpressionDynamic = "";
+                let ExpressionAttributeValuesDynamic = {};
 
-//                 // Build filter expression for this chunk
-//                 chunk.forEach((element, index) => {
-//                     FilterExpressionDynamic += tableUserID + " = :" + tableUserID + index;
-//                     ExpressionAttributeValuesDynamic[':' + tableUserID + index] = element;
+                // Build filter expression for this chunk
+                chunk.forEach((element, index) => {
+                    FilterExpressionDynamic += tableUserID + " = :" + tableUserID + index;
+                    ExpressionAttributeValuesDynamic[':' + tableUserID + index] = element;
 
-//                     if (index < chunk.length - 1) {
-//                         FilterExpressionDynamic += " OR ";
-//                     }
-//                 });
+                    if (index < chunk.length - 1) {
+                        FilterExpressionDynamic += " OR ";
+                    }
+                });
 
-//                 let read_params = {
-//                     TableName: userTableName,
-//                     FilterExpression: FilterExpressionDynamic,
-//                     ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
-//                 };
+                let read_params = {
+                    TableName: userTableName,
+                    FilterExpression: FilterExpressionDynamic,
+                    ExpressionAttributeValues: ExpressionAttributeValuesDynamic,
+                };
 
-//                 console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${userIdChunks.length}:`, JSON.stringify(read_params, null, 2));
+                console.log(`SCAN PARAMS for chunk ${chunkIndex + 1}/${userIdChunks.length}:`, JSON.stringify(read_params, null, 2));
 
-//                 // Process this chunk
-//                 DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
-//                     if (hasError) return; // Skip if another chunk already failed
+                // Process this chunk
+                DATABASE_TABLE.scanRecord(docClient, read_params, (err, data) => {
+                    if (hasError) return; // Skip if another chunk already failed
 
-//                     if (err) {
-//                         console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
-//                         hasError = true;
-//                         return callback(500, `Error fetching users data: ${err}`);
-//                     }
+                    if (err) {
+                        console.error(`Error processing chunk ${chunkIndex + 1}:`, err);
+                        hasError = true;
+                        return callback(500, `Error fetching users data: ${err}`);
+                    }
 
-//                     // Add this chunk's results to total results
-//                     if (data && data.Items) {
-//                         allResults = allResults.concat(data.Items);
-//                     }
+                    // Add this chunk's results to total results
+                    if (data && data.Items) {
+                        allResults = allResults.concat(data.Items);
+                    }
 
-//                     completedChunks++;
-//                     console.log(`Completed chunk ${completedChunks}/${userIdChunks.length}`);
+                    completedChunks++;
+                    console.log(`Completed chunk ${completedChunks}/${userIdChunks.length}`);
 
-//                     // Process next chunk
-//                     processChunk(chunkIndex + 1);
-//                 });
-//             };
+                    // Process next chunk
+                    processChunk(chunkIndex + 1);
+                });
+            };
 
-//             // Start processing from first chunk
-//             processChunk(0);
-//         }
-//     });
-// };
+            // Start processing from first chunk
+            processChunk(0);
+        }
+    });
+};
