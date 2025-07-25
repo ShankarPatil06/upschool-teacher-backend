@@ -33,5 +33,7 @@ exports.TABLE_NAMES = {
     upschool_test_result: `${DBNamePrefix}test_result`,
     upschool_quiz_result: `${DBNamePrefix}quiz_result`,
     upschool_presets_table: `${DBNamePrefix}presets_table`,
+    upschool_teacher_attendance_table: `${DBNamePrefix}teacher_attendance_table`,
+   
 
 }

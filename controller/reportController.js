@@ -60,10 +60,30 @@ exports.viewAnalysisIndividualReport =async (req, res, next) => {
     }
 };
 
+exports.viewClassReportQuestionsTest =async (req, res, next) => {
+    try {
+    let request = req.body;
+    const reportData =  await reportServices.viewClassReportQuestionsTest(request);
+    return formatResponse(res, reportData);
+    } catch (error) {
+    next(error)
+    }
+};
+
 exports.viewClassReportQuestions =async (req, res, next) => {
     try {
     let request = req.body;
     const reportData =  await reportServices.viewClassReportQuestions(request);
+    return formatResponse(res, reportData);
+    } catch (error) {
+    next(error)
+    }
+};
+
+exports.viewClassReportFocusAreaTest =async (req, res, next) => {
+    try {
+    let request = req.body;
+    const reportData =  await reportServices.viewClassReportFocusAreaTest(request);
     return formatResponse(res, reportData);
     } catch (error) {
     next(error)

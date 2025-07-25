@@ -7,6 +7,8 @@ const qs = require('qs');
 const axios = require('axios');
 let sendMail = require("./emailService");
 
+
+
 // const { callbackPromise } = require("nodemailer/lib/shared");
 
 exports.getTeacherClasses = async (request) => {
@@ -450,7 +452,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
           basic_groups = await questionServices.processGroups(basic_groups); //helper.removeDuplicates(basic_groups);
           intermediate_groups = await questionServices.processGroups(intermediate_groups); //helper.removeDuplicates(intermediate_groups);
-          advanced_groups =await questionServices.processGroups(advanced_groups); //helper.removeDuplicates(advanced_groups);
+          advanced_groups = await questionServices.processGroups(advanced_groups); //helper.removeDuplicates(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async function (matrix_count_err, matrix_count_response) {
             if (matrix_count_err) {
@@ -556,7 +558,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             for (var i in non_considered_topic_data) {
                               non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
                             };
-                            console.log({ request , "quiz_duration" : quiz_duration , questions_list});
+                            console.log({ request, "quiz_duration": quiz_duration, questions_list });
 
                             quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
                               if (addQuiz_err) {
@@ -722,8 +724,8 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
       // intermediate_groups = helper.removeDuplicates(intermediate_groups);
       // advanced_groups = helper.removeDuplicates(advanced_groups);
 
-      basic_groups = await questionServices.processGroups(basic_groups); 
-      intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+      basic_groups = await questionServices.processGroups(basic_groups);
+      intermediate_groups = await questionServices.processGroups(intermediate_groups);
       advanced_groups = await questionServices.processGroups(advanced_groups);
 
 
@@ -976,8 +978,8 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           // intermediate_groups = helper.removeDuplicates(intermediate_groups);
           // advanced_groups = helper.removeDuplicates(advanced_groups);
 
-          basic_groups = await questionServices.processGroups(basic_groups); 
-          intermediate_groups = await questionServices.processGroups(intermediate_groups); 
+          basic_groups = await questionServices.processGroups(basic_groups);
+          intermediate_groups = await questionServices.processGroups(intermediate_groups);
           advanced_groups = await questionServices.processGroups(advanced_groups);
 
           questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
@@ -2212,3 +2214,67 @@ exports.sendMailtoTeacher = (request, callback) => {
   })
 
 }
+
+exports.upsertTeacherAttendance = function (request, callback) {
+  // request: { id, date, last_clock_in_time?, last_clock_in_address?, last_clock_out_time?, last_clock_out_address?, working_hours? }
+  teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
+    if (err && err !== 404) {
+      callback(500, err);
+    } else {
+      let attendanceArr = [];
+      if (data && data.Item && Array.isArray(data.Item.Attendance)) {
+        attendanceArr = data.Item.Attendance;
+      }
+      // Prepare today's attendance object
+      let todayObj = {};
+      todayObj[request.date] = {
+        ...(request.last_clock_in_time && { last_clock_in_time: request.last_clock_in_time }),
+        ...(request.last_clock_in_address && { last_clock_in_address: request.last_clock_in_address }),
+        ...(request.last_clock_out_time && { last_clock_out_time: request.last_clock_out_time }),
+        ...(request.last_clock_out_address && { last_clock_out_address: request.last_clock_out_address }),
+        ...(request.working_hours && { working_hours: request.working_hours })
+      };
+      // Check if today's date already exists
+      let found = false;
+      for (let i = 0; i < attendanceArr.length; i++) {
+        if (attendanceArr[i][request.date]) {
+          attendanceArr[i][request.date] = { ...attendanceArr[i][request.date], ...todayObj[request.date] };
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        attendanceArr.push(todayObj);
+      }
+      // Update Attendance array in DB
+      teacherRepository.updateTeacherAttendanceRaw(request.id, attendanceArr, callback);
+    }
+  });
+};
+
+exports.fetchTeacherAttendance = function (request, callback) {
+    // request: { id, date }
+    teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
+        if (err) {
+            callback(500, err);
+        } else if (!data.Item || !Array.isArray(data.Item.Attendance)) {
+            callback(null, null); // No attendance found
+        } else {
+            // Find attendance for the requested date
+            const attendanceArr = data.Item.Attendance;
+            const attendanceObj = attendanceArr.find(obj => obj[request.date]);
+            callback(null, attendanceObj ? attendanceObj[request.date] : null);
+        }
+    });
+};
+
+
+
+// exports.upsertTeacherAttendance = function (request, callback) {
+//     return teacherRepository.upsertTeacherAttendance(request, callback);
+// };
+
+
+// exports.fetchTeacherAttendance = function (request, callback) {
+//     return teacherRepository.fetchTeacherAttendance(request, callback);
+// };

@@ -167,6 +167,17 @@ app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsCl
 
 app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations); //nud
 
+// academic planner and time table planner
+
+app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSections)
+app.post("/v1/getSectionById", sectionController.getSectionById)
+//Section
+app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
+
+// update attendence
+app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
+app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
+// app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

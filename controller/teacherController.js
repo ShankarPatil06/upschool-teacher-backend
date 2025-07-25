@@ -203,4 +203,25 @@ exports.clockOut = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+exports.upsertTeacherAttendance = (req, res, next) => {
+    const request = req.body;
+    teacherServices.upsertTeacherAttendance(request, function (err, data) {
+        if (err) {
+            res.status(500).json({ status: "error", message: err });
+        } else {
+            res.json({ status: "success", data });
+        }
+    });
+};
+
+
+exports.fetchTeacherAttendance = (req, res, next) => {
+    const request = req.body;
+    teacherServices.fetchTeacherAttendance(request, function (err, data) {
+        if (err) {
+            res.status(500).json({ status: "error", message: err });
+        } else {
+            res.json({ status: "success", data });
+        }
+    });
 };
