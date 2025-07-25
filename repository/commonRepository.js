@@ -447,7 +447,7 @@ exports.fetchBulkDataWithProjection3 = async (request) => {
   let { IdArray, fetchIdName, TableName, projectionExp } = request;
 
   IdArray = [...new Set(IdArray)];
-  console.log("IdArray : ", IdArray);
+  // console.log("IdArray : ", IdArray);
 
   if (IdArray.length === 0) {
     console.log("EMPTY BULK ID");
@@ -463,7 +463,7 @@ exports.fetchBulkDataWithProjection3 = async (request) => {
       ProjectionExpression: projectionExp.join(", "),
     };
 
-    console.log("READ PARAMS : ", read_params);
+    // console.log("READ PARAMS : ", read_params);
     const result = await DATABASE_TABLE2.query(read_params);
     return result.Items || [];
   } else {
@@ -482,7 +482,7 @@ exports.fetchBulkDataWithProjection3 = async (request) => {
         },
       };
 
-      console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
+      // console.log("BATCH GET PARAMS : ", JSON.stringify(batchParams, null, 2));
       const response = await DATABASE_TABLE2.getByObjects(batchParams);
       if (response.Responses && response.Responses[TableName]) {
         allResponses = allResponses.concat(response.Responses[TableName]);
@@ -501,7 +501,7 @@ exports.bulkBatchWrite = async (itemsToWrite, userTable) => {
 
     for (let i = 0; i < itemsToWrite.length; i += batchSize) {
       const batch = itemsToWrite.slice(i, i + batchSize);
-      console.log({ batch });
+      // console.log({ batch });
       promises.push(exports.performBatchWrite(batch, userTable));
     }
 

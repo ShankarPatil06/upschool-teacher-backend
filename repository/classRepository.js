@@ -121,7 +121,7 @@ exports.fetchTestResultUsingClassTestId = async (request) => {
         FilterExpression: "class_test_id = :class_test_id AND evaluated = :evaluated",
         ExpressionAttributeValues: {
             ":common_id": constant.constValues.common_id,
-            ":evaluated":'Yes',
+            ":evaluated": 'Yes',
             ":class_test_id": request.class_test_id
         }
     };

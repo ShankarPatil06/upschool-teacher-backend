@@ -32,7 +32,9 @@ const chapterIds = [
     "88f9fa55-7ec8-5ee7-906d-8669f6562900",
     "6308f5f6-caa3-5e23-9b5e-7f0a0077211e",
     "6001ea53-6c33-5224-ab0a-331d761886f5",
-    "1d7c7c8d-47d6-5404-9e49-8b7eb14471ff"
+    "1d7c7c8d-47d6-5404-9e49-8b7eb14471ff",
+
+    "c87c1b35-ffda-5d95-8339-ee33c3a4c244"
 ];
 
 exports.generateLessonPlan = async (data) => {

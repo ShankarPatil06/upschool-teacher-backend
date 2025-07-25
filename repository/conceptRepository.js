@@ -239,7 +239,7 @@ exports.fetchBulkConceptsIDName2 = async (request) => {
             ExpressionAttributeValues: {
                 ":concept_id": unit_Concept_id[0]
             },
-            ProjectionExpression: "concept_id, concept_title, display_name",
+            ProjectionExpression: "concept_id, concept_title, display_name, concept_details",
         };
 
         const result = await DATABASE_TABLE2.query(params);

@@ -27,6 +27,7 @@ const testResultRepository = require('./testResultRepository');
 const topicRepository = require('./topicRepository');
 const unitRepository = require('./unitRepository');
 const userRepository = require('./userRepository');
+const focusConceptsRepository = require('./focusConceptsRepository');
 
 
 
@@ -60,5 +61,6 @@ module.exports = {
     testResultRepository,
     topicRepository,
     unitRepository,
-    userRepository
+    userRepository,
+    focusConceptsRepository,
 }

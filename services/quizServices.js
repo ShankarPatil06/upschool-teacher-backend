@@ -14,6 +14,7 @@ const s3Services = require("./s3Service");
 // const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
+const { conceptRepository, focusConceptsRepository } = require("../repository");
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
@@ -406,7 +407,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
         let intermediateQuestions = 0, intermediateMarks = 0, intermediateObtained = 0;
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
-        console.log(" res.marks_details - ", res.marks_details);
+        // console.log(" res.marks_details - ", res.marks_details);
 
         let questionSetData = [];
         res.marks_details.forEach((req) => {
@@ -428,7 +429,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
             markDetail.qa_details.forEach((question) => {
                 const marksPerQuestion = questionMarksMap[question.question_id] || 0;
 
-                console.log("question - ", question);
+                // console.log("question - ", question);
                 // console.log("marksPerQuestion - ", marksPerQuestion);
                 // console.log("question.obtained_marks - ", question.modified_marks, " - question.type - ", question.type);
                 switch (question.type) {
@@ -451,9 +452,9 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
             });
         });
 
-        console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
-        console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
-        console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
+        // console.log("basicQuestions - ", basicObtained, basicMarks, basicThreshold);
+        // console.log("intermediateQuestions - ", intermediateObtained, intermediateMarks, intermediateThreshold);
+        // console.log("advancedQuestions - ", advancedObtained, advancedMarks, advancedThreshold);
 
 
         const individualGroupPerformance = {
@@ -857,7 +858,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
         // const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
-            for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
+        for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
             const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 
@@ -1000,11 +1001,11 @@ exports.startQuizEvaluationProcess = async (request) => {
                 ],
             });
 
-            console.log("prompt - ", userPrompt);
-            console.log("response - ", response);
+            // console.log("prompt - ", userPrompt);
+            // console.log("response - ", response);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
-            console.log("scores - ", scores);
+            // console.log("scores - ", scores);
             let totalMarks = 0;
             let totalExpectedMarks = 0;
             qa_detailsCopyArray.push([]);
@@ -1061,6 +1062,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             // console.log("totalMark -- - ", totalMarks);
             studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
+            // studentMetaRes.Items[i].evaluated = "No";
             studentMetaRes.Items[i].evaluated = "Yes";
             studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
             studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
@@ -1090,7 +1092,59 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
 
-        // console.log("markAssignRes - ", markAssignRes);
+        let allQuestionsDetails = [...new Set([
+            ...(quizTestRes?.Item?.question_track_details?.qp_set_a ?? []),
+            ...(quizTestRes?.Item?.question_track_details?.qp_set_b ?? []),
+            ...(quizTestRes?.Item?.question_track_details?.qp_set_c ?? [])
+        ])]
+
+        const allConceptsIds = [...new Set((allQuestionsDetails?.map(e => e?.concept_id)) ?? [])]
+        const allConceptsDetails = await conceptRepository.fetchBulkConceptsIDName2({ unit_Concept_id: allConceptsIds });
+        const allConceptsDetailsMap = new Map(allConceptsDetails?.map(e => [e?.concept_id, e]))
+        allQuestionsDetails = allQuestionsDetails?.map(e => ({
+            ...e,
+            concept_title: allConceptsDetailsMap.get(e?.concept_id)?.concept_title ?? '',
+            concept_details: allConceptsDetailsMap.get(e?.concept_id)?.concept_details ?? ''
+        }));
+
+        const allStudentsCounterForSection = await studentRepository.getStudentsCountBySectionId({ section_id: quizTestRes?.Item?.section_id });
+        const passedStudentsCount = markAssignRes?.filter(e => e?.isPassed)?.length;
+        const totalStudentsCount = markAssignRes?.length;
+        const passed = (passedStudentsCount / allStudentsCounterForSection) * 100;
+        const classPercentAchieved = (totalStudentsCount / allStudentsCounterForSection) * 100;
+
+        let conceptsToFocus = [];
+
+        if (!(passed >= classPassPercentage && classPercentAchieved >= classPassPercentage)) {
+            let availableItem = new Set();
+
+            conceptsToFocus = allQuestionsDetails?.reduce((acc, current) => {
+                if (!availableItem?.has(current?.concept_id)) {
+                    availableItem?.add(current?.concept_id);
+                    acc.push({
+                        concept_id: current?.concept_id,
+                        concept_details: current?.concept_details || "",
+                        concept_title: current?.concept_title
+                    })
+                }
+                return acc;
+            }, []);
+        }
+
+        const focusConceptData = {
+            quiz_id: quizTestRes?.Item?.quiz_id,
+            chapter_id: quizTestRes?.Item?.chapter_id,
+            common_id: constant.constValues.common_id,
+            quiz_name: quizTestRes?.Item?.quiz_name,
+            section_id: quizTestRes?.Item?.section_id,
+            subject_id: quizTestRes?.Item?.subject_id,
+            learningType: quizTestRes?.Item?.learningType,
+            school_id: request.data.school_id,
+            concepts_to_focus: conceptsToFocus,
+        }
+
+        await focusConceptsRepository.addNewFocusConceptToDB(focusConceptData)
+
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
         return { status: 200 };
@@ -1108,7 +1162,7 @@ const getQuizQuestionIds = async (quiz_question_details) => {
     await quizSetDetails.forEach(indSet => {
         questionArr.push(...quiz_question_details[indSet.setKey]);
     })
-    console.log("LENGTH : ", questionArr.length);
+    // console.log("LENGTH : ", questionArr.length);
     questionArr = await helper.removeDuplicates(questionArr);
     return questionArr;
 }

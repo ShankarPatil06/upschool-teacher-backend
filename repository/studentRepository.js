@@ -2,6 +2,7 @@ const dynamoDbCon = require('../awsConfig');
 const { DATABASE_TABLE } = require('./baseRepository');
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
+const { table } = require('pdfkit');
 
 
 exports.getStudentsData = function (request, callback) {
@@ -211,4 +212,21 @@ exports.getParentDetailsById = async (request) => {
 
     const result = await DATABASE_TABLE2.query(readParams);
     return result.Items[0];
+}
+
+// for the below function i want the count of the students
+exports.getStudentsCountBySectionId = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_student_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "section_id = :section_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":section_id": request.section_id
+        },
+        Select: "COUNT"
+    }
+
+    return (await DATABASE_TABLE2.query(params))?.Count;
 }

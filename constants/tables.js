@@ -34,5 +34,6 @@ exports.TABLE_NAMES = {
     upschool_quiz_result: `${DBNamePrefix}quiz_result`,
     upschool_presets_table: `${DBNamePrefix}presets_table`,
     upschool_question_count_info: `${DBNamePrefix}question_count_info`,
+    upschool_focus_concept: `${DBNamePrefix}focus_concept`,
 
 }
