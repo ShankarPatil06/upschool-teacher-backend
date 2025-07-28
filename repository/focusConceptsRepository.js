@@ -92,3 +92,18 @@ exports.addNewFocusConceptToDB = async (request) => {
         return await DATABASE_TABLE2.putItem(insertParams);
     }
 };
+
+exports.getFocusedConceptsByQuizId = async (request) => {
+    const params = {
+        TableName: TABLE_NAMES.upschool_focus_concept,
+        IndexName: indexes.Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":quiz_id": request
+        }
+    };
+
+    return (await DATABASE_TABLE2.query(params))?.Items[0] ?? {};
+}

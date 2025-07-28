@@ -183,6 +183,7 @@ app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionControlle
 
 // lesson planner
 app.post("/v1/getLessonPlan", lessonPlanController.getLessonPlan)
+app.post("/v1/getLessonPlanForFocusedConcepts", lessonPlanController.getLessonPlanForFocusedConcepts)
 // app.post("/v1/getLessonPlan", express.raw(), lessonPlanController.getLessonPlan)
 
 
