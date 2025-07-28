@@ -93,8 +93,39 @@ exports.fetchChapterData = function (request, callback) {
         }
     });
 }
-exports.fetchChapterData2 = async (request) => {
+// exports.fetchChapterData2 = async (request) => {
 
+//     const { unit_chapter_id } = request;
+
+//     if (unit_chapter_id.length === 1) {
+//         const readParams = {
+//             TableName: TABLE_NAMES.upschool_chapter_table,
+//             KeyConditionExpression: "chapter_id = :chapter_id",
+//             ExpressionAttributeValues: {
+//                 ":chapter_id": unit_chapter_id[0]
+//             },
+//             ProjectionExpression: "chapter_id, display_name, chapter_status, chapter_updated_ts",
+//         };
+
+//         const result = await DATABASE_TABLE2.query(readParams);
+//         return result.Items;
+//     } else {
+//         const readParams = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_chapter_table]: {
+//                     Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
+//                     ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
+//                 }
+//             }
+//         };
+
+//         const result = await DATABASE_TABLE2.getByObjects(readParams);
+//         return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
+//     }
+// };
+
+//chunk
+exports.fetchChapterData2 = async (request) => {
     const { unit_chapter_id } = request;
 
     if (unit_chapter_id.length === 1) {
@@ -110,17 +141,32 @@ exports.fetchChapterData2 = async (request) => {
         const result = await DATABASE_TABLE2.query(readParams);
         return result.Items;
     } else {
-        const readParams = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_chapter_table]: {
-                    Keys: unit_chapter_id.map(id => ({ chapter_id: id })),
-                    ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
-                }
-            }
-        };
+        const CHUNK_SIZE = 100;
+        const chunks = [];
 
-        const result = await DATABASE_TABLE2.getByObjects(readParams);
-        return result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
+        for (let i = 0; i < unit_chapter_id.length; i += CHUNK_SIZE) {
+            chunks.push(unit_chapter_id.slice(i, i + CHUNK_SIZE));
+        }
+
+        const allResults = [];
+
+        // Process each chunk
+        for (const chunk of chunks) {
+            const readParams = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_chapter_table]: {
+                        Keys: chunk.map(id => ({ chapter_id: id })),
+                        ProjectionExpression: "chapter_id, display_name, chapter_title, chapter_status, chapter_updated_ts"
+                    }
+                }
+            };
+
+            const result = await DATABASE_TABLE2.getByObjects(readParams);
+            const items = result.Responses[TABLE_NAMES.upschool_chapter_table] || [];
+            allResults.push(...items);
+        }
+
+        return allResults;
     }
 };
 

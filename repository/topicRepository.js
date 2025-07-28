@@ -447,6 +447,57 @@ exports.fetchTopicIDandTopicConceptID = function (request, callback) {
     });
 }
 
+// exports.fetchTopicIDandTopicConceptID2 = async (request) => {
+//     console.log("fetchTopicData : ", request);
+
+//     const topic_array = request.topic_array;
+
+//     if (!Array.isArray(topic_array) || topic_array.length === 0) {
+//         throw new Error(constant.messages.INVALID_REQUEST);
+//     }
+
+//     let readParams;
+
+//     if (topic_array.length === 1) {
+//         readParams = {
+//             TableName: TABLE_NAMES.upschool_topic_table,
+//             KeyConditionExpression: "topic_id = :topic_id",
+//             FilterExpression: "topic_status = :topic_status",
+//             ExpressionAttributeValues: {
+//                 ":topic_id": topic_array[0],
+//                 ":topic_status": "Active",
+//             },
+//             ProjectionExpression: "topic_id, topic_concept_id",
+//         };
+
+//         const data = await DATABASE_TABLE2.query(readParams);
+//         return data.Items;
+//     } else {
+//         const keys = topic_array.map(id => ({
+//             topic_id: id,
+//         }));
+
+//         readParams = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_topic_table]: {
+//                     Keys: keys,
+//                     ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+//                 },
+//             },
+//         };
+
+//         const data = await DATABASE_TABLE2.getByObjects(readParams);
+
+//         const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
+//             item => item.topic_status === "Active"
+//         );
+
+//         return filteredData;
+//     }
+// };
+
+
+//chunk
 exports.fetchTopicIDandTopicConceptID2 = async (request) => {
     console.log("fetchTopicData : ", request);
 
@@ -473,30 +524,39 @@ exports.fetchTopicIDandTopicConceptID2 = async (request) => {
         const data = await DATABASE_TABLE2.query(readParams);
         return data.Items;
     } else {
-        const keys = topic_array.map(id => ({
-            topic_id: id,
-        }));
+        // Chunk the topic array to reduce load
+        const CHUNK_SIZE = 100; // DynamoDB batchGet limit
+        const chunks = helper.chunkArray(topic_array, CHUNK_SIZE);
 
-        readParams = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_topic_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+        const allResults = [];
+
+        // Process each chunk
+        for (const chunk of chunks) {
+            const keys = chunk.map(id => ({
+                topic_id: id,
+            }));
+
+            readParams = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_topic_table]: {
+                        Keys: keys,
+                        ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+                    },
                 },
-            },
-        };
+            };
 
-        const data = await DATABASE_TABLE2.getByObjects(readParams);
+            const data = await DATABASE_TABLE2.getByObjects(readParams);
 
-        const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
-            item => item.topic_status === "Active"
-        );
+            const filteredData = (data.Responses[TABLE_NAMES.upschool_topic_table] || []).filter(
+                item => item.topic_status === "Active"
+            );
 
-        return filteredData;
+            allResults.push(...filteredData);
+        }
+
+        return allResults;
     }
 };
-
-
 
 
 exports.fetchTopicByID = function (request, callback) {

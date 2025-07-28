@@ -138,7 +138,7 @@ exports.fetchUnitData2 = async (request) => {
 
             // Filter for active units from this chunk
             const chunkData = data.Responses && data.Responses[TABLE_NAMES.upschool_unit_table]
-                ? data.Responses[TABLE_NAMES.upschool_unit_table]
+            ? data.Responses[TABLE_NAMES.upschool_unit_table]
                 : [];
 
             return chunkData.filter((item) => item.unit_status === "Active");

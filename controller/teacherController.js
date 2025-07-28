@@ -203,6 +203,9 @@ exports.clockOut = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+}
+
+
 exports.upsertTeacherAttendance = (req, res, next) => {
     const request = req.body;
     teacherServices.upsertTeacherAttendance(request, function (err, data) {
