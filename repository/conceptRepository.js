@@ -488,7 +488,7 @@ exports.fetchConceptUsingTopicId = async (request) => {
         if (uniqueConceptIds.length === 0) return [];
 
         // Optimal chunk size for DynamoDB performance
-        const OPTIMAL_BATCH_SIZE = 100; 
+        const OPTIMAL_BATCH_SIZE = 100;
         const MAX_CONCURRENT_BATCHES = 5; // Limit concurrent requests
 
         const chunks = helper.chunkArray(
