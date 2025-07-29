@@ -3,6 +3,7 @@ const { DATABASE_TABLE } = require("./baseRepository");
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
 const { chunkArray } = require("../helper/helper");
+const { helper } = require("../helper");
 
 
 exports.REFfetchBulkQuestionsWithPublishStatusAndProjection = function (request, callback) {
@@ -381,6 +382,81 @@ exports.fetchBulkQuestionsNameById = function (request, callback) {
     });
 };
 
+// exports.fetchBulkQuestionsNameById3 = function (request, callback) {
+//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log("Class Data Database Error");
+//             console.log(DBErr);
+//             callback(500, constant.messages.DATABASE_ERROR);
+//         } else {
+//             let docClient = dynamoDBCall;
+//             let question_id = request.question_id;
+//             console.log("fetchChapterData request : ", request);
+//             console.log("question_id : ", question_id);
+
+//             if (question_id.length === 1) {
+//                 // Single question_id - use Query
+//                 let read_params = {
+//                     TableName: TABLE_NAMES.upschool_question_table,
+//                     KeyConditionExpression: "question_id = :question_id",
+//                     ExpressionAttributeValues: {
+//                         ":question_id": question_id[0]
+//                     },
+//                     ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
+//                 };
+
+//                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
+
+//             } else {
+//                 let uniqueIds = [...new Set(question_id)];
+//                 let keys = uniqueIds.map(id => ({ question_id: id }));
+
+//                 const MAX_BATCH_SIZE = 100;
+//                 let batches = [];
+//                 for (let i = 0; i < keys.length; i += MAX_BATCH_SIZE) {
+//                     batches.push(keys.slice(i, i + MAX_BATCH_SIZE));
+//                 }
+//                 let results = [];
+//                 let batchErrors = [];
+
+//                 const processBatch = (index) => {
+//                     if (index >= batches.length) {
+//                         if (batchErrors.length > 0) {
+//                             return callback(500, "Some batches failed", batchErrors);
+//                         }
+//                         return callback(null, results);
+//                     }
+
+//                     let read_params = {
+//                         RequestItems: {
+//                             [TABLE_NAMES.upschool_question_table]: {
+//                                 Keys: batches[index],
+//                                 ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
+//                             }
+//                         }
+//                     };
+
+//                     docClient.batchGet(read_params, function (err, data) {
+//                         if (err) {
+//                             console.error(`BatchGet Error for batch ${index}:`, err);
+//                             batchErrors.push(err);
+//                         } else {
+//                             console.log(`BatchGet Data for batch ${index}:`, data);
+//                             if (data.Responses[TABLE_NAMES.upschool_question_table]) {
+//                                 results = results.concat(data.Responses[TABLE_NAMES.upschool_question_table]);
+//                             }
+//                         }
+//                         processBatch(index + 1);
+//                     });
+//                 };
+
+//                 processBatch(0);
+//             }
+//         }
+//     });
+// };
+
+//chunk
 exports.fetchBulkQuestionsNameById3 = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {
@@ -389,12 +465,12 @@ exports.fetchBulkQuestionsNameById3 = function (request, callback) {
             callback(500, constant.messages.DATABASE_ERROR);
         } else {
             let docClient = dynamoDBCall;
-            let question_id = request.question_id;
-            console.log("fetchChapterData request : ", request);
-            console.log("question_id : ", question_id);
+            let question_id = [...new Set(request.question_id)]; // Remove duplicates
+            // console.log("fetchChapterData request : ", request);
+            // console.log("question_id : ", question_id);
 
             if (question_id.length === 1) {
-                // Single question_id - use Query
+                // Single question_id - use Query for better performance
                 let read_params = {
                     TableName: TABLE_NAMES.upschool_question_table,
                     KeyConditionExpression: "question_id = :question_id",
@@ -407,62 +483,129 @@ exports.fetchBulkQuestionsNameById3 = function (request, callback) {
                 DATABASE_TABLE.queryRecord(docClient, read_params, callback);
 
             } else {
-                let uniqueIds = [...new Set(question_id)];
-                let keys = uniqueIds.map(id => ({ question_id: id }));
+                // Multiple question_ids - use parallel chunking
+                const MAX_BATCH_SIZE = 100; // DynamoDB batch limit
+                const chunks = helper.chunkArray(question_id, MAX_BATCH_SIZE);
 
-                const MAX_BATCH_SIZE = 100;
-                let batches = [];
-                for (let i = 0; i < keys.length; i += MAX_BATCH_SIZE) {
-                    batches.push(keys.slice(i, i + MAX_BATCH_SIZE));
-                }
                 let results = [];
+                let completedChunks = 0;
+                let hasError = false;
                 let batchErrors = [];
 
-                const processBatch = (index) => {
-                    if (index >= batches.length) {
-                        if (batchErrors.length > 0) {
-                            return callback(500, "Some batches failed", batchErrors);
-                        }
-                        return callback(null, results);
-                    }
+                // Process all chunks in parallel
+                chunks.forEach((chunk, chunkIndex) => {
+                    const keys = chunk.map(id => ({ question_id: id }));
 
                     let read_params = {
                         RequestItems: {
                             [TABLE_NAMES.upschool_question_table]: {
-                                Keys: batches[index],
+                                Keys: keys,
                                 ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
                             }
                         }
                     };
 
+                    // console.log(`Processing chunk ${chunkIndex + 1} of ${chunks.length}`);
+
                     docClient.batchGet(read_params, function (err, data) {
+                        completedChunks++;
+
                         if (err) {
-                            console.error(`BatchGet Error for batch ${index}:`, err);
-                            batchErrors.push(err);
+                            console.error(`BatchGet Error for chunk ${chunkIndex + 1}:`, err);
+                            batchErrors.push({ chunkIndex, error: err });
+                            hasError = true;
                         } else {
-                            console.log(`BatchGet Data for batch ${index}:`, data);
-                            if (data.Responses[TABLE_NAMES.upschool_question_table]) {
+                            // console.log(`BatchGet Data for chunk ${chunkIndex + 1}:`, data);
+                            if (data.Responses && data.Responses[TABLE_NAMES.upschool_question_table]) {
+                                // Thread-safe array concatenation
                                 results = results.concat(data.Responses[TABLE_NAMES.upschool_question_table]);
                             }
                         }
-                        processBatch(index + 1);
-                    });
-                };
 
-                processBatch(0);
+                        // Check if all chunks are completed
+                        if (completedChunks === chunks.length) {
+                            if (hasError && results.length === 0) {
+                                // All chunks failed
+                                return callback(500, "All batches failed", batchErrors);
+                            } else if (hasError) {
+                                // Some chunks failed but we have partial results
+                                console.warn(`Some batches failed, returning partial results. Errors:`, batchErrors);
+                                return callback(null, results, { partialResults: true, errors: batchErrors });
+                            } else {
+                                // All chunks succeeded
+                                // console.log(`Successfully processed ${chunks.length} chunks, total results: ${results.length}`);
+                                return callback(null, results);
+                            }
+                        }
+                    });
+                });
             }
         }
     });
 };
 
 
+
+
+
+// exports.fetchBulkQuestionsNameById2 = async (request) => {
+//     const question_ids = [...new Set(request.question_id)];
+//     console.log("Question IDs: ", question_ids);
+
+//     if (question_ids.length === 0) {
+//         return [];
+//     } else if (question_ids.length === 1) {
+//         const params = {
+//             TableName: TABLE_NAMES.upschool_question_table,
+//             KeyConditionExpression: "question_id = :question_id",
+//             ExpressionAttributeValues: { ":question_id": question_ids[0] },
+//             ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
+//         };
+
+//         const result = await DATABASE_TABLE2.query(params);
+//         return result.Items || [];
+//     } else {
+//         const idChunks = chunkArray(question_ids, 100);
+//         let allResponses = [];
+
+//         for (const chunk of idChunks) {
+//             const keys = chunk.map(id => ({ question_id: id }));
+
+//             const params = {
+//                 RequestItems: {
+//                     [TABLE_NAMES.upschool_question_table]: {
+//                         Keys: keys,
+//                         ProjectionExpression: "answers_of_question, cognitive_skill, question_id, question_type, marks, difficulty_level, question_content"
+//                     }
+//                 }
+//             };
+
+//             console.log("BATCH GET PARAMS : ", JSON.stringify(params, null, 2));
+//             const result = await DATABASE_TABLE2.getByObjects(params);
+//             if (result.Responses && result.Responses[TABLE_NAMES.upschool_question_table]) {
+//                 allResponses = allResponses.concat(result.Responses[TABLE_NAMES.upschool_question_table]);
+//             }
+//         }
+
+//         return allResponses;
+//     }
+// };
+
+
+
+
+
+
+
+//chunk
 exports.fetchBulkQuestionsNameById2 = async (request) => {
-    const question_ids = [...new Set(request.question_id)];
+    const question_ids = [...new Set(request.question_id)]; // Remove duplicates
     console.log("Question IDs: ", question_ids);
 
     if (question_ids.length === 0) {
         return [];
     } else if (question_ids.length === 1) {
+        // Single question ID - use query for better performance
         const params = {
             TableName: TABLE_NAMES.upschool_question_table,
             KeyConditionExpression: "question_id = :question_id",
@@ -473,10 +616,12 @@ exports.fetchBulkQuestionsNameById2 = async (request) => {
         const result = await DATABASE_TABLE2.query(params);
         return result.Items || [];
     } else {
-        const idChunks = chunkArray(question_ids, 100);
-        let allResponses = [];
+        //
+        const CHUNK_SIZE = 100;
+        const idChunks = helper.chunkArray(question_ids, CHUNK_SIZE);
 
-        for (const chunk of idChunks) {
+        // Process  parallel 
+        const chunkPromises = idChunks.map(async (chunk) => {
             const keys = chunk.map(id => ({ question_id: id }));
 
             const params = {
@@ -489,16 +634,20 @@ exports.fetchBulkQuestionsNameById2 = async (request) => {
             };
 
             console.log("BATCH GET PARAMS : ", JSON.stringify(params, null, 2));
+
             const result = await DATABASE_TABLE2.getByObjects(params);
-            if (result.Responses && result.Responses[TABLE_NAMES.upschool_question_table]) {
-                allResponses = allResponses.concat(result.Responses[TABLE_NAMES.upschool_question_table]);
-            }
-        }
+            return result.Responses && result.Responses[TABLE_NAMES.upschool_question_table]
+                ? result.Responses[TABLE_NAMES.upschool_question_table]
+                : [];
+        });
+
+        // flatten
+        const chunkResults = await Promise.all(chunkPromises);
+        const allResponses = chunkResults.flat();
 
         return allResponses;
     }
 };
-
 exports.fetchBulkQuestionsNameById5 = async (request) => {
     const question_ids = [...new Set(request.question_id)]; // Remove duplicates
 

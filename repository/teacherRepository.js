@@ -135,7 +135,7 @@ exports.fetchTeacherSectionData2 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
         ProjectionExpression: "section_id, section_name"
     };
-    console.log({params});
+    console.log({ params });
     const data = await DATABASE_TABLE2.query(params);
     return data;
 
@@ -317,6 +317,119 @@ exports.fetchTeacherActivityDetails2 = async (request) => {
 }
 
 
+
+exports.fetchTodayAttendanceByUserId = async (request) => {
+    const { userId } = request;
+
+    const getParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: userId
+        }
+    };
+
+    try {
+        console.log("Fetching attendance with params:", getParams);
+        const data = await DATABASE_TABLE2.getItem(getParams);
+        console.log("Fetched data:", data);
+        return data;
+    } catch (error) {
+        console.error("DynamoDB Get Error:", error);
+        throw new Error(constant.messages.DATABASE_ERROR);
+    }
+};
+
+
+// exports.appendClockInLog = async (request) => {
+
+//     console.log("riddhi", request);
+
+//     const { userId, time, longitude, latitude } = request;
+//     const date = new Date().toDateString();
+
+//     const params = {
+//         TableName: TABLE_NAMES.upschool_teacher_info,
+//         Key: {
+//             teacher_id: String(userId),
+//         },
+//         UpdateExpression: "SET attendanceLogs = list_append(if_not_exists(attendanceLogs, :empty), :log), updated_ts = :ts",
+//         ExpressionAttributeValues: {
+//             ":empty": [],
+//             ":log": [{ clockInTime: time, latitude: Number(latitude), longitude: Number(longitude) }],
+//             ":ts": new Date().toISOString()
+//         },
+//         ReturnValues: "ALL_NEW"
+//     };
+//     return await DATABASE_TABLE2.updateService(params);
+// };
+
+
+exports.appendClockInLog = async (request) => {
+
+    console.log("riddhi", request);
+
+    const { userId, time, longitude, latitude } = request;
+    const date = new Date().toDateString();
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: String(userId),
+        },
+        UpdateExpression: "SET attendanceLogs = list_append(if_not_exists(attendanceLogs, :empty), :log), updated_ts = :ts",
+        ExpressionAttributeValues: {
+            ":empty": [],
+            ":log": [{ clockIn: { time: time, latitude: Number(latitude), longitude: Number(longitude) } }],
+            // ":log": [{ clockInTime: time }],
+            ":ts": new Date().toISOString()
+        },
+        ReturnValues: "ALL_NEW"
+    };
+    return await DATABASE_TABLE2.updateService(params);
+};
+
+
+
+
+exports.updateLastLogWithClockOut = async (request, logs) => {
+    const { userId, time, longitude, latitude } = request;
+    const date = new Date().toDateString();
+
+    // Add clockOutTime to last log
+    // logs[logs.length - 1].clockOutTime = time;
+
+
+    logs[logs.length - 1].clockOut = {
+        time: time,
+        latitude: Number(latitude),
+        longitude: Number(longitude)
+    };
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: String(userId),
+        },
+        UpdateExpression: "SET attendanceLogs = :logs, updated_ts = :ts",
+        ExpressionAttributeValues: {
+            ":logs": logs,
+            ":ts": new Date().toISOString()
+        },
+        ReturnValues: "ALL_NEW"
+    };
+
+    return await DATABASE_TABLE2.updateService(params);
+};
+///////////////////////////trial
+exports.getTeacherById = async (teacherId) => {
+    const params = {
+        TableName: 'upschool_teacher_info',
+        Key: { id: teacherId }
+    };
+
+    const result = await DATABASE_TABLE2.getItem(params)
+    return result.Item;
+};
 exports.getTeacherAttendanceRaw = function (teacher_id, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {

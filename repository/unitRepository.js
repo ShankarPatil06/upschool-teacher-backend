@@ -2,6 +2,7 @@ const dynamoDbCon = require('../awsConfig');
 const { DATABASE_TABLE } = require('./baseRepository');
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
+const { helper } = require('../helper');
 
 
 exports.fetchUnitData = function (request, callback) {
@@ -58,11 +59,49 @@ exports.fetchUnitData = function (request, callback) {
     });
 }
 
-exports.fetchUnitData2 = async (request) => {
+// exports.fetchUnitData2 = async (request) => {
 
-    const subject_unit_id = request.subject_unit_id;
+//     const subject_unit_id = request.subject_unit_id;
+
+//     if (subject_unit_id.length === 1) {
+//         const params = {
+//             TableName: TABLE_NAMES.upschool_unit_table,
+//             KeyConditionExpression: "unit_id = :unit_id",
+//             FilterExpression: "unit_status = :unit_status",
+//             ExpressionAttributeValues: {
+//                 ":unit_id": subject_unit_id[0],
+//                 ":unit_status": "Active",
+//             },
+//             ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
+//         };
+//         const unit_data = await DATABASE_TABLE2.query(params);
+//         return unit_data.Items;
+//     } else {
+//         const keys = subject_unit_id.map((id) => ({ unit_id: id }));
+//         const params = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_unit_table]: {
+//                     Keys: keys,
+//                     ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
+//                 },
+//             },
+//         };
+//         const data = await DATABASE_TABLE2.getByObjects(params);
+
+//         const activeUnits = data.Responses[TABLE_NAMES.upschool_unit_table].filter(
+//             (item) => item.unit_status === "Active"
+//         );
+//         return activeUnits;
+//     }
+// };
+
+
+//chunk
+exports.fetchUnitData2 = async (request) => {
+    const subject_unit_id = [...new Set(request.subject_unit_id)]; // Remove duplicates for efficiency
 
     if (subject_unit_id.length === 1) {
+        // Single unit ID - use query with FilterExpression for better performance
         const params = {
             TableName: TABLE_NAMES.upschool_unit_table,
             KeyConditionExpression: "unit_id = :unit_id",
@@ -73,23 +112,46 @@ exports.fetchUnitData2 = async (request) => {
             },
             ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
         };
-        const unit_data = await DATABASE_TABLE2.query(params);
-        return unit_data.Items;
-    } else {
-        const keys = subject_unit_id.map((id) => ({ unit_id: id }));
-        const params = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_unit_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
-                },
-            },
-        };
-        const data = await DATABASE_TABLE2.getByObjects(params);
 
-        const activeUnits = data.Responses[TABLE_NAMES.upschool_unit_table].filter(
-            (item) => item.unit_status === "Active"
-        );
-        return activeUnits;
+        const unit_data = await DATABASE_TABLE2.query(params);
+        return unit_data.Items || [];
+    } else {
+        // Multiple unit IDs - use parallel chunking
+        const CHUNK_SIZE = 100; // DynamoDB batch limit
+        const chunks = helper.chunkArray(subject_unit_id, CHUNK_SIZE);
+        const allActiveUnits = [];
+
+        // Process chunks in parallel for better performance
+        const chunkPromises = chunks.map(async (chunk) => {
+            const keys = chunk.map((id) => ({ unit_id: id }));
+
+            const params = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_unit_table]: {
+                        Keys: keys,
+                        ProjectionExpression: "unit_id, unit_chapter_id, display_name, unit_status, unit_title, unit_updated_ts",
+                    },
+                },
+            };
+
+            const data = await DATABASE_TABLE2.getByObjects(params);
+
+            // Filter for active units from this chunk
+            const chunkData = data.Responses && data.Responses[TABLE_NAMES.upschool_unit_table]
+            ? data.Responses[TABLE_NAMES.upschool_unit_table]
+                : [];
+
+            return chunkData.filter((item) => item.unit_status === "Active");
+        });
+
+        // Wait for all chunks to complete and flatten results
+        const chunkResults = await Promise.all(chunkPromises);
+
+        // Flatten all active units from all chunks
+        for (const chunkActiveUnits of chunkResults) {
+            allActiveUnits.push(...chunkActiveUnits);
+        }
+
+        return allActiveUnits;
     }
 };

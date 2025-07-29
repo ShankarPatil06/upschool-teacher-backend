@@ -43,6 +43,20 @@ exports.getTestQuestionPapersBasedonStatus = function (request, callback) {
     });
 };
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Fetches test question papers based on the specified status and other criteria.
+ *
+ * @param {Object} request - The request object containing the filter criteria.
+ * @param {Object} request.data - The data object containing specific filter fields.
+ * @param {string} request.data.client_class_id - The client class ID to filter question papers.
+ * @param {string} request.data.section_id - The section ID to filter question papers.
+ * @param {string} request.data.subject_id - The subject ID to filter question papers.
+ * @param {string} request.data.question_paper_status - The status of the question papers to filter.
+ * @returns {Promise<Array>} - A promise that resolves to an array of question paper items.
+ */
+
+/*******  e3abd7fb-27fa-49c8-831e-1084926767e9  *******/
 exports.getTestQuestionPapersBasedonStatus2 = async (request) => {
     const params = {
         TableName: TABLE_NAMES.upschool_test_question_paper,
@@ -265,7 +279,7 @@ exports.getTestQuestionPaperById3 = async (request) => {
             }
         };
 
-        const results =  await DATABASE_TABLE2.query(readParams);
+        const results = await DATABASE_TABLE2.query(readParams);
         return { statusCode: 200, data: results.Items };
     } else {
         const queryPromises = question_paper_ids.map((id) => {

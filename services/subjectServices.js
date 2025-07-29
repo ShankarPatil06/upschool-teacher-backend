@@ -279,6 +279,7 @@ exports.getExpressTopicsAndQuestionCount = function (request, callback) {
     })
 }
 
+
 exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     const chapterDataRes = await chapterRepository.fetchChapterByID2(request);
