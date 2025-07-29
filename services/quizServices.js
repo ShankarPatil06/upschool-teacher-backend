@@ -14,7 +14,7 @@ const s3Services = require("./s3Service");
 // const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
-const { conceptRepository, focusConceptsRepository } = require("../repository");
+const { conceptRepository, focusConceptsRepository, subjectRepository } = require("../repository");
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
@@ -800,6 +800,233 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
 //     }
 // };
 
+const getGPTBasedScore = async (request, subject_id) => {
+
+    const normalizeAnswer = (answer) => {
+        if (!answer) return " ";
+        let normalized = answer.trim().toLowerCase();
+        if (!isNaN(normalized)) {
+            return parseFloat(normalized).toString();
+        }
+        normalized = normalized.replace(/[,;!?]/g, "");
+        return normalized;
+    };
+
+    const { subjective_prompt, descriptive_prompt, objective_prompt } = (await subjectRepository.getSubjetById2({ data: { subject_id } }))?.Items[0];
+
+    const questionIdFormat = new Map(request?.map((e, i) => [i, e?.question_id]));
+
+    const separatedData = request?.reduce((acc, current) => {
+        const { question_type, question_id } = current;
+        if (!acc[question_type]) {
+            acc[question_type] = new Map();
+        }
+        acc[question_type].set(question_id, current);
+        return acc;
+    }, {
+        Objective: new Map(),
+        Descriptive: new Map(),
+        Subjective: new Map()
+    })
+
+    const { Objective, Descriptive, Subjective } = separatedData;
+
+    const ObjectiveArray = Array.from(Objective.values());
+    const DescriptiveArray = Array.from(Descriptive.values());
+    const SubjectiveArray = Array.from(Subjective.values());
+
+    let ObjectiveScore, DescriptiveScore, SubjectiveScore = [];
+
+    const evaluateObjective = async (data) => {
+        if (helper.isEmptyArray(data)) {
+            return [];
+        };
+        const userPrompt = `
+        ${objective_prompt ??
+
+            `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: 'Subjective'**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.`
+            }
+
+        \n\n` +
+            data.map((pair, index) => {
+                return `Question ${index + 1}:
+            question_id : ${pair?.question_id}
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
+            }).join("\n") + `.
+
+            ### Response Format:
+            **Only return the final similarity scores** and value of question_id as numbers separated by new lines (e.g., "{"question_id":100}\n{"question_id":85}\n") note : '{"question_id":2d6cbf18-5933-52ad-ba81-b10abc100bbe, "similarity_score":95}' do not mention like this i want {"2d6cbf18-5933-52ad-ba81-b10abc100bbe":95}\n  in this format . 
+            **Strictly return just the similarity scores and value of question_id.** No additional text, labels, or question numbers.`;
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                },
+                { role: 'user', content: userPrompt }
+            ],
+        });
+
+        ObjectiveScore = response.choices[0].message.content?.split("\n");
+        return Object.assign({}, ...ObjectiveScore.map(JSON.parse))
+    }
+
+    const evaluateDescriptive = async (data) => {
+        if (helper.isEmptyArray(data)) {
+            return [];
+        };
+        const userPrompt = `
+        ${descriptive_prompt ??
+
+            `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: 'Subjective'**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.`
+            }
+        
+        \n\n` +
+            data.map((pair, index) => {
+                return `Question ${index + 1}:
+            question_id : ${pair?.question_id}
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
+            }).join("\n") + `.
+
+            ### Response Format:
+            **Only return the final similarity scores** and value of question_id as numbers separated by new lines (e.g., "{"question_id":100}\n{"question_id":85}\n") note : '{"question_id":2d6cbf18-5933-52ad-ba81-b10abc100bbe, "similarity_score":95}' do not mention like this i want {"2d6cbf18-5933-52ad-ba81-b10abc100bbe":95}\n  in this format . 
+            **Strictly return just the similarity scores and value of question_id.** No additional text, labels, or question numbers.`;
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                },
+                { role: 'user', content: userPrompt }
+            ],
+        });
+
+        DescriptiveScore = response.choices[0].message.content.split("\n");
+        return Object.assign({}, ...DescriptiveScore.map(JSON.parse))
+    }
+
+    const evaluateSubjective = async (data) => {
+        if (helper.isEmptyArray(data)) {
+            return [];
+        };
+        const userPrompt = `
+        ${subjective_prompt ??
+
+            `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: 'Subjective'**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.`
+            }
+        
+        \n\n` +
+            data.map((pair, index) => {
+                return `Question ${index + 1}:
+            question_id : ${pair?.question_id}
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
+            }).join("\n") + `.
+
+            ### Response Format:
+            **Only return the final similarity scores** and value of question_id as numbers separated by new lines (e.g., "{"question_id":100}\n{"question_id":85}\n") note : '{"question_id":2d6cbf18-5933-52ad-ba81-b10abc100bbe, "similarity_score":95}' do not mention like this i want {"2d6cbf18-5933-52ad-ba81-b10abc100bbe":95}\n  in this format .  
+            **Strictly return just the similarity scores and value of question_id.** No additional text, labels, or question numbers.`;
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                },
+                { role: 'user', content: userPrompt }
+            ],
+        });
+
+        SubjectiveScore = response.choices[0].message.content.split("\n");
+        return Object.assign({}, ...SubjectiveScore.map(JSON.parse))
+    }
+
+    const [ObjectiveScoreValue, DescriptiveScoreValue, SubjectiveScoreValue] = await Promise.all([
+        evaluateObjective(ObjectiveArray),
+        evaluateDescriptive(DescriptiveArray),
+        evaluateSubjective(SubjectiveArray)
+    ])
+
+    const finalScore = { ...ObjectiveScoreValue, ...DescriptiveScoreValue, ...SubjectiveScoreValue };
+    return (Array.from(questionIdFormat?.values()))?.map(e => finalScore?.[e]) ?? []
+}
+
 exports.startQuizEvaluationProcess = async (request) => {
     try {
         const quizSets = constant.quizSets;
@@ -956,55 +1183,59 @@ exports.startQuizEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+            let scores = await getGPTBasedScore(questionAnswerPairs, quizTestRes?.Item?.subject_id);
 
-            ### Evaluation Criteria for **Question Type: "Subjective"**:
+            console.log({ scores });
 
-            1. **Per-Numbered Comparison**:  
-                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+            // const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
 
-            2. **Partial Credit Scaling**:  
-                - **Full points (90-100%)** if the response contains **all key details**.  
-                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
-                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
-                - **Low score (0-40%)** only if the response is completely incorrect.  
+            // ### Evaluation Criteria for **Question Type: "Subjective"**:
 
-            3. **Weighted Average Calculation**:  
-                - Compute **an individual similarity score** (0-100) for each numbered answer.  
-                - Take the **weighted average** for the **final similarity score**.
+            // 1. **Per-Numbered Comparison**:  
+            //     - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
 
-            For **all other question types**, perform a direct correctness-based comparison.
+            // 2. **Partial Credit Scaling**:  
+            //     - **Full points (90-100%)** if the response contains **all key details**.  
+            //     - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+            //     - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+            //     - **Low score (0-40%)** only if the response is completely incorrect.  
 
-            Provide a similarity score between **0 and 100** for each question.\n\n` +
-                questionAnswerPairs.map((pair, index) => {
-                    return `Question ${index + 1}:
-            Question Type: "${pair.question_type}"
-            Student Answer (Structured List):
-            ${normalizeAnswer(pair.studentAnswer)}
+            // 3. **Weighted Average Calculation**:  
+            //     - Compute **an individual similarity score** (0-100) for each numbered answer.  
+            //     - Take the **weighted average** for the **final similarity score**.
 
-            Correct Answers (Structured List):
-            ${pair.correctAnswer}\n`;
-                }).join("\n") + `.
+            // For **all other question types**, perform a direct correctness-based comparison.
 
-            ### Response Format:
-            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
-            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
+            // Provide a similarity score between **0 and 100** for each question.\n\n` +
+            //     questionAnswerPairs.map((pair, index) => {
+            //         return `Question ${index + 1}:
+            // Question Type: "${pair.question_type}"
+            // Student Answer (Structured List):
+            // ${normalizeAnswer(pair.studentAnswer)}
 
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4-turbo',
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
-                    },
-                    { role: 'user', content: userPrompt }
-                ],
-            });
+            // Correct Answers (Structured List):
+            // ${pair.correctAnswer}\n`;
+            //     }).join("\n") + `.
 
-            // console.log("prompt - ", userPrompt);
-            // console.log("response - ", response);
+            // ### Response Format:
+            // **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
+            // **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
 
-            const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
+            // const response = await openai.chat.completions.create({
+            //     model: 'gpt-4-turbo',
+            //     messages: [
+            //         {
+            //             role: 'system',
+            //             content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+            //         },
+            //         { role: 'user', content: userPrompt }
+            //     ],
+            // });
+
+            // // console.log("prompt - ", userPrompt);
+            // // console.log("response - ", response);
+
+            // const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
             // console.log("scores - ", scores);
             let totalMarks = 0;
             let totalExpectedMarks = 0;
@@ -1062,8 +1293,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             // console.log("totalMark -- - ", totalMarks);
             studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
-            // studentMetaRes.Items[i].evaluated = "No";
-            studentMetaRes.Items[i].evaluated = "Yes";
+            studentMetaRes.Items[i].evaluated = "No";
+            // studentMetaRes.Items[i].evaluated = "Yes";
             studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
             studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
             studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
