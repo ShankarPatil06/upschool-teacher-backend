@@ -12,7 +12,7 @@ exports.validUser = (req, res, next) => {
 
     jwt.verify(token, process.env.SECRET_KEY, (err, data) => {
         if (err) {
-            console.log(err);
+            console.log("11", err);
             res.status(400).json(constant.messages.INVALID_TOKEN);
         } else {
             let decode_token = helper.decodeJwtToken(token);

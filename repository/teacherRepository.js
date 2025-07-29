@@ -135,7 +135,7 @@ exports.fetchTeacherSectionData2 = async (request) => {
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
         ProjectionExpression: "section_id, section_name"
     };
-    console.log({params});
+    console.log({ params });
     const data = await DATABASE_TABLE2.query(params);
     return data;
 
@@ -315,3 +315,254 @@ exports.fetchTeacherActivityDetails2 = async (request) => {
 
     return await DATABASE_TABLE2.query(params);
 }
+
+
+
+exports.fetchTodayAttendanceByUserId = async (request) => {
+    const { userId } = request;
+
+    const getParams = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: userId
+        }
+    };
+
+    try {
+        console.log("Fetching attendance with params:", getParams);
+        const data = await DATABASE_TABLE2.getItem(getParams);
+        console.log("Fetched data:", data);
+        return data;
+    } catch (error) {
+        console.error("DynamoDB Get Error:", error);
+        throw new Error(constant.messages.DATABASE_ERROR);
+    }
+};
+
+
+// exports.appendClockInLog = async (request) => {
+
+//     console.log("riddhi", request);
+
+//     const { userId, time, longitude, latitude } = request;
+//     const date = new Date().toDateString();
+
+//     const params = {
+//         TableName: TABLE_NAMES.upschool_teacher_info,
+//         Key: {
+//             teacher_id: String(userId),
+//         },
+//         UpdateExpression: "SET attendanceLogs = list_append(if_not_exists(attendanceLogs, :empty), :log), updated_ts = :ts",
+//         ExpressionAttributeValues: {
+//             ":empty": [],
+//             ":log": [{ clockInTime: time, latitude: Number(latitude), longitude: Number(longitude) }],
+//             ":ts": new Date().toISOString()
+//         },
+//         ReturnValues: "ALL_NEW"
+//     };
+//     return await DATABASE_TABLE2.updateService(params);
+// };
+
+
+exports.appendClockInLog = async (request) => {
+
+    console.log("riddhi", request);
+
+    const { userId, time, longitude, latitude } = request;
+    const date = new Date().toDateString();
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: String(userId),
+        },
+        UpdateExpression: "SET attendanceLogs = list_append(if_not_exists(attendanceLogs, :empty), :log), updated_ts = :ts",
+        ExpressionAttributeValues: {
+            ":empty": [],
+            ":log": [{ clockIn: { time: time, latitude: Number(latitude), longitude: Number(longitude) } }],
+            // ":log": [{ clockInTime: time }],
+            ":ts": new Date().toISOString()
+        },
+        ReturnValues: "ALL_NEW"
+    };
+    return await DATABASE_TABLE2.updateService(params);
+};
+
+
+
+
+exports.updateLastLogWithClockOut = async (request, logs) => {
+    const { userId, time, longitude, latitude } = request;
+    const date = new Date().toDateString();
+
+    // Add clockOutTime to last log
+    // logs[logs.length - 1].clockOutTime = time;
+
+
+    logs[logs.length - 1].clockOut = {
+        time: time,
+        latitude: Number(latitude),
+        longitude: Number(longitude)
+    };
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_teacher_info,
+        Key: {
+            teacher_id: String(userId),
+        },
+        UpdateExpression: "SET attendanceLogs = :logs, updated_ts = :ts",
+        ExpressionAttributeValues: {
+            ":logs": logs,
+            ":ts": new Date().toISOString()
+        },
+        ReturnValues: "ALL_NEW"
+    };
+
+    return await DATABASE_TABLE2.updateService(params);
+};
+///////////////////////////trial
+exports.getTeacherById = async (teacherId) => {
+    const params = {
+        TableName: 'upschool_teacher_info',
+        Key: { id: teacherId }
+    };
+
+    const result = await DATABASE_TABLE2.getItem(params)
+    return result.Item;
+};
+exports.getTeacherAttendanceRaw = function (teacher_id, callback) {
+    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+        if (DBErr) {
+            console.log("DB ERROR : Get Teacher Attendance");
+            console.log(DBErr);
+            callback(500, constant.messages.DATABASE_ERROR);
+        } else {
+            let docClient = dynamoDBCall;
+            let get_params = {
+                TableName: TABLE_NAMES.upschool_teacher_attendance_table,
+                Key: { id: teacher_id }
+            };
+            docClient.get(get_params, callback);
+        }
+    });
+};
+
+exports.updateTeacherAttendanceRaw = function (teacher_id, attendanceArr, callback) {
+    dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+        if (DBErr) {
+            console.log("DB ERROR : Update Teacher Attendance");
+            console.log(DBErr);
+            callback(500, constant.messages.DATABASE_ERROR);
+        } else {
+            let docClient = dynamoDBCall;
+            let update_params = {
+                TableName: TABLE_NAMES.upschool_teacher_attendance_table,
+                Key: { id: teacher_id },
+                UpdateExpression: "set Attendance = :attendance",
+                ExpressionAttributeValues: {
+                    ":attendance": attendanceArr
+                },
+                ReturnValues: "ALL_NEW"
+            };
+            DATABASE_TABLE.updateRecord(docClient, update_params, callback);
+        }
+    });
+};
+
+// exports.upsertTeacherAttendance = function (request, callback) {
+//     // request: { id, date, last_clock_in_time?, last_clock_in_address?, last_clock_out_time?, last_clock_out_address?, working_hours? }
+//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log("DB ERROR : Upsert Teacher Attendance");
+//             console.log(DBErr);
+//             callback(500, constant.messages.DATABASE_ERROR);
+//         } else {
+//             let docClient = dynamoDBCall;
+//             let teacher_id = request.id;
+//             let date = request.date; // e.g., "2025-07-03"
+
+//             // 1. Fetch current Attendance array
+//             let get_params = {
+//                 TableName: TABLE_NAMES.upschool_teacher_attendance_table,
+//                 Key: { id: teacher_id }
+//             };
+
+//             docClient.get(get_params, function (err, data) {
+//                 let attendanceArr = [];
+//                 if (!err && data.Item && Array.isArray(data.Item.Attendance)) {
+//                     attendanceArr = data.Item.Attendance;
+//                 }
+
+//                 // 2. Prepare today's attendance object
+//                 let todayObj = {};
+//                 todayObj[date] = {
+//                     ...(request.last_clock_in_time && { last_clock_in_time: request.last_clock_in_time }),
+//                     ...(request.last_clock_in_address && { last_clock_in_address: request.last_clock_in_address }),
+//                     ...(request.last_clock_out_time && { last_clock_out_time: request.last_clock_out_time }),
+//                     ...(request.last_clock_out_address && { last_clock_out_address: request.last_clock_out_address }),
+//                     ...(request.working_hours && { working_hours: request.working_hours })
+//                 };
+
+//                 // 3. Check if today's date already exists
+//                 let found = false;
+//                 for (let i = 0; i < attendanceArr.length; i++) {
+//                     if (attendanceArr[i][date]) {
+//                         attendanceArr[i][date] = { ...attendanceArr[i][date], ...todayObj[date] };
+//                         found = true;
+//                         break;
+//                     }
+//                 }
+//                 if (!found) {
+//                     attendanceArr.push(todayObj);
+//                 }
+
+//                 // 4. Update Attendance array in DB
+//                 let update_params = {
+//                     TableName: TABLE_NAMES.upschool_teacher_attendance_table,
+//                     Key: { id: teacher_id },
+//                     UpdateExpression: "set Attendance = :attendance",
+//                     ExpressionAttributeValues: {
+//                         ":attendance": attendanceArr
+//                     },
+//                     ReturnValues: "ALL_NEW"
+//                 };
+
+//                 DATABASE_TABLE.updateRecord(docClient, update_params, callback);
+//             });
+//         }
+//     });
+// };
+
+
+// exports.fetchTeacherAttendance = function (request, callback) {
+//     // request: { id, date }
+//     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
+//         if (DBErr) {
+//             console.log("DB ERROR : Fetch Teacher Attendance");
+//             console.log(DBErr);
+//             callback(500, constant.messages.DATABASE_ERROR);
+//         } else {
+//             let docClient = dynamoDBCall;
+//             let teacher_id = request.id;
+//             let date = request.date;
+
+//             let get_params = {
+//                 TableName: TABLE_NAMES.upschool_teacher_attendance_table,
+//                 Key: { id: teacher_id }
+//             };
+
+//             docClient.get(get_params, function (err, data) {
+//                 if (err) {
+//                     callback(500, err);
+//                 } else if (!data.Item || !Array.isArray(data.Item.Attendance)) {
+//                     callback(null, null); // No attendance found
+//                 } else {
+//                     // Find attendance for the requested date
+//                     const attendanceArr = data.Item.Attendance;
+//                     const attendanceObj = attendanceArr.find(obj => obj[date]);
+//                     callback(null, attendanceObj ? attendanceObj[date] : null);
+//                 }
+//             });
+//         }
+//     });
+// };
