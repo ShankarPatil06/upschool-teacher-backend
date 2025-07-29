@@ -15,7 +15,9 @@ exports.fetchConceptData = function (request, callback) {
             let docClient = dynamoDBCall;
             let FilterExpressionDynamic = "";
             let ExpressionAttributeValuesDynamic = {};
-            let topic_concept_id = request.topic_concept_id; ``
+            let topic_concept_id = request.topic_concept_id;
+
+            console.log({ objecttttt: topic_concept_id })
 
             if (topic_concept_id.length === 1) {
                 let read_params = {
