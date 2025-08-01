@@ -63,6 +63,7 @@ app.post("/v1/fetchTeacherSubjectsBasedonSection", validator.validUser, teacherC
 
 app.post("/v1/fetchTopicsBasedonChapters", validator.validUser, topicController.fetchTopicsBasedonChapters);
 app.post("/v1/fetchConceptsBasedonTopics", validator.validUser, conceptController.fetchConceptsBasedonTopics);
+app.post("/v1/fetchPostLearningTopics", validator.validUser, topicController.fetchPostLearningTopicsBasedonChapters);
 
 /** TEACHER ACTIVITY **/
 app.post("/v1/archivedActiveTopicsInChapter", validator.validUser, teacherController.archivedActiveTopicsInChapter);

@@ -270,7 +270,7 @@ exports.fetchTopicIDDisplayTitleData2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: fromatedRequest.FilterExpression,
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-        ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id"
+        ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id ,pre_post_learning"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
@@ -614,4 +614,24 @@ exports.fetchBulkTopicsIDNameBlueprint = async (request) => {
         const data = await DATABASE_TABLE2.getByObjects(params);
         return data.Responses[TABLE_NAMES.upschool_topic_table]; // Return the fetched chapters
     }
+};
+
+exports.fetchPostLearningTopicData = async (request) => {
+    const fromatedRequest = await helper.getDataByFilterKey(request);
+    
+    const params = {
+        TableName: TABLE_NAMES.upschool_topic_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        
+        FilterExpression: `(${fromatedRequest.FilterExpression}) AND pre_post_learning = :learning_type`,
+        ExpressionAttributeValues: {
+            ...fromatedRequest.ExpressionAttributeValues,
+            ":learning_type": "Post-Learning" 
+        },
+         ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id, pre_post_learning"
+    };
+
+    const data = await DATABASE_TABLE2.query(params);
+    return data;
 };

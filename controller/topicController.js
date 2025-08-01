@@ -36,3 +36,14 @@ exports.fetchTopicsBasedonChapters = async (req, res, next) => {
         next(error)
     }
 };
+
+exports.fetchPostLearningTopicsBasedonChapters = async (req, res, next) => {
+    try {
+        const request = req.body;
+        // Call the new service function
+        const reportData = await topicServices.getPostLearningTopicsBasedonChapters(request);
+        return formatResponse(res, reportData);
+    } catch (error) {
+        next(error)
+    }
+};
