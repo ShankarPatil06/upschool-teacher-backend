@@ -38,3 +38,24 @@ exports.getSchoolDetailsById2 = async (request) => {
 
     return await DATABASE_TABLE2.query(params);
 }
+
+//////
+// exports.getSchoolById = async (schoolId) => {
+exports.getSchoolById = async (request) => {
+    // const params = {
+    //     TableName: 'upschool_school_info',
+    //     Key: { id: schoolId }
+    // };
+
+    // const result = await dynamoDb.get(params).promise();
+    // return result.Item;
+    let params = {
+        TableName: TABLE_NAMES.upschool_school_info_table,
+        KeyConditionExpression: "school_id = :school_id",
+        ExpressionAttributeValues: {
+            ":school_id": request
+        }
+    };
+
+    return await DATABASE_TABLE2.query(params);
+};

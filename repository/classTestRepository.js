@@ -374,6 +374,41 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
     return sortedItems;
 }
 
+//optimised
+// exports.fetchAllTestBasedOnSubject = async (request) => {
+//     const filterConditions = [];
+//     const expressionAttributeValues = {
+//         ":common_id": constant.constValues.common_id,
+//     };
+
+//     if (request.data.client_class_id) filterConditions.push("client_class_id = :client_class_id");
+//     if (request.data.subject_id) filterConditions.push("subject_id = :subject_id");
+//     if (request.data.section_id) filterConditions.push("section_id = :section_id");
+//     if (request.data.class_test_status) filterConditions.push("class_test_status = :class_test_status");
+//     if (request.data.class_test_id) filterConditions.push("class_test_id = :class_test_id");
+//     if (request.data.start_date && request.data.end_date) filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
+
+//     Object.assign(expressionAttributeValues, {
+//         ":client_class_id": request.data.client_class_id,
+//         ":subject_id": request.data.subject_id,
+//         ":section_id": request.data.section_id,
+//         ":class_test_status": request.data.class_test_status || "Active",
+//         ":class_test_id": request.data.class_test_id,
+//         ":start_date": request.data.start_date,
+//         ":end_date": request.data.end_date,
+//     });
+
+//     const params = {
+//         TableName: TABLE_NAMES.upschool_class_test_table,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: filterConditions.join(" AND "),
+//         ExpressionAttributeValues: expressionAttributeValues,
+//     };
+
+//     const result = await DATABASE_TABLE2.query(params);
+//     return result.Items.sort((a, b) => new Date(b.created_ts) - new Date(a.created_ts));
+// };
 exports.fetchTestBasedOnQuestionPaper = async (request) => {
     let filterConditions = [
         "class_test_status = :class_test_status",

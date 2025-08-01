@@ -807,15 +807,19 @@ exports.viewAnalysisIndividualReport = async (request) => {
     const questionIds = questionTrackDetails.map((val) => val.question_id);
     const topicIds = questionTrackDetails.map((val) => val.topic_id);
 
+    //ch
     const questions = await questionRepository.fetchBulkQuestionsNameById2({
       question_id: questionIds,
     });
     console.log({ questions });
 
+    //ch
     const topicNames = await topicRepository.fetchBulkTopicsIDName2({
       unit_Topic_id: topicIds,
     });
 
+
+    //ch
     const cognitiveSkillNames =
       await settingsRepository.fetchBulkCognitiveSkillNameById2({
         cognitive_id: questions.map((que) => que.cognitive_skill),
@@ -1916,22 +1920,22 @@ exports.viewChapterwisePerformanceTracking = async (request) => {
 
   const subject_res = await subjectRepository.getSubjetById2(request);
   let subject_unit_id = subject_res.Items[0].subject_unit_id;
-  const unit_res = await unitRepository.fetchUnitData2({ subject_unit_id });
+  const unit_res = await unitRepository.fetchUnitData2({ subject_unit_id }); //ch
   const unit_chapter_id = [...new Set(unit_res.flatMap(e => e.unit_chapter_id))];
-  const chapter_res = await chapterRepository.fetchBulkChaptersIDName2({ unit_chapter_id });
+  const chapter_res = await chapterRepository.fetchBulkChaptersIDName2({ unit_chapter_id }); //ch
   const chapter_ids = chapter_res.map(chapter => chapter.chapter_id)
-  console.log({ chapter_ids });
+  // console.log({ chapter_ids });
 
-  const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter2(request, chapter_ids);
+  const quizDataRes = await quizRepository.fetchAllQuizBasedonChapter2(request, chapter_ids); //ch
 
-  console.log("quizDataRes - ", quizDataRes);
+  // console.log("quizDataRes - ", quizDataRes);
   const quizids = quizDataRes.Items.map(q => q.quiz_id)
   const questionMarksforeachQuiz = await Promise.all(quizDataRes.Items.map(async (quizData) => {
     let overallMarks = 0;
     // Get all unique question IDs from question_track_details
     const uniqueArray = [...new Set(Object.values(quizData.question_track_details).flat())];
     const questionIds = uniqueArray.map(item => item.question_id);
-    console.log("questionsids", questionIds.length)
+    // console.log("questionsids", questionIds.length)
     // Fetch question
     const questions = await new Promise((resolve, reject) => {
       questionRepository.fetchBulkQuestionsNameById3({ question_id: questionIds }, (err, res) => {

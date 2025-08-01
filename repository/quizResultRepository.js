@@ -355,27 +355,93 @@ exports.fetchBulkQuizResultsByID3 = async (request) => {
     }
 };
 
+// exports.fetchBulkQuizResultsByID2 = async (request) => {
+//     const unit_Quiz_id = [...new Set(request.unit_Quiz_id)]; // Remove duplicates
+//     const common_id = constant.constValues.common_id;
+
+//     // Create filter expression for multiple quiz_id
+//     const filterExpression = unit_Quiz_id.map((_, index) => `quiz_id = :quiz_id${index}`).join(" OR ");
+//     const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
+//         acc[`:quiz_id${index}`] = quizId;
+//         return acc;
+//     }, { ":common_id": common_id });
+
+//     const params = {
+//         TableName: TABLE_NAMES.upschool_quiz_result,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: filterExpression,
+//         ExpressionAttributeValues: expressionAttributeValues,
+//     };
+
+//     const result = await DATABASE_TABLE2.query(params);
+//     return result.Items;
+// };
+
+//chunk
 exports.fetchBulkQuizResultsByID2 = async (request) => {
     const unit_Quiz_id = [...new Set(request.unit_Quiz_id)]; // Remove duplicates
     const common_id = constant.constValues.common_id;
 
-    // Create filter expression for multiple quiz_id
-    const filterExpression = unit_Quiz_id.map((_, index) => `quiz_id = :quiz_id${index}`).join(" OR ");
-    const expressionAttributeValues = unit_Quiz_id.reduce((acc, quizId, index) => {
-        acc[`:quiz_id${index}`] = quizId;
-        return acc;
-    }, { ":common_id": common_id });
+    if (unit_Quiz_id.length === 0) {
+        return [];
+    }
 
-    const params = {
-        TableName: TABLE_NAMES.upschool_quiz_result,
-        IndexName: Indexes.common_id_index,
-        KeyConditionExpression: "common_id = :common_id",
-        FilterExpression: filterExpression,
-        ExpressionAttributeValues: expressionAttributeValues,
-    };
+    if (unit_Quiz_id.length === 1) {
+        // Single quiz ID - more efficient query
+        const params = {
+            TableName: TABLE_NAMES.upschool_quiz_result,
+            IndexName: Indexes.common_id_index,
+            KeyConditionExpression: "common_id = :common_id",
+            FilterExpression: "quiz_id = :quiz_id",
+            ExpressionAttributeValues: {
+                ":common_id": common_id,
+                ":quiz_id": unit_Quiz_id[0]
+            },
+        };
 
-    const result = await DATABASE_TABLE2.query(params);
-    return result.Items;
+        const result = await DATABASE_TABLE2.query(params);
+        return result.Items || [];
+    } else {
+        // Multiple quiz IDs - use chunking to avoid FilterExpression complexity limits
+        const CHUNK_SIZE = 100; // Conservative limit for FilterExpression complexity
+        const chunks = helper.chunkArray(unit_Quiz_id, CHUNK_SIZE);
+        
+        // Process chunks in parallel
+        const chunkPromises = chunks.map(async (chunk, chunkIndex) => {
+            // Create filter expression for this chunk
+            const filterExpression = chunk.map((_, index) => `quiz_id = :quiz_id_${chunkIndex}_${index}`).join(" OR ");
+            
+            // Create expression attribute values for this chunk
+            const expressionAttributeValues = chunk.reduce((acc, quizId, index) => {
+                acc[`:quiz_id_${chunkIndex}_${index}`] = quizId;
+                return acc;
+            }, { ":common_id": common_id });
+
+            const params = {
+                TableName: TABLE_NAMES.upschool_quiz_result,
+                IndexName: Indexes.common_id_index,
+                KeyConditionExpression: "common_id = :common_id",
+                FilterExpression: filterExpression,
+                ExpressionAttributeValues: expressionAttributeValues,
+            };
+
+            // console.log(`Processing chunk ${chunkIndex + 1} of ${chunks.length} with ${chunk.length} quiz IDs`);
+
+            const result = await DATABASE_TABLE2.query(params);
+            return result.Items || [];
+        });
+
+        // Wait for all chunks to complete
+        const chunkResults = await Promise.all(chunkPromises);
+        
+        // Flatten all results
+        const allResults = chunkResults.flat();
+        
+        // console.log(`Total quiz results fetched from ${chunks.length} chunks: ${allResults.length}`);
+        
+        return allResults;
+    }
 };
 
 exports.fetchBulkQuizResultsByID4 = async (request) => {
