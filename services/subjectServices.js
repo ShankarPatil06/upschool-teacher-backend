@@ -336,3 +336,26 @@ exports.getExpressTopicsAndQuestionCount2 = async (request) => {
 
     return { statusCode: 200, data: conceptDataRes.Items };
 };
+
+exports.getAllChaptersBySubjectId = async (request) => {
+    try {
+        const fetch_subject_res = await subjectRepository.getSubjetById2(request);
+        const subject_unit_id = fetch_subject_res.Items[0].subject_unit_id;
+        if (!subject_unit_id) {
+            throw { status: 400, message: "subject unit ID is required" };
+        }
+
+        const units = await unitRepository.fetchUnitData2({ subject_unit_id });
+        if (!units || units.length === 0) {
+            return [];
+        }
+        const unit_chapter_id = [
+            ...new Set(units.flatMap((e) => e.unit_chapter_id)),
+        ];
+        const chapters = await chapterRepository.fetchBulkChaptersIDName2({ unit_chapter_id });
+        return chapters;
+
+    } catch (error) {
+        throw error
+    }
+};

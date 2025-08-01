@@ -41,3 +41,14 @@ exports.saveTimetableConfiguration = (req, res, next) => {
     });
 };
 
+    exports.addCurriculumPlanToSection = async (req, res, next) => {
+         try {
+            let request = req.body;
+            const result = await sectionServices.addCurriculumPlanToSection(request);
+             return formatResponse(res, result);
+         } catch (error) {
+            next(error);
+         }
+    };
+
+
