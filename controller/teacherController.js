@@ -208,6 +208,7 @@ exports.clockOut = async (req, res, next) => {
 
 exports.upsertTeacherAttendance = (req, res, next) => {
     const request = req.body;
+    console.log({objecttttt: request});
     teacherServices.upsertTeacherAttendance(request, function (err, data) {
         if (err) {
             res.status(500).json({ status: "error", message: err });
