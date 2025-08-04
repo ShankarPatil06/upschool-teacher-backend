@@ -180,7 +180,7 @@ app.post('/v1/addCurriculumPlanToSection', sectionController.addCurriculumPlanTo
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 
 // update attendence
-app.post("/v1/upsertTeacherAttensssdance", teacherController.upsertTeacherAttendance);
+app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
 app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
 // app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
 
