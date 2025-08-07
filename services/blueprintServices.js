@@ -393,6 +393,8 @@ exports.fetchBlueprintQuestions = (request, callback) => {
                                             
                                             let filteredQuestionData = await questionsData_res.Items.filter((qtn) => request.data.source_ids.includes(qtn.question_source));
 
+                                            console.log({objectttt: filteredQuestionData});
+
                                             let priorities = [];
                                             await helper.checkPriorityQuestions(request.data.question_details).then((priData) => {
                                                 priorities = priData;
@@ -587,7 +589,7 @@ exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas,
         else
         {
             /** END **/
-            // console.log("AVAILABLE QUESTION : ", avalQuestion);
+            console.log("AVAILABLE QUESTION : ", avalQuestion);
             callback(0, avalQuestion);
         }
     }
@@ -650,7 +652,10 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
         quesObj: "N.A.",
         questionExistId: []
     };
-    let getQuestion = await avalQues_data.filter(Qs => Qs.question_category === blueQues.category_id && (!blueQues.cognitive_id || blueQues.cognitive_id === "N.A." || blueQues.cognitive_id === "Select Skill" || Qs.cognitive_skill === blueQues.cognitive_id) && (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
+    console.log({objectttt123:avalQues_data, });
+    console.log({objectttt123:blueQues });
+    let getQuestion = await avalQues_data.filter(Qs => blueQues.category_ids.includes(Qs.question_category)  && (helper.isEmptyArray(blueQues.cognitive_ids) || blueQues.cognitive_ids.includes(Qs.cognitive_skill)) && (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
+
 
     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
 
