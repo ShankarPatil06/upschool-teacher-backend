@@ -51,7 +51,7 @@ exports.fetchActiveBluePrints2 = async (request) => {
 
 
 exports.fetchBlueprintById = function (request, callback) {
-
+    console.log({ objecttttt: request });
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {
             console.log(constant.messages.DATABASE_ERROR);
@@ -65,7 +65,7 @@ exports.fetchBlueprintById = function (request, callback) {
 
                 KeyConditionExpression: "blueprint_id = :blueprint_id",
                 ExpressionAttributeValues: {
-                    ":blueprint_id": request.data.blueprint_id
+                    ":blueprint_id": request.data?.blueprint_id
                 }
             }
 
