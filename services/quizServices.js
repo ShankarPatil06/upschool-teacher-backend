@@ -857,7 +857,7 @@ exports.startQuizEvaluationProcess = async (request) => {
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
         // const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
-            for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
+        for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
             const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
 

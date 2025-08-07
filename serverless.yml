@@ -484,3 +484,7 @@ functions:
           path: /v1/fetchTeacherAttendance
           method: POST
           cors: true  
+      - http:
+          path: /v1/fetchPostLearningTopics
+          method: POST
+          cors: true

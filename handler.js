@@ -93,7 +93,7 @@ app.post("/v1/viewTestQuestionPaper", validator.validUser, testQuestionPaperCont
 app.post("/v1/toggleQuestionPaper", validator.validUser, testQuestionPaperController.toggleQuestionPaper); //n
 
 /** BLUE PRINT **/
-app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);  //ch a
+app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);  //cha
 app.post("/v1/fetchBlueprintDetailsBasedonId", blueprintController.fetchBlueprintDetailsBasedonId); //ch
 app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionBasedOnBlueprint); // validator.validUser,  //ch a
 app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints); // n
