@@ -48,6 +48,8 @@ exports.fetchActiveBluePrints2 = async (request) => {
     const data = await DATABASE_TABLE2.query(params);
     return data.Items;
 }
+
+
 exports.fetchBlueprintById = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {

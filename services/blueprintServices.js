@@ -3,6 +3,95 @@ const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 
+
+// exports.getBlueprintByItsId = async (request, callback) => {
+//     try {
+//         // Step 1: Fetch the core blueprint data
+//         const singleBlueprint_res = await new Promise((resolve, reject) => {
+//             blueprintRepository.fetchBlueprintById(request, (err, res) => {
+//                 if (err) return reject(err);
+//                 resolve(res);
+//             });
+//         });
+
+//         if (!singleBlueprint_res.Items || singleBlueprint_res.Items.length === 0) {
+//             console.log(constant.messages.NO_DATA);
+//             return callback(404, constant.messages.NO_DATA); // Use 404 for not found
+//         }
+
+//         const blueprint = singleBlueprint_res.Items[0];
+//         const questionSection = blueprint.sections || [];
+        
+//         let catIds = [];
+//         let skillIds = [];
+
+//         // Step 2: Safely collect all category and skill IDs
+//         for (const section of questionSection) {
+//             if (Array.isArray(section.questions)) {
+//                 for (const ques of section.questions) {
+//                     catIds.push(ques.category_id);
+//                     skillIds.push(ques.cognitive_id);
+//                 }
+//             }
+//         }
+
+//         // --- THE CORE FIX ---
+//         // Step 3: Remove duplicates and filter out any invalid (undefined, null, or empty) IDs
+//         const uniqueCatIds = [...new Set(catIds)].filter(Boolean);
+//         const uniqueSkillIds = [...new Set(skillIds)].filter(Boolean);
+
+//         console.log("VALID CATEGORY IDs TO FETCH: ", uniqueCatIds);
+//         console.log("VALID SKILL IDs TO FETCH : ", uniqueSkillIds);
+
+//         // Step 4: Fetch category data
+//         const fetchBulkCatReq = {
+//             IdArray: uniqueCatIds,
+//             fetchIdName: "category_id",
+//             TableName: TABLE_NAMES.upschool_content_category,
+//             projectionExp: ["category_id", "category_name"]
+//         };
+        
+//         const cateData_res = await new Promise((resolve, reject) => {
+//             commonRepository.fetchBulkDataWithProjection(fetchBulkCatReq, (err, res) => {
+//                 if (err) return reject(err);
+//                 resolve(res);
+//             });
+//         });
+
+//         // Step 5: Fetch cognitive skill data only if there are IDs to fetch
+//         let cognData_res = { Items: [] }; // Default to empty response
+//         if (uniqueSkillIds.length > 0) {
+//             const fetchBulkCogReq = {
+//                 IdArray: uniqueSkillIds,
+//                 fetchIdName: "cognitive_id",
+//                 TableName: TABLE_NAMES.upschool_cognitive_skill,
+//                 projectionExp: ["cognitive_id", "cognitive_name"]
+//             };
+//             cognData_res = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCogReq);
+//         }
+
+//         // Step 6: Merge all the data together
+//         const finalSections = await new Promise((resolve, reject) => {
+//             exports.setBlueprintFinalData(questionSection, cateData_res.Items, cognData_res.Items || [], (err, data) => {
+//                 if (err) return reject(err);
+//                 resolve(data);
+//             });
+//         });
+
+//         // Step 7: Finalize the response and send it back
+//         blueprint.sections = finalSections;
+//         callback(null, singleBlueprint_res);
+
+//     } catch (error) {
+//         console.error("Error in getBlueprintByItsId:", error);
+//         // Pass the error to the callback, which will be sent as the response
+//         callback(500, { message: "An internal server error occurred while fetching the blueprint." });
+//     }
+// };
+
+
+
+
 exports.getBlueprintByItsId = (request, callback) => {    
     blueprintRepository.fetchBlueprintById(request, async function (singleBlueprint_err, singleBlueprint_res) {
         if (singleBlueprint_err) {
@@ -253,7 +342,7 @@ exports.fetchBlueprintQuestions = (request, callback) => {
                                 {
                                     conceptIds = conceptIds.concat(topItem.topic_concept_id);
                                 } 
-                            });
+                            }); 
 
                             conceptIds = await helper.removeDuplicates(conceptIds);
 
