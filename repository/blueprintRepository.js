@@ -31,24 +31,67 @@ exports.fetchActiveBluePrints = function (request, callback) {
         }
     });
 }
+// exports.fetchActiveBluePrints2 = async (request) => {
+//     let params = {
+//         TableName: TABLE_NAMES.upschool_blueprint_table,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: "blueprint_status = :blueprint_status AND blueprint_type = :blueprint_type",
+//         ExpressionAttributeValues: {
+//             ":common_id": constant.constValues.common_id,
+//             ":blueprint_status": "Active",
+//             ":blueprint_type": request.data.blueprint_type
+//         },
+//         ProjectionExpression: "blueprint_id, blueprint_name, description, test_duration, display_name",
+
+//     };
+//     const data = await DATABASE_TABLE2.query(params);
+//     return data.Items;
+// }
+
 exports.fetchActiveBluePrints2 = async (request) => {
+    // Base parameters for the query
     let params = {
         TableName: TABLE_NAMES.upschool_blueprint_table,
         IndexName: Indexes.common_id_index,
         KeyConditionExpression: "common_id = :common_id",
+        // Start with the base filters that are always required
         FilterExpression: "blueprint_status = :blueprint_status AND blueprint_type = :blueprint_type",
         ExpressionAttributeValues: {
             ":common_id": constant.constValues.common_id,
             ":blueprint_status": "Active",
             ":blueprint_type": request.data.blueprint_type
         },
-        ProjectionExpression: "blueprint_id, blueprint_name, description, test_duration, display_name",
-
+        // Update the projection to also return the school_ids, which is useful for debugging
+        ProjectionExpression: "blueprint_id, blueprint_name, description, test_duration, display_name, school_ids",
     };
-    const data = await DATABASE_TABLE2.query(params);
-    return data.Items;
-}
 
+    // --- START OF MODIFICATION ---
+    // Check if school_id was passed in the request data
+    if (request.data.school_id) {
+        console.log(`Filtering blueprints for school_id: ${request.data.school_id}`);
+
+        // 1. Append the school_id filter to the FilterExpression.
+        //    The 'contains' function works on list or set attributes in DynamoDB.
+        params.FilterExpression += " AND contains(school_ids, :school_id)";
+
+        // 2. Add the school_id value to the ExpressionAttributeValues.
+        params.ExpressionAttributeValues[":school_id"] = request.data.school_id;
+    }
+    // --- END OF MODIFICATION ---
+
+    // For debugging, you can log the final params object
+    console.log("Executing DynamoDB query with params:", JSON.stringify(params, null, 2));
+
+    try {
+        const data = await DATABASE_TABLE2.query(params);
+        return data.Items;
+    } catch (error) {
+        console.error("Error executing DynamoDB query:", error);
+        // Propagate the error to be handled by the controller
+        throw error;
+    }
+};
 
 exports.fetchBlueprintById = function (request, callback) {
     console.log({ objecttttt: request });

@@ -434,132 +434,238 @@ exports.fetchBlueprintQuestions = (request, callback) => {
 /** END NEW **/
 
 
+// exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topicData, conceptData, questionData, callback) => { 
+    
+//     console.log("CONCEPT DATA : ", conceptData);
+
+//     let responseData = JSON.parse(JSON.stringify(request.data.question_details));
+//     let reqSection = request.data.question_details;
+//     let blueSection = blueprint.sections;
+     
+//     let exitingQuesIds = [];
+//     let secPos = "";
+//     let quePos = "";
+//     async function mainLoop(i)
+//     {
+//         if(i < 3)
+//         {   
+//             async function priLoop(j){
+//                 if(j < priorities.length)
+//                 {
+//                     secPos = priorities[j].sec;
+//                     quePos = priorities[j].que;
+
+//                     if(priorities[j].qStatus === "No")
+//                     {
+//                         if(priorities[j].pre === 0)
+//                         {
+//                             /** FIRST PRIORITY WITH CONCEPT IDS **/
+//                             exports.getConceptAvailQuestions(reqSection[secPos].questions[quePos].concept_ids, conceptData, questionData, async(conAvail_err, conAvail_data) => {
+//                                 if(conAvail_err)
+//                                 {
+//                                     console.log(conAvail_err);
+//                                     callback(conAvail_err, conAvail_data);
+//                                 }
+//                                 else
+//                                 {
+//                                     exports.getResQuestionObj(conAvail_data, blueSection[secPos].questions[quePos], exitingQuesIds, (quesObj_err, quesObj_data) => {
+//                                         if(quesObj_err)
+//                                         {
+//                                             console.log(quesObj_err);
+//                                             callback(quesObj_err, quesObj_data);
+//                                         }
+//                                         else
+//                                         {
+//                                             responseData[secPos].questions[quePos] = quesObj_data.quesObj;
+//                                             exitingQuesIds = quesObj_data.questionExistId;
+//                                             priorities[j].qStatus = "Yes";
+
+//                                             j++;
+//                                             priLoop(j);
+//                                         }
+//                                     })
+//                                 }
+//                             })
+//                             /** END FIRST PRIORITY WITH CONCEPT IDS **/
+//                         }
+//                         else if(priorities[j].pre === 1)
+//                         {
+//                             /** SECOND PRIORITY WITH TOPIC IDS **/
+//                             exports.getTopicsAvailQuestions(reqSection[secPos].topic_ids, topicData, conceptData, questionData, async(topAvail_err, topAvail_data) => {
+//                                 if(topAvail_err)
+//                                 {
+//                                     console.log(topAvail_err);
+//                                     callback(topAvail_err, topAvail_data);
+//                                 }
+//                                 else
+//                                 {
+//                                     exports.getResQuestionObj(topAvail_data, blueSection[secPos].questions[quePos], exitingQuesIds, (quesTopObj_err, quesTopObj_data) => {
+//                                         if(quesTopObj_err)
+//                                         {
+//                                             console.log(quesTopObj_err);
+//                                             callback(quesTopObj_err, quesTopObj_data);
+//                                         }
+//                                         else
+//                                         {
+//                                             responseData[secPos].questions[quePos] = quesTopObj_data.quesObj;
+//                                             exitingQuesIds = quesTopObj_data.questionExistId;
+//                                             priorities[j].qStatus = "Yes";
+
+//                                             j++;
+//                                             priLoop(j);
+//                                         }
+//                                     })
+//                                 }
+//                             });
+                            
+//                             /** END SECOND PRIORITY WITH TOPIC IDS **/                            
+//                         }
+//                         else if(priorities[j].pre === 2)
+//                         {
+//                             /** THIRD PRIORITY WITH CHAPTER IDS **/
+//                             exports.getResQuestionObj(questionData, blueSection[secPos].questions[quePos], exitingQuesIds, (quesObjChap_err, quesObjChap_data) => {
+//                                 if(quesObjChap_err)
+//                                 {
+//                                     console.log(quesObjChap_err);
+//                                     callback(quesObjChap_err, quesObjChap_data);
+//                                 }
+//                                 else
+//                                 {
+//                                     responseData[secPos].questions[quePos] = quesObjChap_data.quesObj;
+//                                     exitingQuesIds = quesObjChap_data.questionExistId;
+//                                     priorities[j].qStatus = "Yes";
+
+//                                     j++;
+//                                     priLoop(j);
+//                                 }
+//                             })
+//                             /** END THIRD PRIORITY WITH CHAPTER IDS **/                            
+//                         }
+//                     }else{
+//                         j++;
+//                         priLoop(j);
+//                     }
+//                 }else{
+//                     i++;
+//                     mainLoop(i);
+//                 }
+//             }
+//             priLoop(0);            
+//         }else{
+//             console.log("FINALLY GOT QUESTION :", responseData[0].questions[2]);
+//             callback(0, responseData);
+//         }
+//     }
+//     mainLoop(0)
+// }
+
+
 exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topicData, conceptData, questionData, callback) => { 
     
-    console.log("CONCEPT DATA : ", conceptData);
+    console.log("Starting question paper creation...");
 
     let responseData = JSON.parse(JSON.stringify(request.data.question_details));
-    let reqSection = request.data.question_details;
-    let blueSection = blueprint.sections;
+    // let responseData = JSON.parse(JSON.stringify(blueprint.sections));
+    let blueSections = blueprint.sections;
      
-    let exitingQuesIds = [];
+    let exitingQuesIds = []; // Holds all used question IDs to prevent duplicates across the entire paper.
     let secPos = "";
     let quePos = "";
+    
     async function mainLoop(i)
     {
-        if(i < 3)
+        if(i < 3) // This loop handles the 3 priority levels (Concept, Topic, Chapter)
         {   
             async function priLoop(j){
                 if(j < priorities.length)
                 {
+                    // Only process for the current priority level
+                    if (priorities[j].pre !== i) {
+                        j++;
+                        priLoop(j);
+                        return;
+                    }
+
                     secPos = priorities[j].sec;
                     quePos = priorities[j].que;
 
                     if(priorities[j].qStatus === "No")
                     {
-                        if(priorities[j].pre === 0)
-                        {
-                            /** FIRST PRIORITY WITH CONCEPT IDS **/
-                            exports.getConceptAvailQuestions(reqSection[secPos].questions[quePos].concept_ids, conceptData, questionData, async(conAvail_err, conAvail_data) => {
-                                if(conAvail_err)
-                                {
-                                    console.log(conAvail_err);
-                                    callback(conAvail_err, conAvail_data);
-                                }
-                                else
-                                {
-                                    exports.getResQuestionObj(conAvail_data, blueSection[secPos].questions[quePos], exitingQuesIds, (quesObj_err, quesObj_data) => {
-                                        if(quesObj_err)
-                                        {
-                                            console.log(quesObj_err);
-                                            callback(quesObj_err, quesObj_data);
-                                        }
-                                        else
-                                        {
-                                            responseData[secPos].questions[quePos] = quesObj_data.quesObj;
-                                            exitingQuesIds = quesObj_data.questionExistId;
-                                            priorities[j].qStatus = "Yes";
+                        let questionsToSearchFrom = [];
 
-                                            j++;
-                                            priLoop(j);
-                                        }
-                                    })
-                                }
-                            })
-                            /** END FIRST PRIORITY WITH CONCEPT IDS **/
-                        }
-                        else if(priorities[j].pre === 1)
-                        {
-                            /** SECOND PRIORITY WITH TOPIC IDS **/
-                            exports.getTopicsAvailQuestions(reqSection[secPos].topic_ids, topicData, conceptData, questionData, async(topAvail_err, topAvail_data) => {
-                                if(topAvail_err)
-                                {
-                                    console.log(topAvail_err);
-                                    callback(topAvail_err, topAvail_data);
-                                }
-                                else
-                                {
-                                    exports.getResQuestionObj(topAvail_data, blueSection[secPos].questions[quePos], exitingQuesIds, (quesTopObj_err, quesTopObj_data) => {
-                                        if(quesTopObj_err)
-                                        {
-                                            console.log(quesTopObj_err);
-                                            callback(quesTopObj_err, quesTopObj_data);
-                                        }
-                                        else
-                                        {
-                                            responseData[secPos].questions[quePos] = quesTopObj_data.quesObj;
-                                            exitingQuesIds = quesTopObj_data.questionExistId;
-                                            priorities[j].qStatus = "Yes";
-
-                                            j++;
-                                            priLoop(j);
-                                        }
-                                    })
-                                }
+                        // Step 1: Determine the pool of available questions based on the current priority
+                        if(priorities[j].pre === 0) {
+                            console.log(`Priority 0: Fetching by Concept for Sec:${secPos}, Que:${quePos}`);
+                            questionsToSearchFrom = await new Promise((resolve, reject) => {
+                                exports.getConceptAvailQuestions(responseData[secPos].questions[quePos].concept_ids, conceptData, questionData, (err, data) => {
+                                    if (err) return reject(err);
+                                    resolve(data || []);
+                                });
                             });
-                            
-                            /** END SECOND PRIORITY WITH TOPIC IDS **/                            
-                        }
-                        else if(priorities[j].pre === 2)
-                        {
-                            /** THIRD PRIORITY WITH CHAPTER IDS **/
-                            exports.getResQuestionObj(questionData, blueSection[secPos].questions[quePos], exitingQuesIds, (quesObjChap_err, quesObjChap_data) => {
-                                if(quesObjChap_err)
-                                {
-                                    console.log(quesObjChap_err);
-                                    callback(quesObjChap_err, quesObjChap_data);
-                                }
-                                else
-                                {
-                                    responseData[secPos].questions[quePos] = quesObjChap_data.quesObj;
-                                    exitingQuesIds = quesObjChap_data.questionExistId;
-                                    priorities[j].qStatus = "Yes";
+                        } else if(priorities[j].pre === 1) {
+                            console.log(`Priority 1: Fetching by Topic for Sec:${secPos}, Que:${quePos}`);
+                            questionsToSearchFrom = await new Promise((resolve, reject) => {
+                            //     exports.getTopicsAvailQuestions(responseData[secPos].questions[quePos].topic_ids, topicData, conceptData, questionData, (err, data) => {
+                            //         if (err) return reject(err);
+                            //         resolve(data || []);
+                            //     });
+                            // });
 
-                                    j++;
-                                    priLoop(j);
-                                }
-                            })
-                            /** END THIRD PRIORITY WITH CHAPTER IDS **/                            
+                                exports.getTopicsAvailQuestions(responseData[secPos].topic_ids, topicData, conceptData, questionData, (err, data) => {
+                                    if (err) return reject(err);
+                                    resolve(data || []);
+                                });
+                            });
+                        } else if(priorities[j].pre === 2) {
+                            console.log(`Priority 2: Fetching by Chapter for Sec:${secPos}, Que:${quePos}`);
+                            // For chapter level, the pool is all available questions.
+                            questionsToSearchFrom = questionData;
                         }
-                    }else{
+
+                        // Step 2: Call the recursive function to process the blueprint node
+                        try {
+                            // This is the blueprint question structure we need to populate.
+                            const blueprintQuestionNode = blueSections[secPos].questions[quePos];
+
+                            // This single call handles all complexity (General, OR, Sub-Question, nesting).
+                            const result = await exports.processAndFetchQuestion(blueprintQuestionNode, questionsToSearchFrom, exitingQuesIds);
+
+                            // Update the final response with the fully populated question object/tree.
+                            responseData[secPos].questions[quePos] = result.quesObj;
+                            // Update the global list of used IDs.
+                            exitingQuesIds = result.questionExistId;
+                            priorities[j].qStatus = "Yes";
+
+                            j++;
+                            priLoop(j);
+                        } catch (error) {
+                            console.error("Error processing question node:", error);
+                            return callback(error, null);
+                        }
+                    } else {
                         j++;
                         priLoop(j);
                     }
-                }else{
+                } else {
                     i++;
                     mainLoop(i);
                 }
             }
             priLoop(0);            
-        }else{
-            console.log("FINALLY GOT QUESTION :", responseData[0].questions[2]);
+        } else {
+            console.log("FINALLY CREATED QUESTION PAPER:", JSON.stringify(responseData, null, 2));
             callback(0, responseData);
         }
     }
-    mainLoop(0)
+    mainLoop(0);
 }
 
 exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas, callback) => {
+
+    if(!conceptId || conceptId.length === 0) {
+        // If no concept IDs are provided, there are no questions to find. Return empty.
+        return callback(0, []); 
+    }
     
     // console.log("CONCEPT ID : ", conceptId);
     let conceptBlock = "";
@@ -597,6 +703,11 @@ exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas,
 }
 
 exports.getTopicsAvailQuestions = async (topicId, topicData, conceptData, questionDatas, callback) => {
+
+     if (!topicId || topicId.length === 0) {
+        // If no topic IDs are provided, there are no questions to find. Return empty.
+        return callback(0, []);
+    }
     // console.log("TOPIC ID : ", topicId);
     let foundTopic = "";
     let avalConcept = [];
@@ -646,16 +757,156 @@ exports.getTopicsAvailQuestions = async (topicId, topicData, conceptData, questi
     topicLoop(0);
 }
 
+// exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, callback) => {
+    
+//     let endRes = {
+//         quesObj: "N.A.",
+//         questionExistId: []
+//     };
+//     console.log({objectttt123:avalQues_data, });
+//     console.log({objectttt123:blueQues });
+//     let getQuestion = await avalQues_data.filter(Qs => blueQues.category_ids.includes(Qs.question_category)  && (helper.isEmptyArray(blueQues.cognitive_ids) || blueQues.cognitive_ids.includes(Qs.cognitive_skill)) && (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
+
+
+//     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
+
+//     if(getQuestion.length > 0 && (!questionExistId.find(ext => ext === getQuestion[0].question_id)))
+//     {
+//         let contUrl = "N.A.";
+//         if(blueQues.question_type === constant.questionKeys.objective)
+//         {
+//             await helper.getAnswerContentFileUrl(getQuestion[0].answers_of_question).then((curl) => {
+//                 contUrl = curl
+//             })
+//             .catch(function(curlErr) {
+//                 console.log(curlErr);  
+//                 contUrl = "N.A.";
+//             })
+//         }
+
+//         questionExistId.push(getQuestion[0].question_id); 
+//         endRes = {
+//             quesObj: {
+//                 question_name : blueQues.question_name,
+//                 question_type : blueQues.question_type,
+//                 marks : blueQues.marks,
+//                 difficulty_level : blueQues?.difficulty_level,
+//                 question_id : getQuestion[0].question_id,
+//                 question_content : getQuestion[0].question_content,
+//                 answers_of_question : contUrl
+//             },
+//             questionExistId: questionExistId
+//         }; 
+//     }
+//     else
+//     {
+//         endRes = {
+//             quesObj: {      
+//                 question_name : blueQues.question_name,
+//                 question_type : blueQues.question_type,
+//                 marks : blueQues.marks,
+//                 difficulty_level : blueQues.difficulty_level,
+//                 question_id : "N.A.",
+//                 question_content : "N.A.",
+//                 answers_of_question : "N.A."
+//             },
+//             questionExistId: questionExistId
+//         };  
+//     }
+
+//     callback(0, endRes);
+// }
+
+exports.processAndFetchQuestion = async (blueQues, availableQuestions, existingQuestionIds) => {
+    // --- Recursive Case 1: The node is a container for Sub-Questions ---
+    if (blueQues.question_structure_type === 'Sub-Question' && blueQues.sub_questions) {
+        const processedSubQuestions = [];
+        // Loop through each child sub-question
+        for (const subQuestion of blueQues.sub_questions) {
+            // Recursively process the child. It might be a General question or another container (like an OR question).
+            const fetchedResult = await exports.processAndFetchQuestion(subQuestion, availableQuestions, existingQuestionIds);
+            processedSubQuestions.push(fetchedResult.quesObj);
+            // CRUCIAL: Update the list of used IDs to pass to the next iteration.
+            existingQuestionIds = fetchedResult.questionExistId;
+        }
+        // Return the original container, but with its children now fully processed and populated.
+        return {
+            quesObj: {
+                ...blueQues, // Copy properties like question_description, question_number, etc.
+                sub_questions: processedSubQuestions, // Overwrite with the populated children
+            },
+            questionExistId: existingQuestionIds
+        };
+    }
+
+    // --- Recursive Case 2: The node is a container for OR-Questions ---
+    if (blueQues.question_structure_type === 'OR Question' && blueQues.or_questions) {
+        const processedOrQuestions = [];
+        for (const orQuestion of blueQues.or_questions) {
+            const fetchedResult = await exports.processAndFetchQuestion(orQuestion, availableQuestions, existingQuestionIds);
+            processedOrQuestions.push(fetchedResult.quesObj);
+            existingQuestionIds = fetchedResult.questionExistId;
+        }
+        return {
+            quesObj: {
+                ...blueQues,
+                or_questions: processedOrQuestions,
+            },
+            questionExistId: existingQuestionIds
+        };
+    }
+
+    // --- Base Case: The node is a "General Question" that needs to be fetched from the DB ---
+    // Also handles nested General Questions (e.g., inside a sub_question array).
+    if (blueQues.question_structure_type === 'General Question') {
+        return new Promise((resolve, reject) => {
+            // Use the existing function that filters and finds a single question match.
+            exports.getResQuestionObj(availableQuestions, blueQues, existingQuestionIds, (err, data) => {
+                if (err) return reject(err);
+                resolve(data);
+            });
+        });
+    }
+    
+    // --- Fallback for any other case or malformed data ---
+    // This will return the container as-is if it has no recognized children array.
+    console.log(`Warning: Unhandled question structure type or malformed node for question number: ${blueQues.question_number}`);
+    return { quesObj: blueQues, questionExistId: existingQuestionIds };
+};
+
+
 exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, callback) => {
     
     let endRes = {
         quesObj: "N.A.",
         questionExistId: []
     };
-    console.log({objectttt123:avalQues_data, });
-    console.log({objectttt123:blueQues });
-    let getQuestion = await avalQues_data.filter(Qs => blueQues.category_ids.includes(Qs.question_category)  && (helper.isEmptyArray(blueQues.cognitive_ids) || blueQues.cognitive_ids.includes(Qs.cognitive_skill)) && (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && Number(Qs.marks) === Number(blueQues.marks) && Qs.question_type === blueQues.question_type) 
 
+    // If blueQues is not valid or doesn't have marks, it's likely a container. Return "N.A.".
+    if (!blueQues || !blueQues.marks) {
+         endRes = {
+            quesObj: {      
+                question_name : blueQues?.question_name || "N.A.",
+                question_type : blueQues?.question_type || "N.A.",
+                marks : blueQues?.marks || "N.A.",
+                difficulty_level : blueQues?.difficulty_level || "N.A.",
+                question_id : "N.A.",
+                question_content : "N.A.",
+                answers_of_question : "N.A."
+            },
+            questionExistId: questionExistId
+        }; 
+        return callback(0, endRes);
+    }
+
+    let getQuestion = await avalQues_data.filter(Qs => 
+        // FIX: Add defensive checks. If the blueprint doesn't specify a filter, the condition passes.
+        (!blueQues.category_ids || blueQues.category_ids.length === 0 || blueQues.category_ids.includes(Qs.question_category)) &&
+        (helper.isEmptyArray(blueQues.cognitive_ids) || blueQues.cognitive_ids.includes(Qs.cognitive_skill)) && 
+        (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || blueQues.difficulty_level === "Select Question Difficulty" || Qs.difficulty_level === blueQues.difficulty_level) && 
+        (Number(Qs.marks) === Number(blueQues.marks)) && 
+        (Qs.question_type === blueQues.question_type)
+    );
 
     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
 
@@ -676,6 +927,7 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
         questionExistId.push(getQuestion[0].question_id); 
         endRes = {
             quesObj: {
+                question_structure_type: blueQues.question_structure_type,
                 question_name : blueQues.question_name,
                 question_type : blueQues.question_type,
                 marks : blueQues.marks,
@@ -706,7 +958,110 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
     callback(0, endRes);
 }
 
+
+// exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, callback) => {
+    
+//     // Step 1: Filter available DB questions based on all criteria from the blueprint
+//     let getQuestion = await avalQues_data.filter(dbQuestion => {
+//         const criteriaMatch = 
+//             (!blueQues.category_ids || blueQues.category_ids.length === 0 || blueQues.category_ids.includes(dbQuestion.question_category)) &&
+//             (helper.isEmptyArray(blueQues.cognitive_ids) || blueQues.cognitive_ids.includes(dbQuestion.cognitive_skill)) && 
+//             (!blueQues.difficulty_level || blueQues.difficulty_level === "N.A." || dbQuestion.difficulty_level === blueQues.difficulty_level) && 
+//             (Number(dbQuestion.marks) === Number(blueQues.marks)) && 
+//             (dbQuestion.question_type === blueQues.question_type);
+
+//         if (!criteriaMatch) return false;
+        
+//         if (blueQues.question_structure_type === 'Sub-Question') {
+//             return dbQuestion.sub_questions && dbQuestion.sub_questions.length > 0;
+//         } 
+        
+//         if (blueQues.question_structure_type === 'General Question') {
+//             return !dbQuestion.sub_questions || dbQuestion.sub_questions.length === 0;
+//         }
+
+//         return false;
+//     });
+
+//     // Step 2: From the candidates, remove any that have already been used
+//     getQuestion = await helper.removeExistObject(questionExistId, getQuestion, "question_id");
+
+//     let endRes;
+
+//     if (getQuestion.length > 0) {
+//         // --- Success: A matching, unused question was found ---
+//         const foundQuestion = getQuestion[0];
+        
+//         // *** THIS IS THE RESTORED LOGIC THAT WAS MISSING ***
+//         let processedAnswers = foundQuestion.answers_of_question; // Default to original answers
+//         if (foundQuestion.question_type === constant.questionKeys.objective) {
+//             try {
+//                 // Call your helper to process the answers for objective questions
+//                 const curl = await helper.getAnswerContentFileUrl(foundQuestion.answers_of_question);
+//                 processedAnswers = curl;
+//             } catch (curlErr) {
+//                 console.log("Error getting answer content URL:", curlErr);
+//                 processedAnswers = "N.A."; // Or handle the error as you see fit
+//             }
+//         }
+//         // ******************************************************
+
+//         questionExistId.push(foundQuestion.question_id); 
+        
+//         // Build the final object to send to the frontend
+//         const finalQuestionObject = {
+//             ...foundQuestion, // Copy the entire fetched DB record
+//             question_structure_type: blueQues.question_structure_type, // Ensure structure type is set
+//             answers_of_question: processedAnswers, // Use the processed answers
+//         };
+
+//         endRes = {
+//             quesObj: finalQuestionObject,
+//             questionExistId: questionExistId
+//         }; 
+
+//     } else {
+//         // --- Failure: No matching question was found ---
+//         endRes = {
+//             quesObj: {      
+//                 question_structure_type: blueQues.question_structure_type,
+//                 question_id: "N.A.",
+//                 marks: blueQues.marks,
+//                 question_type: blueQues.question_type,
+//             },
+//             questionExistId: questionExistId
+//         };  
+//     }
+
+//     callback(0, endRes);
+// };
+
 exports.getAllBluePrints = async(request) => await blueprintRepository.fetchActiveBluePrints2(request)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /** OLD **/
 // exports.fetchBlueprintQuestions = (request, callback) => {    
