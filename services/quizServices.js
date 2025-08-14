@@ -1167,6 +1167,256 @@ exports.startQuizEvaluationProcess = async (event) => {
             statusCode: 200,
             body: JSON.stringify({ message: "Evaluation started" }),
         };
+
+        const questionIds = fetchBulkQtnReq.IdArray.map((val) => ({ question_id: val }));
+        const questionDataRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkQtnReq);
+
+        let answerCompareArray = [];
+        const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
+
+        // console.log("setsMarkFormat - ", setsMarkFormat);
+
+        let totalMarkCopyArray = []
+        let qa_detailsCopyArray = []
+        // const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
+        for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
+            const studentData = studentMarkDetail;
+            const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
+
+            const markDetails = setsMarkFormat.filter(markForm => markForm.set_key === quizSetKey);
+            studentMarkDetail.marks_details = markDetails;
+            const marksToUpdate = studentMarkDetail.marks_details[0].qa_details;
+            const allStudentAnswers = studentMarkDetail.answer_metadata.flatMap(item => item.studentAnswer);
+
+            const mergedAnswers = allStudentAnswers.reduce((acc, curr) => {
+                const existing = acc.find(item => item.question === curr.question);
+                if (existing) {
+                    existing.answer += ' ' + curr.answer; // Merge answers with a space
+                } else {
+                    acc.push({ ...curr });
+                }
+                return acc;
+            }, []);
+
+            const studentAnswers = mergedAnswers.map((mark, i) => {
+                const questionDetail = markDetails[0].qa_details[mergedAnswers[i]?.question - 1]
+                return { question_id: questionDetail?.question_id, answers: mergedAnswers[i].answer }
+            })
+
+            const questionAnswerPairs = marksToUpdate.map((mark, i) => {
+
+                let studentAnswer = "";
+                studentAnswers.forEach(ans => {
+                    if (ans.question_id === mark.question_id) {
+                        studentAnswer = ans.answers;
+                    }
+                })
+
+                let correctAnswer = "";
+
+                const question = questionDataRes.find(
+                    (q) => q.question_id === mark.question_id
+                );
+
+                if (question) {
+                    if (question.question_type === "Descriptive") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_weightage > 0)
+                            .map((ans) => ans.answer_content) // Extract all answer_content
+                            .join(" ");
+                        // console.log("DESCRIPTIKJKJN", correctAnswer)
+                    } else if (question.question_type === "Objective") {
+                        const index = question.answers_of_question.findIndex(
+                            (ans) => ans.answer_display === "Yes" || !ans.answer_display
+                        );
+                        const indexLetter = String.fromCharCode(97 + index);
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
+                        // console.log("objective", question.answers_of_question, correctAnswer)
+                    } else if (question.question_type === "Subjective") {
+                        correctAnswer = question.answers_of_question
+                            .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
+
+                        // console.log(correctAnswer);
+                    }
+                }
+                // console.log("correct answers:::", correctAnswer)
+                const marks = questionDataRes.find((q) => q.question_id === mark.question_id)?.marks || "";
+                const type = questionDataRes.find((q) => q.question_id === mark.question_id)?.question_type || "";
+                return {
+                    question_id: mark.question_id,
+                    studentAnswer: studentAnswer,
+                    correctAnswer: correctAnswer,
+                    marks: marks,
+                    question_type: type
+                };
+            });
+
+            // console.log("correct answers:::",correctAnswer)
+
+            // const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
+            //     questionAnswerPairs.map(
+            //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
+            //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
+
+            const normalizeAnswer = (answer) => {
+                if (!answer) return " ";
+                let normalized = answer.trim().toLowerCase();
+                if (!isNaN(normalized)) {
+                    return parseFloat(normalized).toString();
+                }
+                normalized = normalized.replace(/[,;!?]/g, "");
+                return normalized;
+            };
+
+            const extractValidAnswers = (correctAnswer) => {
+                return correctAnswer
+                    ?.split(/\s*or\s*/i)
+                    ?.map(normalizeAnswer)
+                    .filter(Boolean);
+            };
+
+            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: "Subjective"**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.\n\n` +
+                questionAnswerPairs.map((pair, index) => {
+                    return `Question ${index + 1}:
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
+                }).join("\n") + `.
+
+            ### Response Format:
+            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
+            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
+
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                    },
+                    { role: 'user', content: userPrompt }
+                ],
+            });
+
+            console.log("prompt - ", userPrompt);
+            console.log("response - ", response);
+
+            const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
+            console.log("scores - ", scores);
+            let totalMarks = 0;
+            let totalExpectedMarks = 0;
+            qa_detailsCopyArray.push([]);
+            await marksToUpdate.forEach((mark, index) => {
+                totalExpectedMarks += questionAnswerPairs[index].marks;
+                // console.log("type", questionAnswerPairs[index].question_type)
+
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
+                    // console.log("Descriptive -  ", questionAnswerPairs[index].marks);
+                    const range = 100 / Number(questionAnswerPairs[index].marks)
+                    if (Number.isNaN(scores[index]) || scores[index] < 10) mark.obtained_marks = 0;
+                    else {
+                        for (let i = 1; i <= questionAnswerPairs[index].marks; i++) {
+                            if (scores[index] <= i * range) {
+                                // console.log("questiondesc - ",scores[index], i);
+                                mark.obtained_marks = i;
+                                // totalMarks += i;
+                                // totalMarks -= (i-1);
+                                break;
+                            }
+                        }
+                        // console.log("mark for that question  -- - ", totalMarks);
+                    }
+                }
+                else {
+                    if (scores[index] > 90) {
+                        // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
+                        mark.obtained_marks = questionAnswerPairs[index].marks;
+                        // totalMarks += questionAnswerPairs[index].marks;
+                        // console.log("mark for that question  -- - ", totalMarks);
+                        // console.log("non Descriptive ");
+
+                    }
+                    if (scores[index] === NaN) {
+                        mark.obtained_marks = 0;
+                    }
+                }
+
+                totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
+                mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
+                mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
+                // console.log("scores[index] - ", scores[index]);
+
+                let newMarksData = { ...mark }
+                qa_detailsCopyArray[i]?.push(newMarksData);
+
+                answerCompareArray.push({
+                    question_id: questionAnswerPairs[index].question_id,
+                    extractedAns: questionAnswerPairs[index].studentAnswer,
+                    actualAns: questionAnswerPairs[index].correctAnswer,
+                    similarityScore: scores[index]
+                });
+            });
+
+            // console.log("totalMark -- - ", totalMarks);
+            studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
+            studentMetaRes.Items[i].evaluated = "Yes";
+            studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
+            studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
+            studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
+
+            totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
+        }
+        // ));
+        // await Promise.all(tasks);
+        // console.log("Answer Comparison Details: ", answerCompareArray);
+
+        qa_detailsCopyArray.forEach((marksDataArray, i) => {
+            if (!studentMetaRes.Items[i] || !totalMarkCopyArray[i]) return;
+
+            studentMetaRes.Items[i] = {
+                ...studentMetaRes.Items[i],
+                marks_details: [
+                    {
+                        ...studentMetaRes.Items[i].marks_details[0],
+                        qa_details: JSON.parse(JSON.stringify(marksDataArray)),
+                        totalMark: totalMarkCopyArray[i].totalMark ?? 0
+                    }
+                ]
+            };
+
+        });
+
+        const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
+
+        // console.log("markAssignRes - ", markAssignRes);
+        await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
+
+        return { status: 200 };
+
     } catch (error) {
         console.error(error);
         throw error;

@@ -444,6 +444,7 @@ exports.checkPriorityQuestions = async (quesDetails) => {
         async function secLoop(i) {
             if (i < quesDetails.length) {
                 await quesDetails[i].questions.forEach((qes, j) => {
+                    console.log({objectttt: qes.concept_ids.length})
                     priorityOrder.push(
                         {
                             "sec": i,

@@ -487,5 +487,15 @@ evaluation-api:
           cors: true
       - http:
           path: /v1/resetEvaluationStatus
+      - http:
+          path: /v1/upsertTeacherAttendance
+          method: POST
+          cors: true  
+      - http:
+          path: /v1/fetchTeacherAttendance
+          method: POST
+          cors: true  
+      - http:
+          path: /v1/fetchPostLearningTopics
           method: POST
           cors: true

@@ -25,7 +25,7 @@ exports.fetchBlueprintDetailsBasedonId = async (req, res, next)=> {
 
 exports.fetchQuestionBasedOnBlueprint = async (req, res, next) => {
     let request = req.body;
-    console.log("NO TOPIC HAS BEEN CHOOSEN!");
+    console.log("NO TOPIC HAS BEEN CHOOSEN!", request);
     blueprintServices.fetchBlueprintQuestions(request, function (blueQuestions_err, blueQuestions_response) {
         if (blueQuestions_err) {
             res.status(blueQuestions_err).json(blueQuestions_response);
