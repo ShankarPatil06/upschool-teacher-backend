@@ -785,6 +785,45 @@ exports.fetchBulkDataWithProjection = function (request, callback) {
 
 
 ///chunk
+// exports.fetchBulkDataWithProjection2 = async (request) => {
+//   try {
+//     const question_ids = [...new Set(request.items.map((item) => item.question_id))];
+
+//     if (question_ids.length === 0) {
+//       throw new Error("No question IDs provided.");
+//     }
+
+//     const CHUNK_SIZE = 25; // Process 10 queries at a time
+//     const chunks = chunkArray(question_ids, CHUNK_SIZE);
+//     const allResults = [];
+
+//     // Process each chunk sequentially
+//     for (const chunk of chunks) {
+//       const queries = chunk.map((question_id) => {
+//         const params = {
+//           TableName: TABLE_NAMES.upschool_question_table,
+//           KeyConditionExpression: "question_id = :question_id",
+//           ExpressionAttributeValues: {
+//             ":question_id": question_id
+//           }
+//         };
+//         return DATABASE_TABLE2.query(params);
+//       });
+
+//       const results = await Promise.all(queries);
+//       const chunkResults = results.flatMap(result => result.Items || []);
+//       allResults.push(...chunkResults);
+//     }
+
+//     console.log("allResults", allResults);
+
+//     return allResults;
+//   } catch (error) {
+//     throw new Error("Failed to fetch bulk data.");
+//   }
+// };
+
+
 exports.fetchBulkDataWithProjection2 = async (request) => {
   try {
     const question_ids = [...new Set(request.items.map((item) => item.question_id))];
@@ -793,30 +832,43 @@ exports.fetchBulkDataWithProjection2 = async (request) => {
       throw new Error("No question IDs provided.");
     }
 
-    const CHUNK_SIZE = 100; // Process 10 queries at a time
-    const chunks = chunkArray(question_ids, CHUNK_SIZE);
+    const CHUNK_SIZE = 25; // DynamoDB batch limit
+    const chunks = helper.chunkArray(question_ids, CHUNK_SIZE);
     const allResults = [];
 
-    // Process each chunk sequentially
     for (const chunk of chunks) {
       const queries = chunk.map((question_id) => {
         const params = {
           TableName: TABLE_NAMES.upschool_question_table,
+          // If question_id is NOT the partition key, change to scan below:
+          // Use Query if question_id is the partition key
           KeyConditionExpression: "question_id = :question_id",
           ExpressionAttributeValues: {
             ":question_id": question_id
           }
         };
-        return DATABASE_TABLE2.query(params);
+
+        // If question_id is not the partition key, switch to scan:
+        // const params = {
+        //   TableName: TABLE_NAMES.upschool_question_table,
+        //   FilterExpression: "question_id = :question_id",
+        //   ExpressionAttributeValues: {
+        //     ":question_id": question_id
+        //   }
+        // };
+
+        return DATABASE_TABLE2.query(params); // or scan(params) if above
       });
 
       const results = await Promise.all(queries);
-      const chunkResults = results.flatMap(result => result.Items || []);
+      const chunkResults = results.flatMap(result => result?.Items ?? []);
       allResults.push(...chunkResults);
     }
 
+    console.log("All results fetched:", allResults.length);
     return allResults;
   } catch (error) {
+    console.error("Error in fetchBulkDataWithProjection2:", error);
     throw new Error("Failed to fetch bulk data.");
   }
 };

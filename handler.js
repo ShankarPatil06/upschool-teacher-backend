@@ -125,7 +125,7 @@ app.post("/v1/getStudentQuizResultData", validator.validUser, quizController.get
 app.post("/v1/updateStudentQuizMarks", quizController.updateStudentQuizMarks); // validator.validUser,  //ch fet
 app.post("/v1/fetchQuizTemplates", validator.validUser, quizController.fetchQuizTemplates);
 app.post("/v1/resetQuizEvaluationStatus", validator.validUser, quizController.resetQuizEvaluationStatus);
-app.post("/v1/startQuizEvaluation", quizController.startQuizEvaluation); // validator.validUser,
+app.post("/v1/startQuizEvaluation", quizController.startQuizEvaluation); // validator.validUser, ////te
 
 app.post("/v1/getIndividualQuizReport", reportController.getIndividualQuizReport) //ch
 
@@ -210,3 +210,5 @@ else {
     const serverless = require("serverless-http");
     module.exports.upschoolTeacherServer = serverless(app);
 }
+
+

@@ -224,6 +224,9 @@ exports.getClassTestIdAndName = function (request, callback) {
 //     return await DATABASE_TABLE2.query(params);    
 // }
 exports.getClassTestIdAndName2 = async (request) => {
+
+    console.log("requestridqq", request);
+    
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
 

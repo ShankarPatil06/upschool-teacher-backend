@@ -1,0 +1,45 @@
+API with chunk - 39
+
+fetchUnitsandChaptersBasedonSubjects -pm
+fetchTopicsBasedonChapter - pm
+fetchAvailableNumOfQuestions - pm
+fetchAllPostTopicDigicards - pm
+fetchTestQuestionPapersBasedonStatus -pm
+fetchBlueprintById - pm
+fetchBlueprintDetailsBasedonId - pm
+fetchQuestionBasedOnBlueprint -pm
+fetchQuestionsBasedonQuestionPaper -pm
+getTargetedLearningExpectation -pm2
+viewAnalysisIndividualReportc - pm
+comprehensivePerformanceChapterWise -pm
+comprehensivePerformanceConceptWise -pm2
+viewClassReportQuestions -pm 2
+viewChapterwisePerformanceTracking - pm
+getActionsAndRecommendations - pm
+topAndBottomPerformers -pm
+needAttention -pm
+studentAvgVsClassAvg - pm
+studentAvgVsClassAvgChapterWise - pm
+comprehensivePerformanceChapterWiseForTest -pm2
+comprehensivePerformanceTopicWiseForTest -pm2
+comprehensivePerformanceTopicWise -pm2
+fetchConceptsBasedonTopics -pm2
+fetchAllPreTopicDigicards - pm2
+fetchAssessmentSummary -  pm2
+postLearningSummaryDetails -pm2
+preLearningBlueprintDetails -pm2
+getIndividualQuizReport -pm2
+preLearningSummaryDetails -pm2
+getTargetedLearningExpectationDetails -pm2
+studentChaptersPerformance -pm2
+getActionsAndRecommendationDetail -pm2
+viewTestQuestionPaper -pm2
+
+
+customWorksheetGenerated- need payload
+startEvaluation  ///////////////////////////////////chnages pending
+fetchTopicAndNoOfQuestions  // not used
+
+
+viewQuizQuestionPaper -pm2
+updateStudentQuizMarks
