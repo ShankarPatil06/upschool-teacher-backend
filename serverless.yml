@@ -477,25 +477,3 @@ backend-lambda:
           path: /v1/saveTimetableConfiguration
           method: POST
           cors: true  
-
-evaluation-api:
-    handler: handler.evaluationHandler
-    events:
-      - http:
-          path: /v1/startEvaluation
-          method: POST
-          cors: true
-      - http:
-          path: /v1/resetEvaluationStatus
-      - http:
-          path: /v1/upsertTeacherAttendance
-          method: POST
-          cors: true  
-      - http:
-          path: /v1/fetchTeacherAttendance
-          method: POST
-          cors: true  
-      - http:
-          path: /v1/fetchPostLearningTopics
-          method: POST
-          cors: true
