@@ -1790,42 +1790,64 @@ exports.sendEmailToParent = async (request) => {
     try {
         const student_id = request.data.student_id;
         const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
-        const schoolName = schoolDetails.Items[0].school_name
+        console.log({ schoolDetails: schoolDetails.Items[0] });
+        
+        const notificationSettings = schoolDetails.Items[0]?.notification_settings;
+        const schoolName = schoolDetails.Items[0].school_name;
+        console.dir({ notificationSettings: notificationSettings.personalizedWorksheet },{ depth: null ,color:true});
         let worksheet = await exports.fetchCustomWorksheet(request);
         console.log( 'student id' + worksheet);
         if (worksheet?.worksheet_template_url) {
             const studentDetails = await studentRepository.getAllStudents2(student_id);
             console.log({ studentDetails: studentDetails.Items[0] });
-            if (studentDetails?.Items?.[0]) {
-                request.data['parent_id'] = studentDetails.Items[0].parent_id;
-                const parentDetails = await studentRepository.getParentDetailsById(request)
-                console.log({ parentDetails });
-                console.log( 'parent details' + parentDetails);
-                if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
-                let fileKey = worksheet.question_paper_template
-                const fileLink = await s3Services.getFileBufferFromS3(fileKey);
-                let answerFileKey = worksheet.key_answer_template
-                const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
-                // const pdfBase64 = fileBuffer.toString("base64");
-
-                const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
-                const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
-                const chapterNames = request?.data.chapter_name?.join(',')
-                const toMail = parentDetails?.user_email
-                const mailPayload = {
-                    subject: subject,
-                    toMail: toMail,
-                    questionPaperLink: fileLink,
-                    answerKeyLink: answerKeyLink,
-                    schoolName: schoolName,
-                    studentName: studentName,
-                    chapterNames: chapterNames,
-                    mailFor: "customWorksheetSender",
+                if (studentDetails?.Items?.[0]) {
+                    request.data['parent_id'] = studentDetails.Items[0].parent_id;
+                    const parentDetails = await studentRepository.getParentDetailsById(request)
+                    console.log({ parentDetails });
+                    console.log( 'parent details' + parentDetails);
+                    if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
+                    let fileKey = worksheet.question_paper_template
+                    const fileLink = await s3Services.getFileBufferFromS3(fileKey);
+                    let answerFileKey = worksheet.key_answer_template
+                    const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
+                    // const pdfBase64 = fileBuffer.toString("base64");
+                    
+                    const subject = `${worksheet?.question_paper_name} of ${request?.data.chapter_name?.join(',')}`
+                    const studentName = `${studentDetails?.Items[0]?.user_firstname} ${studentDetails?.Items[0]?.user_lastname}`
+                    const chapterNames = request?.data.chapter_name?.join(',')
+                    const toMail = "aathavansurya02@gmail.com" || parentDetails?.user_email 
+                    const mailPayload = {
+                        subject: subject,
+                        toMail: toMail,
+                        questionPaperLink: fileLink,
+                        answerKeyLink: answerKeyLink,
+                        schoolName: schoolName,
+                        studentName: studentName,
+                        chapterNames: chapterNames,
+                        mailFor: "customWorksheetSender",
+                    };
+                    let response = 200;
+                    if(!notificationSettings?.personalizedWorksheet?.isActive){
+                    throw new Error('There is no notification settings enabled for this school');
+                 }
+                    if(notificationSettings.personalizedWorksheet.isActive && notificationSettings.personalizedWorksheet.modes.email){
+                        console.log("email notification enabled");
+                        
+                    let dataEmail = await sendMail.process(mailPayload);
+                    console.log({ dataEmail });
+                    //  response.email = dataEmail.httpStatusCode;
+                     if(dataEmail.httpStatusCode != 200) response = dataEmail
+                    };
+                    if(notificationSettings.personalizedWorksheet.isActive && notificationSettings.personalizedWorksheet.modes.whatsapp){
+                    console.log("whatsapp notification enabled");
+                    const parameters = [mailPayload.studentName,schoolName,mailPayload.subject ,mailPayload.chapterNames,mailPayload.questionPaperLink,mailPayload.answerKeyLink]
+                    const whatsapp = await whatsappService.sendMessage({phone: parentDetails.user_phone_no, parameters: parameters, templateName:constant.whatsappTemplate.workSheet});
+                    console.log({ whatsapp });
+                     if (whatsapp !=200) response = whatsapp
+                   }
+                    return response
                 };
-                let dataEmail = await sendMail.process(mailPayload);
-                console.log({ dataEmail });
-                return dataEmail.httpStatusCode
-            };
+            
         }
         throw new Error('There is no worksheet available for this student');
     } catch (error) {
