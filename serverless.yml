@@ -17,6 +17,8 @@ provider:
     MP_APP_ID: ${file(config/${self:provider.stage}-config.yml):data.mathPix.MP_APP_ID}
     MP_APP_KEY: ${file(config/${self:provider.stage}-config.yml):data.mathPix.MP_APP_KEY}
     PDF_GENERATION_URL: ${file(config/${self:provider.stage}-config.yml):data.pdfMake.generate_url}
+    WHATSAPP_ACCESS_TOKEN: ${file(config/${self:provider.stage}-config.yml):data.whatsappAccessToken}
+    WHATSAPP_PHONE_NUMBER_ID: ${file(config/${self:provider.stage}-config.yml):data.whatsappPhoneNumberId}  
   iam:
     role:
       statements:

@@ -21,3 +21,5 @@ data:
   pdfMake:
     generate_url:
       - http://13.233.9.196:3002/v1
+  whatsappPhoneNumberId: 722998727568720
+  whatsappAccessToken: EAAR7DgndnwcBPBdVDJmVAc5xBGUXCZBHggnfqruVilzZCiel0Mdt1pSSZCLNKIUKbwqaFYLYcVGA65qmTbQuZCKeOd7G8ZAmpwOCNYtdIOklqBKDpBUI4re07AmpqeorYF18tvaoRZC1zVLRZBmsB0Yyu9wYQ4PNMRZCPhZA6v4cj9hQDjcJ1euDZAcuqNcSiVdwZDZD
