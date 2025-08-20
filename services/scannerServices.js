@@ -4,6 +4,7 @@ const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 const ocrServices = require('./ocrServices');
 let sendMail = require("./emailService");
+const whatsappService = require("./whatsappService");
 
 // exports.sendScannerLink = function (request, callback) {
 //     console.log("sendScannerLink Services : ", request);
@@ -59,43 +60,98 @@ let sendMail = require("./emailService");
 // }
 
 exports.sendScannerLink = async function (request) {
-    console.log("sendScannerLink Services:", request);
-    request.teacher_id = request.data.teacher_id;
+  console.log("sendScannerLink Services:", request);
+  request.teacher_id = request.data.teacher_id;
 
-    const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
+  const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
 
-    if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== "Active") {
-        return { statusCode: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
-    }
-
-    request.data.school_id = userDataResponse.Items[0].school_id;
-
-    const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
-
-    if (schoolDataRes.Items.length === 0 ||
-        schoolDataRes.Items[0].school_status !== "Active" ||
-        schoolDataRes.Items[0].subscription_active !== "Yes") {
-        console.log(constant.messages.SCHOOL_IS_INACTIVE);
-        return { statusCode: 400, message: constant.messages.SCHOOL_IS_INACTIVE };
-    }
-
-    const mailPayload = {
-        upload_url: request.data.upload_url,
-        toMail: userDataResponse.Items[0].user_email,
-        subject: constant.mailSubject.urlToScanAnswerSheets,
-        mailFor: "urlToUploadAnswerSheets",
+  if (
+    userDataResponse.Items.length === 0 ||
+    userDataResponse.Items[0].user_status !== "Active"
+  ) {
+    return {
+      statusCode: 400,
+      message: constant.messages.TEACHER_DOESNOT_EXISTS,
     };
+  }
+  console.dir(userDataResponse.Items[0], { depth: null });
 
-    console.log("MAIL PAYLOAD:", mailPayload);
+  request.data.school_id = userDataResponse.Items[0].school_id;
+
+  const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+
+  if (
+    schoolDataRes.Items.length === 0 ||
+    schoolDataRes.Items[0].school_status !== "Active" ||
+    schoolDataRes.Items[0].subscription_active !== "Yes"
+  ) {
+    console.log(constant.messages.SCHOOL_IS_INACTIVE);
+    return { statusCode: 400, message: constant.messages.SCHOOL_IS_INACTIVE };
+  }
+
+  const mailPayload = {
+    upload_url: request.data.upload_url,
+    toMail: userDataResponse.Items[0].user_email,
+    subject: constant.mailSubject.urlToScanAnswerSheets,
+    mailFor: "urlToUploadAnswerSheets",
+  };
+
+  console.log("MAIL PAYLOAD:", mailPayload);
+  const notificationSettings = schoolDataRes.Items[0]?.notification_settings;
+  let response = {
+    statusCode: 200,
+    messages: {
+      mail: null,
+      whatsapp: null,
+    },
+  };
+  console.log("NOTIFICATION SETTINGS:", notificationSettings?.paperEvaluationOTP?.isActive);
+  
+  if (!notificationSettings?.paperEvaluationOTP?.isActive) {
+    throw new Error(constant.messages.NOTIFICATION_SETTINGS_NOT_SET);
+  }
+  if (notificationSettings?.paperEvaluationOTP?.modes?.email) {
     const emailResponse = await sendMail.process(mailPayload);
+    if (emailResponse.httpStatusCode != 200)
+      response.statusCode = emailResponse.httpStatusCode;
+    response.messages.mail = emailResponse;
+  }
+  if (notificationSettings?.paperEvaluationOTP?.modes?.whatsapp) {
+    const whatsappResponse = await whatsappService.sendMessage({
+      phone: userDataResponse.Items[0].user_phone_no,
+      parameters: [
+        {
+          parameter_name: "teacher_name",
+          text: userDataResponse.Items[0].user_firstname,
+        },
+        {
+          parameter_name: "institution_name",
+          text: schoolDataRes.Items[0].school_name,
+        },
+        {
+          parameter_name: "upload_link",
+          text: mailPayload.upload_url,
+        },
+        {
+          parameter_name: "institution",
+          text: schoolDataRes.Items[0].school_name,
+        },
+      ],
+      templateName: constant.whatsappTemplate.paperEvaluation,
+      nameParameter: true,
+    });
 
-    if (emailResponse.httpStatusCode === 200) {
-        return { statusCode: 200, message: constant.messages.UPLOAD_URL_Sent };
-    } else {
-        console.log("Email sending error:", emailResponse);
-        return { statusCode: 400, message: "SNS ERROR" };
-    }
+    if (whatsappResponse != 200) response.statusCode = whatsappResponse;
+    response.messages.whatsapp = whatsappResponse;
+  }
 
+  if (response.statusCode === 200) {
+    return { statusCode: 200, message: constant.messages.UPLOAD_URL_Sent };
+  } else {
+    console.log("Email sending error:", response);
+
+    return { statusCode: 400, message: "SNS ERROR" };
+  }
 };
 
 
@@ -186,6 +242,16 @@ exports.sendOTPForScanning = async function (request) {
     request.teacher_id = request.data.teacher_id;
 
     const userDataResponse = await userRepository.fetchUserDataByUserId2(request);
+    request.data.school_id = userDataResponse.Items[0].school_id;
+      const schoolDataRes = await schoolRepository.getSchoolDetailsById2(request);
+      
+    if (schoolDataRes.Items.length === 0 ||
+        schoolDataRes.Items[0].school_status !== "Active" ||
+        schoolDataRes.Items[0].subscription_active !== "Yes") {
+        console.log(constant.messages.SCHOOL_IS_INACTIVE);
+        throw new Error(constant.messages.SCHOOL_IS_INACTIVE);
+    };
+     const notificationSettings = schoolDataRes.Items[0].notification_settings;
 
     if (userDataResponse.Items.length === 0 || userDataResponse.Items[0].user_status !== "Active") {
         return { statusCode: 400, message: constant.messages.TEACHER_DOESNOT_EXISTS };
@@ -200,10 +266,33 @@ exports.sendOTPForScanning = async function (request) {
     };
 
     console.log("MAIL PAYLOAD:", mailPayload);
-
-    const emailResponse = await sendMail.process(mailPayload);
-    if (emailResponse.httpStatusCode !== 200) {
-        console.log("Email sending error:", emailResponse);
+    if(!notificationSettings.paperEvaluationOTP.isActive){
+        throw new Error(constant.messages.NOTIFICATION_SETTINGS_NOT_SET);
+    };
+      let response = {
+    statusCode: 200,
+    messages: {
+      mail: null,
+      whatsapp: null,
+    },
+  };
+    if(notificationSettings.paperEvaluationOTP.modes.email){
+        const emailResponse = await sendMail.process(mailPayload);
+        if (emailResponse.httpStatusCode !== 200) {
+            console.log("Email sending error:", emailResponse);
+            response.statusCode = 400;
+            response.messages.mail = "SNS ERROR";
+        }
+    };
+    if(notificationSettings.paperEvaluationOTP.modes.whatsapp){
+        const whatsappResponse = await whatsappService.sendMessage({phone: userDataResponse.Items[0].user_phone_no, parameters: [user_otp ] , templateName:constant.whatsappTemplate.otpToScanAnswerSheets });
+        if (whatsappResponse !== 200) {
+            response.statusCode = 400;
+            response.messages.whatsapp = response;
+        }
+    }
+    if (response.statusCode !== 200) {
+        console.log("Email sending error:", response);
         return { statusCode: 400, message: "SNS ERROR" };
     }
 

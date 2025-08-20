@@ -211,4 +211,36 @@ exports.getParentDetailsById = async (request) => {
 
     const result = await DATABASE_TABLE2.query(readParams);
     return result.Items[0];
-}
+};
+
+exports.fetchStudentsByIds = async (studentIds) => {
+
+    const readParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_student_info]: {
+                Keys: studentIds.map((id) => ({
+                    student_id: id
+                }))
+            }
+        }
+    };
+
+    const result = await DATABASE_TABLE2.getByObjects(readParams);
+    return result.Responses[TABLE_NAMES.upschool_student_info] || [];
+};
+
+exports.fetchParentsByIds = async (parentIds) => {
+
+    const readParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_parent_info]: {
+                Keys: parentIds.map((id) => ({
+                    parent_id: id
+                }))
+            }
+        }
+    };
+
+    const result = await DATABASE_TABLE2.getByObjects(readParams);
+    return result.Responses[TABLE_NAMES.upschool_parent_info] || [];
+};

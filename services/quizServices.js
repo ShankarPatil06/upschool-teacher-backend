@@ -9,11 +9,13 @@ const { TABLE_NAMES } = require('../constants/tables');
 const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
+const whatsappService = require("./whatsappService");
 const s3Services = require("./s3Service");
 // const pLimit = require('p-limit');
 // const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
+const { subjectRepository } = require("../repository");
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
@@ -1093,6 +1095,67 @@ exports.startQuizEvaluationProcess = async (request) => {
         // console.log("markAssignRes - ", markAssignRes);
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
+
+        // console.dir({quizTestRes:quizTestRes.Item},{studentMetaRes:studentMetaRes.Items[0]},{depth: null});
+        const studentIds = studentMetaRes.Items.map((val) => val.student_id);
+        // console.log("studentIds - ", studentIds);
+        const fetchStudents =  await studentRepository.fetchStudentsByIds(studentIds) ;
+        // console.log("fetchStudents - ", fetchStudents);
+        // console.dir("fetchStudents - ", fetchStudents,{depth: null});
+        const parentIds = fetchStudents.map((val) => (val.parent_id));
+        // console.log("parentIds - ", parentIds);
+        const fetchParents =  await studentRepository.fetchParentsByIds(parentIds) ;
+        // console.log("fetchParents - ", fetchParents);
+        const fetchSubject = await subjectRepository.getSubjectByIdAsync({data:{subject_id:quizTestRes.Item.subject_id}});
+        // console.log("fetchSubject - ", fetchSubject.Items[0]);
+
+        const WhatsAppData =  fetchStudents.map((val) => {
+            const parent = fetchParents.find((parent) => parent.parent_id === val.parent_id);
+            const student = val;
+            const marks = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+            const result = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+            return {
+                student_name: student.user_firstname,
+                parent_name: parent.user_firstname,
+                subject:fetchSubject.Items[0].subject_title,
+                marks: `${marks.marks_details[0].totalMark}/${marks.marks_details[0].expectedMarks}`,
+                phone:parent.user_phone_no,
+                answerSheet: result.answer_metadata.map((ans) => process.env.S3_BUCKET_URL+ans.url)
+            };
+        });
+
+        // console.log("WhatsAppData - ", WhatsAppData);
+        const notificationSettings = schoolDataRes.Items[0].notification_settings;
+
+        // if(!notificationSettings.paperEvaluationOTP.isActive) {
+        //     throw new Error(constant.messages.NOTIFICATION_SETTINGS_NOT_SET);
+        // };
+        // const response = {
+        //     statusCode:200,
+        //     message:{
+        //         email:null,
+        //         whatsapp:null
+        //     }
+        // }
+        console.log("notificationSettings - ", notificationSettings);
+        console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
+        
+        
+        if(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.modes?.whatsapp){
+            for(let student of WhatsAppData){
+                const whatsappResponse = await whatsappService.sendMessage({
+                    phone: student.phone,
+                    parameters: [
+                        student.parent_name,
+                        student.student_name,
+                        student.marks,
+                        student.subject,
+                        student.answerSheet.join('\n')
+                    ],
+                    templateName: constant.whatsappTemplate.markNotify,
+                })
+            }
+        };
         return { status: 200 };
 
     } catch (error) {

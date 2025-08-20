@@ -1,5 +1,5 @@
 const dynamoDbCon = require('../awsConfig');
-const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository, testResultRepository, } = require("../repository")
+const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository,studentRepository, testResultRepository,schoolRepository ,teacherRepository,subjectRepository} = require("../repository")
 const commonServices = require("../services/commonServices");
 const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
@@ -11,6 +11,7 @@ const { resolve } = require('bluebird');
 const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
+const whatsappService = require("./whatsappService");
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
@@ -142,25 +143,32 @@ exports.startEvaluationProcess = async (request) => {
         // Fetch class test data
         const classTestRes = await classTestRepository.getClassTestIdAndName2(request);
         const classTest = classTestRes.Items[0];
-
+        console.log("CLASS TEST : ", classTest);
+        
+        
         if (!classTest) {
             throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
         }
-
+        
         // Fetch student metadata
         const studentMetaRes = await testResultRepository.fetchStudentresultMetadata2(request);
         if (studentMetaRes.Items.length === 0) {
             throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
-        }
-
+        };
+        console.log("STUDENT METADATA : ", studentMetaRes.Items[0]);
+        
+        
         // Fetch question paper details
         request.data.question_paper_id = classTest.question_paper_id;
         const questionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
         const questionPaper = questionPaperRes.Items[0];
-
+        
         if (!questionPaper) {
             throw helper.formatErrorResponse(constant.messages.NO_QUESTION_PAPER_FOUND, 400);
         }
+        console.log("QUESTION PAPER : ", questionPaper);
+        
+        // return { status: 200 };
 
         // Collect question IDs
         const questionArray = questionPaper.questions.flatMap((e) => e.question_id);
@@ -400,6 +408,63 @@ exports.startEvaluationProcess = async (request) => {
         // Batch update with processed results
         // const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes.Items, classTest.groupPassPercentage);
         await commonRepository.bulkBatchWrite(studentMetaRes.Items, TABLE_NAMES.upschool_test_result);
+        const fetchTeacherById = await teacherRepository.fetchTeacherByID2({ data: { teacher_id: request.teacher_id } });
+        console.log("fetchTeacherById - ", fetchTeacherById.Items[0]);
+        
+        const fetchSchoolDetails = await schoolRepository.getSchoolById(fetchTeacherById.Items[0].school_id);
+        const notificationSettings = fetchSchoolDetails.Items[0].notification_settings;
+        console.log("notificationSettings - ", notificationSettings);
+        
+        if(notificationSettings?.paperEvaluationOTP?.isActive && notificationSettings?.paperEvaluationOTP?.modes?.whatsapp ){
+            
+            const studentIds = studentMetaRes.Items.map((val) => val.student_id);
+            // console.log("studentIds - ", studentIds);
+            const fetchStudents =  await studentRepository.fetchStudentsByIds(studentIds) ;
+            // console.log("fetchStudents - ", fetchStudents);
+            // console.dir("fetchStudents - ", fetchStudents,{depth: null});
+            const parentIds = fetchStudents.map((val) => (val.parent_id));
+            // console.log("parentIds - ", parentIds);
+            const fetchParents =  await studentRepository.fetchParentsByIds(parentIds) ;
+            // console.log("fetchParents - ", fetchParents);
+            const fetchSubject = await subjectRepository.getSubjectByIdAsync({data:{subject_id:questionPaper.subject_id}});
+            // console.log("fetchSubject - ", fetchSubject.Items[0]);
+    
+            const WhatsAppData =  fetchStudents.map((val) => {
+                const parent = fetchParents.find((parent) => parent.parent_id === val.parent_id);
+                const student = val;
+                const marks = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+                const result = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+                return {
+                    student_name: student.user_firstname,
+                    parent_name: parent.user_firstname,
+                    subject:fetchSubject.Items[0].subject_title,
+                    marks: `${marks.marks_details[0].totalMark}/${marks.marks_details[0].expectedMarks}`,
+                    phone:parent.user_phone_no,
+                    answerSheet: result.answer_metadata.map((ans) => process.env.S3_BUCKET_URL+ans.url)
+                };
+            });
+    
+            // console.log("WhatsAppData - ", WhatsAppData);
+        // console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
+        
+        
+        if(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.modes?.whatsapp){
+            for(let student of WhatsAppData){
+                const whatsappResponse = await whatsappService.sendMessage({
+                    phone: student.phone,
+                    parameters: [
+                        student.parent_name,
+                        student.student_name,
+                        student.marks,
+                        student.subject,
+                        student.answerSheet[0]
+                    ],
+                    templateName: constant.whatsappTemplate.markNotify,
+                })
+            }
+        };            
+            
+        }
 
         return { status: 200 };
     } catch (error) {
