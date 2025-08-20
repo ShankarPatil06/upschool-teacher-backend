@@ -1127,36 +1127,57 @@ exports.startQuizEvaluationProcess = async (request) => {
         // console.log("WhatsAppData - ", WhatsAppData);
         const notificationSettings = schoolDataRes.Items[0].notification_settings;
 
-        // if(!notificationSettings.paperEvaluationOTP.isActive) {
-        //     throw new Error(constant.messages.NOTIFICATION_SETTINGS_NOT_SET);
-        // };
-        // const response = {
-        //     statusCode:200,
-        //     message:{
-        //         email:null,
-        //         whatsapp:null
-        //     }
-        // }
         console.log("notificationSettings - ", notificationSettings);
-        console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
+        // console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
         
         
-        if(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.modes?.whatsapp){
-            for(let student of WhatsAppData){
+            const response = {
+              statusCode: 200,
+              message: {
+                email: null,
+                whatsapp: null,
+              },
+            };
+
+            for (let student of WhatsAppData) {
+              if (
+                notificationSettings?.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.whatsapp
+              ) {
                 const whatsappResponse = await whatsappService.sendMessage({
-                    phone: student.phone,
-                    parameters: [
-                        student.parent_name,
-                        student.student_name,
-                        student.marks,
-                        student.subject,
-                        student.answerSheet.join('\n')
-                    ],
-                    templateName: constant.whatsappTemplate.markNotify,
-                })
+                  phone: student.phone,
+                  parameters: [
+                    student.parent_name,
+                    student.student_name,
+                    student.marks,
+                    student.subject,
+                    student.answerSheet[0],
+                  ],
+                  templateName: constant.whatsappTemplate.markNotify,
+                });
+              }
+              if (
+                notificationSettings.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.email
+              ) {
+                const mailPayload = {
+                  subject: student.subject,
+                  toMail: student.parent_email,
+                  marks: student.marks,
+                  parentName: student.parent_name,
+                  studentName: student.student_name,
+                  fileLink: student.answerSheet.join("\n"),
+                  mailFor: "Individual Report",
+                };
+                const mailSend = await mailServices.process(mailPayload);
+                if (mailSend.httpStatusCode != 200) {
+                  response.statusCode = mailSend.httpStatusCode;
+                  response.message.email = mailSend?.message;
+                }
+              }
             }
-        };
-        return { status: 200 };
+
+            return { status: 200, response };
 
     } catch (error) {
         console.error(error);

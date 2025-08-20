@@ -1790,7 +1790,6 @@ exports.sendEmailToParent = async (request) => {
     try {
         const student_id = request.data.student_id;
         const schoolDetails = await schoolRepository.getSchoolDetailsById2(request);
-        console.log({ schoolDetails: schoolDetails.Items[0] });
         
         const notificationSettings = schoolDetails.Items[0]?.notification_settings;
         const schoolName = schoolDetails.Items[0].school_name;
@@ -1800,13 +1799,13 @@ exports.sendEmailToParent = async (request) => {
         if (worksheet?.worksheet_template_url) {
             const studentDetails = await studentRepository.getAllStudents2(student_id);
             console.log({ studentDetails: studentDetails.Items[0] });
-                if (studentDetails?.Items?.[0]) {
-                    request.data['parent_id'] = studentDetails.Items[0].parent_id;
-                    const parentDetails = await studentRepository.getParentDetailsById(request)
-                    console.log({ parentDetails });
-                    console.log( 'parent details' + parentDetails);
-                    if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
-                    let fileKey = worksheet.question_paper_template
+            if (studentDetails?.Items?.[0]) {
+                request.data['parent_id'] = studentDetails.Items[0].parent_id;
+                const parentDetails = await studentRepository.getParentDetailsById(request)
+                console.log({ parentDetails });
+                console.log( 'parent details' + parentDetails);
+                if (!parentDetails?.user_email) throw new Error('There is no parent email associated with the student');
+                let fileKey = worksheet.question_paper_template
                     const fileLink = await s3Services.getFileBufferFromS3(fileKey);
                     let answerFileKey = worksheet.key_answer_template
                     const answerKeyLink = await s3Services.getFileBufferFromS3(answerFileKey);
@@ -1826,11 +1825,14 @@ exports.sendEmailToParent = async (request) => {
                         chapterNames: chapterNames,
                         mailFor: "customWorksheetSender",
                     };
+                    
                     let response = 200;
-                    if(!notificationSettings?.personalizedWorksheet?.isActive){
+
+                    if(request.data.notificationMode == "email"){
+                        
+                         if(!notificationSettings?.personalizedWorksheet?.isActive || !notificationSettings.personalizedWorksheet.modes.email  ){
                     throw new Error('There is no notification settings enabled for this school');
-                 }
-                    if(notificationSettings.personalizedWorksheet.isActive && notificationSettings.personalizedWorksheet.modes.email){
+                    }
                         console.log("email notification enabled");
                         
                     let dataEmail = await sendMail.process(mailPayload);
@@ -1838,11 +1840,14 @@ exports.sendEmailToParent = async (request) => {
                     //  response.email = dataEmail.httpStatusCode;
                      if(dataEmail.httpStatusCode != 200) response = dataEmail
                     };
-                    if(notificationSettings.personalizedWorksheet.isActive && notificationSettings.personalizedWorksheet.modes.whatsapp){
+                    if(request.data.notificationMode === "whatsapp"){
+                         if(!notificationSettings?.personalizedWorksheet?.isActive || !notificationSettings.personalizedWorksheet.modes.whatsapp  ){
+                    throw new Error('There is no notification settings enabled for this school');
+                    }
                     console.log("whatsapp notification enabled");
                     const parameters = [mailPayload.studentName,schoolName,mailPayload.subject ,mailPayload.chapterNames,mailPayload.questionPaperLink,mailPayload.answerKeyLink]
                     const whatsapp = await whatsappService.sendMessage({phone: parentDetails.user_phone_no, parameters: parameters, templateName:constant.whatsappTemplate.workSheet});
-                    console.log({ whatsapp });
+                    // console.log({ whatsapp });
                      if (whatsapp !=200) response = whatsapp
                    }
                     return response

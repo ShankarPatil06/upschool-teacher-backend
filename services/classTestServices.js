@@ -12,6 +12,7 @@ const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
 const whatsappService = require("./whatsappService");
+const mailServices = require("./emailService");
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
@@ -437,6 +438,7 @@ exports.startEvaluationProcess = async (request) => {
                 return {
                     student_name: student.user_firstname,
                     parent_name: parent.user_firstname,
+                    parent_email: parent.user_email,
                     subject:fetchSubject.Items[0].subject_title,
                     marks: `${marks.marks_details[0].totalMark}/${marks.marks_details[0].expectedMarks}`,
                     phone:parent.user_phone_no,
@@ -444,29 +446,54 @@ exports.startEvaluationProcess = async (request) => {
                 };
             });
     
-            // console.log("WhatsAppData - ", WhatsAppData);
-        // console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
-        
-        
-        if(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.modes?.whatsapp){
-            for(let student of WhatsAppData){
-                const whatsappResponse = await whatsappService.sendMessage({
-                    phone: student.phone,
-                    parameters: [
-                        student.parent_name,
-                        student.student_name,
-                        student.marks,
-                        student.subject,
-                        student.answerSheet[0]
-                    ],
-                    templateName: constant.whatsappTemplate.markNotify,
-                })
-            }
-        };            
-            
-        }
+            const response = {
+              statusCode: 200,
+              message: {
+                email: null,
+                whatsapp: null,
+              },
+            };
 
-        return { status: 200 };
+            for (let student of WhatsAppData) {
+              if (
+                notificationSettings?.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.whatsapp
+              ) {
+                const whatsappResponse = await whatsappService.sendMessage({
+                  phone: student.phone,
+                  parameters: [
+                    student.parent_name,
+                    student.student_name,
+                    student.marks,
+                    student.subject,
+                    student.answerSheet[0],
+                  ],
+                  templateName: constant.whatsappTemplate.markNotify,
+                });
+              }
+              if (
+                notificationSettings.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.email
+              ) {
+                const mailPayload = {
+                  subject: student.subject,
+                  toMail: student.parent_email,
+                  marks: student.marks,
+                  parentName: student.parent_name,
+                  studentName: student.student_name,
+                  fileLink: student.answerSheet.join("\n"),
+                  mailFor: "Individual Report",
+                };
+                const mailSend = await mailServices.process(mailPayload);
+                if (mailSend.httpStatusCode != 200) {
+                  response.statusCode = mailSend.httpStatusCode;
+                  response.message.email = mailSend?.message;
+                }
+              }
+            }
+
+            return { status: 200, response };
+    }
     } catch (error) {
         console.error(error);
         throw error;
