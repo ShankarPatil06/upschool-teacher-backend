@@ -11,6 +11,7 @@ const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
 const whatsappService = require("./whatsappService");
 const s3Services = require("./s3Service");
+const mailServices = require("./emailService");
 // const pLimit = require('p-limit');
 // const limit = pLimit(5);
 
