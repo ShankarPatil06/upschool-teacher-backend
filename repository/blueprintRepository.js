@@ -79,6 +79,10 @@ exports.fetchActiveBluePrints2 = async (request) => {
         params.ExpressionAttributeValues[":school_id"] = request.data.school_id;
     }
     // --- END OF MODIFICATION ---
+    if (request.data.subject_id) {
+        params.FilterExpression += " AND contains(subject_id, :subject_id)";
+        params.ExpressionAttributeValues[":subject_id"] = request.data.subject_id;
+    }
 
     // For debugging, you can log the final params object
     console.log("Executing DynamoDB query with params:", JSON.stringify(params, null, 2));
