@@ -1,12 +1,23 @@
 const scanData = (docClient, params, callback) => {
-    docClient.scan(params, (err, data) => {
+    let items = [];
+
+    const onScan = (err, data) => {
         if (err) {
-            console.log(err);
-            callback(err, data);
-        } else {
-            callback(err, data);
+            console.log("Scan failed:", err);
+            return callback(err, null);
         }
-    });
+
+        items = items.concat(data.Items);
+
+        if (data.LastEvaluatedKey) {
+            params.ExclusiveStartKey = data.LastEvaluatedKey;
+            docClient.scan(params, onScan);
+        } else {
+            callback(null, { Items: items });
+        }
+    };
+
+    docClient.scan(params, onScan);
 };
 
 const queryData = (docClient, params, callback) => {
@@ -76,7 +87,7 @@ const batchReadData = (docClient, params, callback) => {
             console.log(err);
             callback(err, data);
         } else {
-            // callback(0, 200);
+            callback(0, data);
         }
     });
 };
@@ -111,7 +122,7 @@ const queryWithPagination = async (docClient, params, callback) => {
             callback(error, 0);
         }
     }
-    
+
     callback(0, { Items: results });
 };
 

@@ -16,6 +16,14 @@ const s3Services = require("../services/s3Service");
 const excelEpoc = new Date(1900, 0, 0).getTime();
 const msDay = 86400000;
 
+exports.chunkArray = (array, chunkSize) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+};
+
 exports.getCurrentTimestamp = () => new Date().toISOString();
 
 // exports.getRandomString = function () {
@@ -436,6 +444,7 @@ exports.checkPriorityQuestions = async (quesDetails) => {
         async function secLoop(i) {
             if (i < quesDetails.length) {
                 await quesDetails[i].questions.forEach((qes, j) => {
+                    console.log({objectttt: qes.concept_ids.length})
                     priorityOrder.push(
                         {
                             "sec": i,

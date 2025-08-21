@@ -9,9 +9,14 @@ const { TABLE_NAMES } = require('../constants/tables');
 const schoolRepository = require("../repository/schoolRepository");
 const studentRepository = require("../repository/studentRepository");
 const classTestRepository = require("../repository/classTestRepository");
+const whatsappService = require("./whatsappService");
 const s3Services = require("./s3Service");
+const mailServices = require("./emailService");
+// const pLimit = require('p-limit');
+// const limit = pLimit(5);
 
 const { OpenAI } = require('openai');
+const { subjectRepository } = require("../repository");
 
 // Initialize OpenAI Client
 const openai = new OpenAI({
@@ -56,7 +61,6 @@ exports.updateQuizStatus = async (request) => {
     return statusRes;
 };
 
-
 const checkDuplicateTopics = async (resTopics, checkTopics) => {
     let dupTopics = [];
     await checkTopics.forEach(cArr => {
@@ -93,7 +97,6 @@ exports.getQuizResult = async (request) => {
         }));
     return result_response;
 }
-
 
 exports.editStudentQuizMarks = async (request) => {
     console.log("request000", request.data.marks_details[0].qa_details);
@@ -242,8 +245,6 @@ exports.editStudentQuizMarks = async (request) => {
     }
 };
 
-
-
 exports.viewQuizQuestionPaper = async (request) => {
     try {
         // Fetch quiz result data of student
@@ -284,7 +285,6 @@ exports.viewQuizQuestionPaper = async (request) => {
     }
 };
 
-
 exports.setQuestionPaperView = async (questionIDs, questionData) => {
 
     const individualQuestions = await Promise.all(
@@ -306,7 +306,6 @@ exports.setQuestionPaperView = async (questionIDs, questionData) => {
 
     return individualQuestions.filter(q => q !== null); // Remove null values (if any question IDs did not match)
 };
-
 
 exports.fetchQuizTemplates = async (request) => {
     try {
@@ -351,10 +350,7 @@ exports.fetchQuizTemplates = async (request) => {
     }
 };
 
-
-
 exports.resetQuizEvaluationStatus = async (request) => await quizResultRepository.resetQuizEvaluationStatus2(request)
-
 
 /** EVALUATION API'S **/
 const mergeStudentAnswers = (answerMetadata) => {
@@ -545,7 +541,6 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
     // request.data.individual_group_performance = individualGroupPerformance;
     return markAssignRes;
 }
-
 
 // exports.startQuizEvaluationProcess = async (request) => {
 //     try {
@@ -864,6 +859,7 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
+        // const tasks = studentMetaRes.Items.map((studentMarkDetail, i) => limit(async () => {
         for (const [i, studentMarkDetail] of studentMetaRes.Items.entries()) {
             const studentData = studentMarkDetail;
             const quizSetKey = quizSets[studentData.quiz_set.toLowerCase()];
@@ -915,13 +911,13 @@ exports.startQuizEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
                         // console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-                            .map((ans) => ans.answer_content)               // Extract the answer_content
-                            .join(" ");                                     // Join the answer contents into a single string
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
 
                         // console.log(correctAnswer);
                     }
@@ -962,18 +958,39 @@ exports.startQuizEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Please compare the following answers for similarity. 
-            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
-            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
+            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
 
-            Provide a similarity score between 0 and 100 for each comparison.\n\n` +
+            ### Evaluation Criteria for **Question Type: "Subjective"**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
-                    const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
-            Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
-            Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
-            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
+
+            ### Response Format:
+            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
+            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',
@@ -985,18 +1002,20 @@ exports.startQuizEvaluationProcess = async (request) => {
                     { role: 'user', content: userPrompt }
                 ],
             });
-            console.log("response - ", response.choices[0].message);
+
+            console.log("prompt - ", userPrompt);
+            console.log("response - ", response);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
             console.log("scores - ", scores);
             let totalMarks = 0;
             let totalExpectedMarks = 0;
             qa_detailsCopyArray.push([]);
-            marksToUpdate.forEach((mark, index) => {
+            await marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
                 // console.log("type", questionAnswerPairs[index].question_type)
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     // console.log("Descriptive -  ", questionAnswerPairs[index].marks);
                     const range = 100 / Number(questionAnswerPairs[index].marks)
                     if (Number.isNaN(scores[index]) || scores[index] < 10) mark.obtained_marks = 0;
@@ -1014,7 +1033,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                     }
                 }
                 else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         // totalMarks += questionAnswerPairs[index].marks;
@@ -1033,7 +1052,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                 // console.log("scores[index] - ", scores[index]);
 
                 let newMarksData = { ...mark }
-                qa_detailsCopyArray[i].push(newMarksData);
+                qa_detailsCopyArray[i]?.push(newMarksData);
 
                 answerCompareArray.push({
                     question_id: questionAnswerPairs[index].question_id,
@@ -1052,7 +1071,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
         }
-
+        // ));
+        // await Promise.all(tasks);
         // console.log("Answer Comparison Details: ", answerCompareArray);
 
         qa_detailsCopyArray.forEach((marksDataArray, i) => {
@@ -1076,15 +1096,95 @@ exports.startQuizEvaluationProcess = async (request) => {
         // console.log("markAssignRes - ", markAssignRes);
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
-        return { status: 200 };
+
+        // console.dir({quizTestRes:quizTestRes.Item},{studentMetaRes:studentMetaRes.Items[0]},{depth: null});
+        const studentIds = studentMetaRes.Items.map((val) => val.student_id);
+        // console.log("studentIds - ", studentIds);
+        const fetchStudents =  await studentRepository.fetchStudentsByIds(studentIds) ;
+        // console.log("fetchStudents - ", fetchStudents);
+        // console.dir("fetchStudents - ", fetchStudents,{depth: null});
+        const parentIds = fetchStudents.map((val) => (val.parent_id));
+        // console.log("parentIds - ", parentIds);
+        const fetchParents =  await studentRepository.fetchParentsByIds(parentIds) ;
+        // console.log("fetchParents - ", fetchParents);
+        const fetchSubject = await subjectRepository.getSubjectByIdAsync({data:{subject_id:quizTestRes.Item.subject_id}});
+        // console.log("fetchSubject - ", fetchSubject.Items[0]);
+
+        const WhatsAppData =  fetchStudents.map((val) => {
+            const parent = fetchParents.find((parent) => parent.parent_id === val.parent_id);
+            const student = val;
+            const marks = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+            const result = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+            return {
+                student_name: student.user_firstname,
+                parent_name: parent.user_firstname,
+                subject:fetchSubject.Items[0].subject_title,
+                marks: `${marks.marks_details[0].totalMark}/${marks.marks_details[0].expectedMarks}`,
+                phone:parent.user_phone_no,
+                answerSheet: result.answer_metadata.map((ans) => process.env.S3_BUCKET_URL+ans.url)
+            };
+        });
+
+        // console.log("WhatsAppData - ", WhatsAppData);
+        const notificationSettings = schoolDataRes.Items[0].notification_settings;
+
+        console.log("notificationSettings - ", notificationSettings);
+        // console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
+        
+        
+            const response = {
+              statusCode: 200,
+              message: {
+                email: null,
+                whatsapp: null,
+              },
+            };
+
+            for (let student of WhatsAppData) {
+              if (
+                notificationSettings?.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.whatsapp
+              ) {
+                const whatsappResponse = await whatsappService.sendMessage({
+                  phone: student.phone,
+                  parameters: [
+                    student.parent_name,
+                    student.student_name,
+                    student.marks,
+                    student.subject,
+                    student.answerSheet[0],
+                  ],
+                  templateName: constant.whatsappTemplate.markNotify,
+                });
+              }
+              if (
+                notificationSettings.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.email
+              ) {
+                const mailPayload = {
+                  subject: student.subject,
+                  toMail: student.parent_email,
+                  marks: student.marks,
+                  parentName: student.parent_name,
+                  studentName: student.student_name,
+                  fileLink: student.answerSheet.join("\n"),
+                  mailFor: "Individual Report",
+                };
+                const mailSend = await mailServices.process(mailPayload);
+                if (mailSend.httpStatusCode != 200) {
+                  response.statusCode = mailSend.httpStatusCode;
+                  response.message.email = mailSend?.message;
+                }
+              }
+            }
+
+            return { status: 200, response };
 
     } catch (error) {
         console.error(error);
         throw error;
     }
 };
-
-
 
 const getQuizQuestionIds = async (quiz_question_details) => {
     let quizSetDetails = constant.quizSetDetails;
@@ -1154,7 +1254,6 @@ exports.assigningQuizMarks = async (studResultData, quizQuestionSets, quesAns, c
     }
 };
 
-
 exports.comparingQuizAnswer = async (studAns, markDetails, questionPaper, quesAns, classPassPercentage, group_pass_percentage, questionPaperTrack) => {
     return new Promise(async (resolve, reject) => {
         await helper.splitStudentQuizAnswer(studAns).then((splitedAns) => {
@@ -1195,7 +1294,6 @@ exports.comparingQuizAnswer = async (studAns, markDetails, questionPaper, quesAn
     });
 };
 
-
 exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack) => {
     try {
         for (let i = 0; i < qaDetails.length; i++) {
@@ -1217,7 +1315,6 @@ exports.setQizQaDetails = async (qaDetails, indAns, quesAns, questionPaperTrack)
         throw error;
     }
 };
-
 
 const knowPassOrFail = (marks_details, quesAndAns, classPercentage, individualPassPercentage = 50) => {
 
@@ -1257,7 +1354,6 @@ exports.fetchAllQuizDetails = function (request, callback) {
         }
     })
 }
-
 
 // exports.comparingQuizAnswer = async (markDetails, quesAns, individualPassPercentage) => {
 //     const qaDetails = markDetails.qa_details;

@@ -49,20 +49,20 @@ exports.getStudentsData = function (request, callback) {
 // }
 
 exports.getStudentsData2 = async (request) => {
-        const params = {
-            TableName: TABLE_NAMES.upschool_student_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "user_status = :user_status AND section_id = :section_id",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":user_status": "Active",
-                ":section_id": request.data.section_id
-            }
-        };
-        console.log({params});
+    const params = {
+        TableName: TABLE_NAMES.upschool_student_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "user_status = :user_status AND section_id = :section_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":user_status": "Active",
+            ":section_id": request.data.section_id
+        }
+    };
+    console.log({ params });
 
-        return await DATABASE_TABLE2.query(params); 
+    return await DATABASE_TABLE2.query(params);
 };
 
 exports.fetchStudentDataByRollNoClassSection = function (request, callback) {
@@ -95,23 +95,23 @@ exports.fetchStudentDataByRollNoClassSection = function (request, callback) {
     });
 }
 
-exports.fetchStudentDataByRollNoClassSection2 = async (request)=> {
+exports.fetchStudentDataByRollNoClassSection2 = async (request) => {
 
-        const readParams = {
-            TableName: TABLE_NAMES.upschool_student_info,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: "class_id = :class_id AND section_id = :section_id AND roll_no = :roll_no",
-            ExpressionAttributeValues: {
-                ":common_id": constant.constValues.common_id,
-                ":class_id": request.data.client_class_id,
-                ":section_id": request.data.section_id,
-                ":roll_no": request.data.roll_no
-            }
-        };
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_student_info,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "class_id = :class_id AND section_id = :section_id AND roll_no = :roll_no",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":class_id": request.data.client_class_id,
+            ":section_id": request.data.section_id,
+            ":roll_no": request.data.roll_no
+        }
+    };
 
-        const result = await DATABASE_TABLE2.query(readParams);
-        return result;
+    const result = await DATABASE_TABLE2.query(readParams);
+    return result;
 };
 
 
@@ -211,4 +211,36 @@ exports.getParentDetailsById = async (request) => {
 
     const result = await DATABASE_TABLE2.query(readParams);
     return result.Items[0];
-}
+};
+
+exports.fetchStudentsByIds = async (studentIds) => {
+
+    const readParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_student_info]: {
+                Keys: studentIds.map((id) => ({
+                    student_id: id
+                }))
+            }
+        }
+    };
+
+    const result = await DATABASE_TABLE2.getByObjects(readParams);
+    return result.Responses[TABLE_NAMES.upschool_student_info] || [];
+};
+
+exports.fetchParentsByIds = async (parentIds) => {
+
+    const readParams = {
+        RequestItems: {
+            [TABLE_NAMES.upschool_parent_info]: {
+                Keys: parentIds.map((id) => ({
+                    parent_id: id
+                }))
+            }
+        }
+    };
+
+    const result = await DATABASE_TABLE2.getByObjects(readParams);
+    return result.Responses[TABLE_NAMES.upschool_parent_info] || [];
+};

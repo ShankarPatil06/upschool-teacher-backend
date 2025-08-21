@@ -117,7 +117,22 @@ exports.insertClassTest2 = async (request) => {
     const data = (await DATABASE_TABLE2.putItem(params)).$metadata.httpStatusCode;
     return data;
 }
-
+exports.updateClassTest = async (request) => {
+    let params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        Key: {
+            "class_test_id": request.data.class_test_id
+        },
+        UpdateExpression: "set answer_sheet_template = :answer_sheet_template, question_paper_template = :question_paper_template, key_answer_template=:key_answer_template, updated_ts = :updated_ts",
+        ExpressionAttributeValues: {
+            ":updated_ts": helper.getCurrentTimestamp(),
+            ":answer_sheet_template": request.data.answer_sheet_template,
+            ":question_paper_template": request.data.question_paper_template,
+            ":key_answer_template": request.data.key_answer_template
+        },
+    };
+    return await DATABASE_TABLE2.updateService(params);
+}
 exports.fetchClassTestByName = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
@@ -242,7 +257,7 @@ exports.getStudentInfo = async (request) => {
     }
 
     return await DATABASE_TABLE2.query(params);
-    
+
 
 }
 
@@ -269,15 +284,15 @@ exports.fetchClassTestDataById = function (request, callback) {
 }
 
 exports.fetchClassTestDataById2 = async (request) => {
-        const readParams = {
-            TableName: TABLE_NAMES.upschool_class_test_table,
-            Key: {
-                "class_test_id": request.data.class_test_id
-            }
-        };
+    const readParams = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        Key: {
+            "class_test_id": request.data.class_test_id
+        }
+    };
 
-        const result = await DATABASE_TABLE2.getItem(readParams);
-        return result;
+    const result = await DATABASE_TABLE2.getItem(readParams);
+    return result;
 };
 
 
@@ -332,7 +347,7 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         ":section_id": request.data.section_id,
         ":subject_id": request.data.subject_id,
         ":client_class_id": request.data.client_class_id,
-        ":class_test_status": "Active",
+        ":class_test_status": request.data.class_test_status || "Active",
     };
 
     if (request.data?.class_test_id) {
@@ -343,7 +358,7 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
         filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
         expressionAttributeValues[":start_date"] = request.data.start_date;
         expressionAttributeValues[":end_date"] = request.data.end_date;
-    }    
+    }
 
     const params = {
         TableName: TABLE_NAMES.upschool_class_test_table,
@@ -358,3 +373,67 @@ exports.fetchAllTestBasedOnSubject = async (request) => {
     );
     return sortedItems;
 }
+
+//optimised
+// exports.fetchAllTestBasedOnSubject = async (request) => {
+//     const filterConditions = [];
+//     const expressionAttributeValues = {
+//         ":common_id": constant.constValues.common_id,
+//     };
+
+//     if (request.data.client_class_id) filterConditions.push("client_class_id = :client_class_id");
+//     if (request.data.subject_id) filterConditions.push("subject_id = :subject_id");
+//     if (request.data.section_id) filterConditions.push("section_id = :section_id");
+//     if (request.data.class_test_status) filterConditions.push("class_test_status = :class_test_status");
+//     if (request.data.class_test_id) filterConditions.push("class_test_id = :class_test_id");
+//     if (request.data.start_date && request.data.end_date) filterConditions.push("created_ts BETWEEN :start_date AND :end_date");
+
+//     Object.assign(expressionAttributeValues, {
+//         ":client_class_id": request.data.client_class_id,
+//         ":subject_id": request.data.subject_id,
+//         ":section_id": request.data.section_id,
+//         ":class_test_status": request.data.class_test_status || "Active",
+//         ":class_test_id": request.data.class_test_id,
+//         ":start_date": request.data.start_date,
+//         ":end_date": request.data.end_date,
+//     });
+
+//     const params = {
+//         TableName: TABLE_NAMES.upschool_class_test_table,
+//         IndexName: Indexes.common_id_index,
+//         KeyConditionExpression: "common_id = :common_id",
+//         FilterExpression: filterConditions.join(" AND "),
+//         ExpressionAttributeValues: expressionAttributeValues,
+//     };
+
+//     const result = await DATABASE_TABLE2.query(params);
+//     return result.Items.sort((a, b) => new Date(b.created_ts) - new Date(a.created_ts));
+// };
+exports.fetchTestBasedOnQuestionPaper = async (request) => {
+    let filterConditions = [
+        "class_test_status = :class_test_status",
+        "question_paper_id = :question_paper_id",
+    ];
+    
+    let expressionAttributeValues = {
+        ":common_id": constant.constValues.common_id,
+        ":class_test_status": request.data.class_test_status || "Active",
+        ":question_paper_id": request.data.question_paper_id,
+    };
+
+    const params = {
+        TableName: TABLE_NAMES.upschool_class_test_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: filterConditions.join(" AND "),
+        ExpressionAttributeValues: expressionAttributeValues,
+    };
+
+    const result = await DATABASE_TABLE2.query(params);
+    
+    const sortedItems = result.Items.sort(
+        (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+    );
+
+    return sortedItems;
+};

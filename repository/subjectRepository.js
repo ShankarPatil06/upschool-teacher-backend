@@ -84,3 +84,21 @@ exports.getSubjectById3 = async (request) => {
         throw new Error("Failed to fetch subject unit ID.");
     }
 };
+
+exports.getSubjectByIdAsync = async (request) => {
+    try {
+        const params = {
+            TableName: TABLE_NAMES.upschool_subject_table,
+            KeyConditionExpression: "subject_id = :subject_id",
+            ExpressionAttributeValues: {
+                ":subject_id": request.data.subject_id,
+            },
+        };
+
+        const result = await DATABASE_TABLE2.query(params);
+        return result;; 
+    } catch (error) {
+        console.error("Error fetching subject unit ID:", error);
+        throw new Error("Failed to fetch subject unit ID.");
+    }
+};

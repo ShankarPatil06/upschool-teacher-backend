@@ -1,5 +1,5 @@
 const dynamoDbCon = require('../awsConfig');
-const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository, testResultRepository, } = require("../repository")
+const { classTestRepository, testQuestionPaperRepository, commonRepository, classRepository,studentRepository, testResultRepository,schoolRepository ,teacherRepository,subjectRepository} = require("../repository")
 const commonServices = require("../services/commonServices");
 const { TABLE_NAMES } = require('../constants/tables');
 const constant = require('../constants/constant');
@@ -11,35 +11,63 @@ const { resolve } = require('bluebird');
 const { postAPICall } = require('../apiHelper/httpCommon');
 const s3Services = require("./s3Service");
 const { OpenAI } = require('openai');
+const whatsappService = require("./whatsappService");
+const mailServices = require("./emailService");
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_KEY, // Replace with your actual OpenAI API key
 });
 
 exports.addClassTest = async (request) => {
-    const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request)
-    console.log("fetch_class_test_res - ", fetch_class_test_res);
-    if (fetch_class_test_res.Items.length === 0) {
-        request.data.class_test_id = helper.getRandomString();
-        console.log("request.data.class_test_id - ", request.data.class_test_id);
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const options = {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            data: qs.stringify(request),
-            url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
-            // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
-        };
-        // const headers = { 'content-type': 'application/x-www-form-urlencoded' }
-        console.log("qs.stringify(request) - ", qs.stringify(request));
-        const pdfData = await axios(options);
-        // console.log(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        // const pdfData = await postAPICall(process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',qs.stringify(request),headers)
-        request.data.answer_sheet_template = pdfData.data.answer_sheet_template;
-        request.data.question_paper_template = pdfData.data.question_paper_template;
-        request.data.key_answer_template = pdfData.data.key_answer_template;
+    try {
+        const fetch_class_test_res = await classTestRepository.fetchClassTestByName2(request);
 
-        return await classTestRepository.insertClassTest2(request);
+        if (fetch_class_test_res.Items.length === 0) {
+            request.data.class_test_id = helper.getRandomString();
+            console.log("request.data.class_test_id - ", request.data.class_test_id);
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+            const options = {
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify(request),
+                url: process.env.PDF_GENERATION_URL + '/createQuestionAndAnswerPapers',
+                // url: "http://localhost:3005/v1" + '/createQuestionAndAnswerPapers',
+                timeout: 60000,
+            };
+
+            console.log("qs.stringify(request) - ", qs.stringify(request));
+
+            request.data.answer_sheet_template = " ";
+            request.data.question_paper_template = " ";
+            request.data.key_answer_template = " ";
+
+            await classTestRepository.insertClassTest2(request)
+                .then(() => console.log("Class Test Inserted"))
+                .catch(err => console.error("DB Insert Error:", err));
+
+            axios(options)
+                .then(response => {
+                    console.log("PDF Data Received: ", response.data);
+                    request.data.answer_sheet_template = response.data.answer_sheet_template || "";
+                    request.data.question_paper_template = response.data.question_paper_template || "";
+                    request.data.key_answer_template = response.data.key_answer_template || "";
+
+                    console.log("request==", request);
+
+                    classTestRepository.updateClassTest(request)
+                        .then(() => console.log("Class Test Updated"))
+                        .catch(err => console.error("DB Update Error:", err));
+                })
+                .catch(error => {
+                    console.error("PDF Generation Error:", error);
+                });
+            return 200;
+        } else {
+            return helper.formatErrorResponse(constant.messages.CLASS_TEST_ALREADY_EXISTS, 400);
+        }
+    } catch (error) {
+        console.error("Error while generating PDF:", error.response ? error.response.data : error.message);
+        return { status: 500, message: "PDF Generation Failed" };
     }
 };
 
@@ -116,25 +144,32 @@ exports.startEvaluationProcess = async (request) => {
         // Fetch class test data
         const classTestRes = await classTestRepository.getClassTestIdAndName2(request);
         const classTest = classTestRes.Items[0];
-
+        console.log("CLASS TEST : ", classTest);
+        
+        
         if (!classTest) {
             throw helper.formatErrorResponse(constant.messages.NO_DATA, 400);
         }
-
+        
         // Fetch student metadata
         const studentMetaRes = await testResultRepository.fetchStudentresultMetadata2(request);
         if (studentMetaRes.Items.length === 0) {
             throw helper.formatErrorResponse(constant.messages.NO_ANSWER_SHEET_FOUND, 400);
-        }
-
+        };
+        console.log("STUDENT METADATA : ", studentMetaRes.Items[0]);
+        
+        
         // Fetch question paper details
         request.data.question_paper_id = classTest.question_paper_id;
         const questionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
         const questionPaper = questionPaperRes.Items[0];
-
+        
         if (!questionPaper) {
             throw helper.formatErrorResponse(constant.messages.NO_QUESTION_PAPER_FOUND, 400);
         }
+        console.log("QUESTION PAPER : ", questionPaper);
+        
+        // return { status: 200 };
 
         // Collect question IDs
         const questionArray = questionPaper.questions.flatMap((e) => e.question_id);
@@ -234,13 +269,13 @@ exports.startEvaluationProcess = async (request) => {
                             (ans) => ans.answer_display === "Yes" || !ans.answer_display
                         );
                         const indexLetter = String.fromCharCode(97 + index);
-                        correctAnswer = index !== -1 ? `${question.answers_of_question[index].answer_content} or ${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}. or ${indexLetter}.${question.answers_of_question[index].answer_content}` : "";
+                        correctAnswer = index !== -1 ? `${indexLetter} or ${indexLetter.toUpperCase()} or ${indexLetter}. or ${indexLetter.toUpperCase()}.` : "";
                         console.log("objective", question.answers_of_question, correctAnswer)
                     } else if (question.question_type === "Subjective") {
                         correctAnswer = question.answers_of_question
                             .filter((ans) => ans.answer_display === "Yes")  // Filter answers with answer_display as "Yes"
-                            .map((ans) => ans.answer_content)               // Extract the answer_content
-                            .join(" ");                                     // Join the answer contents into a single string
+                            .map((ans, index) => `${index + 1}. ${ans.answer_content}`) // Extract the answer_content
+                            .join("\n"); // Join the answer contents into a single string
 
                         console.log(correctAnswer);
                     }
@@ -281,18 +316,39 @@ exports.startEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Please compare the following answers for similarity. 
-            Ignore numbering, placeholders, minor formatting differences such as "1." before the answer, extra spaces, full stops, or punctuation marks that do not affect the meaning. 
-            Ensure different words or concepts are not mistakenly considered similar. If the student's answer does not match any of the meanings in the correct answer, the similarity score should be 0.
-            
-            Provide a similarity score between 0 and 100 for each comparison.\n\n` +
+            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+
+            ### Evaluation Criteria for **Question Type: "Subjective"**:
+
+            1. **Per-Numbered Comparison**:  
+                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+
+            2. **Partial Credit Scaling**:  
+                - **Full points (90-100%)** if the response contains **all key details**.  
+                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
+                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
+                - **Low score (0-40%)** only if the response is completely incorrect.  
+
+            3. **Weighted Average Calculation**:  
+                - Compute **an individual similarity score** (0-100) for each numbered answer.  
+                - Take the **weighted average** for the **final similarity score**.
+
+            For **all other question types**, perform a direct correctness-based comparison.
+
+            Provide a similarity score between **0 and 100** for each question.\n\n` +
                 questionAnswerPairs.map((pair, index) => {
-                    const correctAnswers = extractValidAnswers(pair.correctAnswer);
                     return `Question ${index + 1}:
-            Student Answer: "${normalizeAnswer(pair.studentAnswer)}"
-            Correct Answers: ${correctAnswers.map(ans => `"${ans}"`).join(", ")}\n`;
+            Question Type: "${pair.question_type}"
+            Student Answer (Structured List):
+            ${normalizeAnswer(pair.studentAnswer)}
+
+            Correct Answers (Structured List):
+            ${pair.correctAnswer}\n`;
                 }).join("\n") + `.
-            In the response content, just return the similarity scores as numbers separated by new lines (e.g., "100\n85\n") without any additional text, labels, or question numbers. Just Similarity Scores in the specified format.`;
+
+            ### Response Format:
+            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
+            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',
@@ -302,9 +358,12 @@ exports.startEvaluationProcess = async (request) => {
                 ],
             });
 
-            console.log("response - ", userPrompt, response.choices[0].message);
+            console.log("prompt - ", userPrompt);
+            console.log("response - ", response);
 
             const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
+
+            console.log("scores - ", scores);
 
             let totalMarks = 0;
             let totalExpectedMarks = 0;
@@ -313,7 +372,7 @@ exports.startEvaluationProcess = async (request) => {
 
                 console.log("questionAnswerPairs[index].question_type - ", questionAnswerPairs[index].question_type);
 
-                if (questionAnswerPairs[index].question_type === "Descriptive") {
+                if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     const range = 100 / Number(questionAnswerPairs[index].marks);
                     if (isNaN(scores[index]) || scores[index] < 10) {
                         mark.obtained_marks = 0;
@@ -327,7 +386,7 @@ exports.startEvaluationProcess = async (request) => {
                         }
                     }
                 } else {
-                    if (scores[index] > 80) {
+                    if (scores[index] > 90) {
                         mark.obtained_marks = questionAnswerPairs[index].marks;
                         totalMarks += questionAnswerPairs[index].marks;
                     } else {
@@ -350,8 +409,91 @@ exports.startEvaluationProcess = async (request) => {
         // Batch update with processed results
         // const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes.Items, classTest.groupPassPercentage);
         await commonRepository.bulkBatchWrite(studentMetaRes.Items, TABLE_NAMES.upschool_test_result);
+        const fetchTeacherById = await teacherRepository.fetchTeacherByID2({ data: { teacher_id: request.teacher_id } });
+        console.log("fetchTeacherById - ", fetchTeacherById.Items[0]);
+        
+        const fetchSchoolDetails = await schoolRepository.getSchoolById(fetchTeacherById.Items[0].school_id);
+        const notificationSettings = fetchSchoolDetails.Items[0].notification_settings;
+        console.log("notificationSettings - ", notificationSettings);
+        
+        if(notificationSettings?.paperEvaluationOTP?.isActive && notificationSettings?.paperEvaluationOTP?.modes?.whatsapp ){
+            
+            const studentIds = studentMetaRes.Items.map((val) => val.student_id);
+            // console.log("studentIds - ", studentIds);
+            const fetchStudents =  await studentRepository.fetchStudentsByIds(studentIds) ;
+            // console.log("fetchStudents - ", fetchStudents);
+            // console.dir("fetchStudents - ", fetchStudents,{depth: null});
+            const parentIds = fetchStudents.map((val) => (val.parent_id));
+            // console.log("parentIds - ", parentIds);
+            const fetchParents =  await studentRepository.fetchParentsByIds(parentIds) ;
+            // console.log("fetchParents - ", fetchParents);
+            const fetchSubject = await subjectRepository.getSubjectByIdAsync({data:{subject_id:questionPaper.subject_id}});
+            // console.log("fetchSubject - ", fetchSubject.Items[0]);
+    
+            const WhatsAppData =  fetchStudents.map((val) => {
+                const parent = fetchParents.find((parent) => parent.parent_id === val.parent_id);
+                const student = val;
+                const marks = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+                const result = studentMetaRes.Items.find((item) => item.student_id === student.student_id);
+                return {
+                    student_name: student.user_firstname,
+                    parent_name: parent.user_firstname,
+                    parent_email: parent.user_email,
+                    subject:fetchSubject.Items[0].subject_title,
+                    marks: `${marks.marks_details[0].totalMark}/${marks.marks_details[0].expectedMarks}`,
+                    phone:parent.user_phone_no,
+                    answerSheet: result.answer_metadata.map((ans) => process.env.S3_BUCKET_URL+ans.url)
+                };
+            });
+    
+            const response = {
+              statusCode: 200,
+              message: {
+                email: null,
+                whatsapp: null,
+              },
+            };
 
-        return { status: 200 };
+            for (let student of WhatsAppData) {
+              if (
+                notificationSettings?.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.whatsapp
+              ) {
+                const whatsappResponse = await whatsappService.sendMessage({
+                  phone: student.phone,
+                  parameters: [
+                    student.parent_name,
+                    student.student_name,
+                    student.marks,
+                    student.subject,
+                    student.answerSheet[0],
+                  ],
+                  templateName: constant.whatsappTemplate.markNotify,
+                });
+              }
+              if (
+                notificationSettings.individualReport?.isActive &&
+                notificationSettings?.individualReport?.modes?.email
+              ) {
+                const mailPayload = {
+                  subject: student.subject,
+                  toMail: student.parent_email,
+                  marks: student.marks,
+                  parentName: student.parent_name,
+                  studentName: student.student_name,
+                  fileLink: student.answerSheet.join("\n"),
+                  mailFor: "Individual Report",
+                };
+                const mailSend = await mailServices.process(mailPayload);
+                if (mailSend.httpStatusCode != 200) {
+                  response.statusCode = mailSend.httpStatusCode;
+                  response.message.email = mailSend?.message;
+                }
+              }
+            }
+
+            return { status: 200, response };
+    }
     } catch (error) {
         console.error(error);
         throw error;

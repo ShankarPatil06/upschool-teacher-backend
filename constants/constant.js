@@ -15,6 +15,7 @@ exports.messages = {
     ERROR_UPLOADING_FILES_TO_S3: "Error Uploading Files to S3",
     USER_LOGIN_DATABASE_ERROR: "User Login Database Error",
     CLIENT_NAME_ALREADY_EXISTS: "Client Name Already Exist",
+    CLASS_TEST_ALREADY_EXISTS: "Class Test Already Exists",
     NO_DATA: "NO DATA",
     INVALID_DATA: "Invalid Data",
     PASSWORD_MISSMATCH: "Password Missmatch",
@@ -26,6 +27,7 @@ exports.messages = {
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
     SCHOOL_IS_ACTIVE: "Unable to delete the school as subscription status is active!",
     SCHOOL_IS_INACTIVE: "School is not active",
+    NOTIFICATION_SETTINGS_NOT_SET: 'There is no notification settings enabled for this school',
     INVALID_REQUEST_FORMAT: "Invaid Request Format",
     ERROR: "Error",
     DIDNT_SET_CONFIG: "Post Configuration is not set by School",
@@ -42,7 +44,7 @@ exports.messages = {
     DIGICARD_NAME_ALREADY_EXISTS: "Digicard Name Already Exists",
     INVALID_DIGICARD: "No Digicard on this ID / Invalid DIgicard",
     UNABLE_TO_DELETE_THE_DIGICARD: "Unable to delete the digi card as it is mapped with the concept blocks: **REPLACE**",
-    DIGICARD_UNLOCK_MANDATORY : "Please, unlock Digicard to generate Quiz!",
+    DIGICARD_UNLOCK_MANDATORY: "Please, unlock Digicard to generate Quiz!",
     PRE_DIGICARDS_UNLOCKED: "Pre Learning Digicards Unlocked",
     POST_DIGICARDS_UNLOCKED: "Post Learning Digicards Unlocked",
     // DIGICARD_UNLOCK_MANDATORY: "Please, unlock digicards to generate Quiz!",
@@ -59,8 +61,8 @@ exports.messages = {
     DIGICARD_ORDER_CHANGED: "DigiCards Order Changed",
     DIGICARD_DELETED_IN_TOPIC: "DigiCards Deleted",
     DIGICARD_ACTIVATED_IN_TOPIC: "DigiCards Activated",
-    INSUFFICIENT_QUESTIONS: "Insufficient Questions!", 
-    ERROR_IN_GENERATING_QUIZ: "Error in Generating Quiz", 
+    INSUFFICIENT_QUESTIONS: "Insufficient Questions!",
+    ERROR_IN_GENERATING_QUIZ: "Error in Generating Quiz",
     NO_ANSWER_SHEET_FOUND: "No answer sheets to evaluate!",
     DUPLICATE_QUIZ_NAME: "Quiz name exists already!",
     COULDNOT_READ_QUIZ_ID: "Couldn't extract Quiz ID, please re-upload!",
@@ -139,15 +141,15 @@ exports.messages = {
     TEST_QUESTION_PAPER_NAME_ALREADY_EXISTS: "Question Paper Name Already Exists",
     CANNOT_DELETE_QUESTION_PAPER: "Unable to delete the Question Paper, as it is mapped to a class test!",
 
-    NO_ENOUGH_QUESTIONS: "No enough Questions found!", 
-    
+    NO_ENOUGH_QUESTIONS: "No enough Questions found!",
+
     // CLASS TEST
     CLASS_TEST_EXISTS: "Class Test Name Already Exists!",
     COULDNT_EXTRACT_TEXT: "Couldn't extract text, please re-upload!",
     COULDNT_READ_PAGE_DETAILS: "Couldn't extract basic page details, please re-upload!",
     COULDNT_READ_TEST_ID: "Couldn't extract Test ID, please re-upload!",
     COULDNT_READ_ROLL_NUMBER: "Couldn't extract student roll no, please enter it manually!",
-    
+
     ANSWER_DATA_WAS_NOT_FOUND: "Answer Data not Found!",
     STUDENT_DATA_NOT_FOUND: "Student Data not Found!",
     TEST_DATA_NOT_FOUND: "Test Data not Found!",
@@ -161,13 +163,13 @@ exports.messages = {
     INVALID_OTP: "Invalid OTP!",
 
     // School Admin
-    SCHOOL_USER_EXISTS_ALREADY: 'User exists already, please use a different email Id!', 
+    SCHOOL_USER_EXISTS_ALREADY: 'User exists already, please use a different email Id!',
 
     // Athena
-    QUERY_FAILED: "Query failed with status: **status**", 
+    QUERY_FAILED: "Query failed with status: **status**",
     QUERY_EXECUTION_FAILED: "Error executing query: **error**",
 
-    INVALID_SUBJECT_ID:"INVALID SUBJECT ID"
+    INVALID_SUBJECT_ID: "INVALID SUBJECT ID"
 }
 
 exports.constValues = {
@@ -179,7 +181,7 @@ exports.mailSubject = {
     urlToScanAnswerSheets: "URL to Scan and Upload Answer Sheets",
     otpToScanAnswerSheets: "OTP to Scan and Upload Answer Sheets",
     otpForResettingPassword: "OTP for Creating/Resetting Password",
-    otpForCreatingPassword: "OTP for Creating Password", 
+    otpForCreatingPassword: "OTP for Creating Password",
     quizGeneration: "Quiz Generation"
 
 }
@@ -282,22 +284,30 @@ exports.quizSetDetails = [
         setKey: this.quizSets.b,
         setName: "B",
         setFolder: this.quizFolder.answerSheetSetB,
-        fieldName: "answerPapersSetB" 
+        fieldName: "answerPapersSetB"
     },
     {
         setKey: this.quizSets.c,
         setName: "C",
         setFolder: this.quizFolder.answerSheetSetC,
-        fieldName: "answerPapersSetC"  
+        fieldName: "answerPapersSetC"
     }
 ];
 
 exports.groupTypes = {
-    Basic: "Basic", 
-    Intermediate: "Intermediate", 
+    Basic: "Basic",
+    Intermediate: "Intermediate",
     Advanced: "Advanced"
-}; 
+};
 
-exports.awsConstants ={
-    batchSize : 25
+exports.whatsappTemplate={
+    workSheet:"student_worksheet",
+    paperEvaluation:"answersheet_upload_url",
+    otpToScanAnswerSheets:"otp_for_scan",
+    testTemplate:"test_template",
+    markNotify:"notify_mark"
+}
+
+exports.awsConstants = {
+    batchSize: 25
 }

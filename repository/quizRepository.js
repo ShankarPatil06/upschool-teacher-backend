@@ -38,20 +38,20 @@ exports.fetchQuizData = function (request, callback) {
 exports.fetchQuizData2 = async (request) => {
     const params = {
         TableName: TABLE_NAMES.upschool_quiz_table,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND quiz_status = :quiz_status AND chapter_id = :chapter_id AND learningType = :learningType",
-                ExpressionAttributeValues: {
-                    ":common_id": constant.constValues.common_id,
-                    ":client_class_id": request.data.client_class_id,
-                    ":section_id": request.data.section_id,
-                    ":subject_id": request.data.subject_id,
-                    ":chapter_id": request.data.chapter_id,
-                    ":learningType": request.data.learningType,
-                    ":quiz_status": "Active"
-                }
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id AND quiz_status = :quiz_status AND chapter_id = :chapter_id AND learningType = :learningType",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":client_class_id": request.data.client_class_id,
+            ":section_id": request.data.section_id,
+            ":subject_id": request.data.subject_id,
+            ":chapter_id": request.data.chapter_id,
+            ":learningType": request.data.learningType,
+            ":quiz_status": "Active"
+        }
     };
-    return await DATABASE_TABLE2.query(params); 
+    return await DATABASE_TABLE2.query(params);
 };
 
 exports.addQuiz = function (request, callback) {
@@ -216,7 +216,7 @@ exports.updateQuizStatus2 = async (request) => {
             ":updated_ts": await helper.getCurrentTimestamp(),
         }
     };
- return await DATABASE_TABLE2.updateService(params);
+    return await DATABASE_TABLE2.updateService(params);
 }
 
 exports.getQuizBasedonStatus = function (request, callback) {
@@ -252,6 +252,7 @@ exports.getQuizBasedonStatus = function (request, callback) {
         }
     });
 }
+
 
 exports.getQuizBasedonStatus2 = async (request) => {
     try {
@@ -306,33 +307,6 @@ exports.getQuizBasedonStatus2 = async (request) => {
         throw new Error(error.message || constant.messages.DATABASE_ERROR);
     }
 };
-
-// exports.getQuizBasedonStatus2 = async (request) => {
-
-//     let filterExpression = "quiz_status = :quiz_status AND client_class_id = :client_class_id AND section_id = :section_id AND subject_id = :subject_id";
-
-//     let expressionAttributeValues = {
-//         ":common_id": constant.constValues.common_id,
-//         ":client_class_id": request.data.client_class_id,
-//         ":section_id": request.data.section_id,
-//         ":subject_id": request.data.subject_id,
-//         ":quiz_status": request.data.quiz_status
-//     };
-//     if (request.data.chapter_id) {
-//         filterExpression += " AND chapter_id = :chapter_id";
-//         expressionAttributeValues[":chapter_id"] = request.data.chapter_id;
-//     }
-//     let params = {
-//         TableName: TABLE_NAMES.upschool_quiz_table,
-//         IndexName: Indexes.common_id_index,
-//         KeyConditionExpression: "common_id = :common_id",
-//         FilterExpression: filterExpression,
-//         ExpressionAttributeValues: expressionAttributeValues,
-//         ProjectionExpression: "quizMode, quiz_status, learningType, quiz_id, quiz_name, chapter_id"
-//     };
-//     const data = await DATABASE_TABLE2.query(params);
-//     return data.Items;
-// };
 
 
 exports.fetchQuizDataById = function (request, callback) {
@@ -400,15 +374,15 @@ exports.getQuizResult = function (request, callback) {
 exports.getQuizResult2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
-                IndexName: Indexes.common_id_index,
-                KeyConditionExpression: "common_id = :common_id",
-                FilterExpression: "quiz_id = :quiz_id AND student_id = :student_id",
-                ExpressionAttributeValues: {
-                    ":common_id": constant.constValues.common_id,
-                    ":quiz_id": request.data.quiz_id,
-                    ":student_id": request.data.student_id
-                },
-                ProjectionExpression: "answer_metadata, marks_details, result_id, evaluated"
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        FilterExpression: "quiz_id = :quiz_id AND student_id = :student_id",
+        ExpressionAttributeValues: {
+            ":common_id": constant.constValues.common_id,
+            ":quiz_id": request.data.quiz_id,
+            ":student_id": request.data.student_id
+        },
+        ProjectionExpression: "answer_metadata, marks_details, result_id, evaluated"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
@@ -443,16 +417,16 @@ exports.modifyStudentMarks = function (request, callback) {
 exports.modifyStudentMarks2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_result,
-                Key: {
-                    "result_id": request.data.result_id
-                },
+        Key: {
+            "result_id": request.data.result_id
+        },
         UpdateExpression: "set marks_details = :marks_details, updated_ts = :updated_ts, isPassed = :isPassed, individual_group_performance = :individual_group_performance",
-                ExpressionAttributeValues: {
-                    ":marks_details": request.data.marks_details,
-                    ":isPassed": request.data.passStatus,
-                    ":updated_ts": helper.getCurrentTimestamp(),
-                    ":individual_group_performance": request.data.individual_group_performance,
-                },
+        ExpressionAttributeValues: {
+            ":marks_details": request.data.marks_details,
+            ":isPassed": request.data.passStatus,
+            ":updated_ts": helper.getCurrentTimestamp(),
+            ":individual_group_performance": request.data.individual_group_performance,
+        },
     };
     const data = await DATABASE_TABLE2.updateService(params);
     return data;
@@ -488,20 +462,20 @@ exports.fetchQuizTemplates2 = async (request) => {
     let params = {
         TableName: TABLE_NAMES.upschool_quiz_table,
 
-                KeyConditionExpression: "quiz_id = :quiz_id",
-                // FilterExpression: "quiz_status = :quiz_status",
-                ExpressionAttributeValues: {
-                    ":quiz_id": request.data.quiz_id,
-                    // ":quiz_status": request.data.quiz_status,
-                },
-                ProjectionExpression: "quiz_id, quiz_name, quiz_template_details",
+        KeyConditionExpression: "quiz_id = :quiz_id",
+        // FilterExpression: "quiz_status = :quiz_status",
+        ExpressionAttributeValues: {
+            ":quiz_id": request.data.quiz_id,
+            // ":quiz_status": request.data.quiz_status,
+        },
+        ProjectionExpression: "quiz_id, quiz_name, quiz_template_details",
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
 }
 
 
-exports.checkPreQuiz = function(request, callback){
+exports.checkPreQuiz = function (request, callback) {
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
         if (DBErr) {
             console.log("Quiz Data Database Error");
@@ -629,7 +603,7 @@ exports.fetchAllQuizBasedonSubject2 = async (request) => {
             filterExpression += " AND created_ts >= :start_date AND created_ts <= :end_date";
             expressionAttributeValues[":start_date"] = request.data.start_date;
             expressionAttributeValues[":end_date"] = request.data.end_date;
-        }    
+        }
 
         let params = {
             TableName: TABLE_NAMES.upschool_quiz_table,
@@ -808,12 +782,12 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
             filterExpression += " AND quiz_id = :quiz_id";
             expressionAttributeValues[":quiz_id"] = request.data.quiz_id;
         }
-        
+
         if (request.data?.start_date && request.data?.end_date) {
             filterExpression += " AND created_ts >= :start_date AND created_ts <= :end_date";
             expressionAttributeValues[":start_date"] = request.data.start_date;
             expressionAttributeValues[":end_date"] = request.data.end_date;
-        } 
+        }
 
         let params = {
             TableName: TABLE_NAMES.upschool_quiz_table,
@@ -841,6 +815,74 @@ exports.fetchAllQuizBasedonChapter = async (request) => {
     }
 };
 
+// exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
+//     try {
+//         const dynamoDBCall = await new Promise((resolve, reject) => {
+//             dynamoDbCon.getDB((DBErr, db) => {
+//                 if (DBErr) {
+//                     console.error("Fetch Quiz Data Database Error:", DBErr);
+//                     return reject(new Error(constant.messages.DATABASE_ERROR));
+//                 }
+//                 console.log("DynamoDB Connection Established ✅");
+//                 resolve(db);
+//             });
+//         });
+
+//         const docClient = dynamoDBCall;
+
+//         // Constructing Expression Attribute Values
+//         let expressionAttributeValues = {
+//             ":common_id": constant.constValues.common_id,
+//             ":client_class_id": request.data.client_class_id,
+//             ":section_id": request.data.section_id,
+//             ":subject_id": request.data.subject_id,
+//             ":quiz_status": "Active",
+//         };
+
+//         // Constructing Chapter ID Filter
+//         const chapterFilter = chapterIds.map((id, index) => {
+//             expressionAttributeValues[`:chapter_id_${index}`] = id;
+//             return `chapter_id = :chapter_id_${index}`;
+//         }).join(" OR ");
+
+//         let read_params = {
+//             TableName: TABLE_NAMES.upschool_quiz_table,
+//             IndexName: Indexes.common_id_index,
+//             KeyConditionExpression: "common_id = :common_id",
+//             FilterExpression: `(${chapterFilter}) 
+//                                AND quiz_status = :quiz_status 
+//                                AND subject_id = :subject_id 
+//                                AND client_class_id = :client_class_id 
+//                                AND section_id = :section_id`,
+//             ExpressionAttributeValues: expressionAttributeValues,
+//         };
+
+//         console.log("Executing Query with Parameters:", JSON.stringify(read_params, null, 2));
+
+//         const result = await new Promise((resolve, reject) => {
+//             DATABASE_TABLE.queryRecord(docClient, read_params, (err, data) => {
+//                 if (err) {
+//                     console.error("Error querying database:", err);
+//                     return reject(err);
+//                 }
+//                 console.log("Query Successful ✅ Data Received:", JSON.stringify(data, null, 2));
+//                 resolve(data);
+//             });
+//         });
+
+//         // Sorting by created timestamp (descending order)
+//         const sortedItems = result.Items.sort(
+//             (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
+//         );
+
+//         return {Items : sortedItems};
+//     } catch (error) {
+//         console.error("Error fetching quiz data:", error);
+//         throw new Error(error.message || constant.messages.DATABASE_ERROR);
+//     }
+// };
+
+//chunk
 exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
     try {
         const dynamoDBCall = await new Promise((resolve, reject) => {
@@ -855,9 +897,10 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
         });
 
         const docClient = dynamoDBCall;
-        
-        // Constructing Expression Attribute Values
-        let expressionAttributeValues = {
+        const uniqueChapterIds = [...new Set(chapterIds)]; // Remove duplicates
+
+        // Base expression attribute values (common for all chunks)
+        const baseExpressionAttributeValues = {
             ":common_id": constant.constValues.common_id,
             ":client_class_id": request.data.client_class_id,
             ":section_id": request.data.section_id,
@@ -865,43 +908,62 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
             ":quiz_status": "Active",
         };
 
-        // Constructing Chapter ID Filter
-        const chapterFilter = chapterIds.map((id, index) => {
-            expressionAttributeValues[`:chapter_id_${index}`] = id;
-            return `chapter_id = :chapter_id_${index}`;
-        }).join(" OR ");
+        // Chunk chapter IDs
+        const CHUNK_SIZE = 100;
+        const chapterChunks = helper.chunkArray(uniqueChapterIds, CHUNK_SIZE);
 
-        let read_params = {
-            TableName: TABLE_NAMES.upschool_quiz_table,
-            IndexName: Indexes.common_id_index,
-            KeyConditionExpression: "common_id = :common_id",
-            FilterExpression: `(${chapterFilter}) 
-                               AND quiz_status = :quiz_status 
-                               AND subject_id = :subject_id 
-                               AND client_class_id = :client_class_id 
-                               AND section_id = :section_id`,
-            ExpressionAttributeValues: expressionAttributeValues,
-        };
+        const chunkPromises = chapterChunks.map(async (chapterChunk, chunkIndex) => {
+            let expressionAttributeValues = { ...baseExpressionAttributeValues };
 
-        console.log("Executing Query with Parameters:", JSON.stringify(read_params, null, 2));
+            // Constructing Chapter ID Filter for this chunk
+            const chapterFilter = chapterChunk.map((id, index) => {
+                const paramKey = `:chapter_id_${chunkIndex}_${index}`;
+                expressionAttributeValues[paramKey] = id;
+                return `chapter_id = ${paramKey}`;
+            }).join(" OR ");
 
-        const result = await new Promise((resolve, reject) => {
-            DATABASE_TABLE.queryRecord(docClient, read_params, (err, data) => {
-                if (err) {
-                    console.error("Error querying database:", err);
-                    return reject(err);
-                }
-                console.log("Query Successful ✅ Data Received:", JSON.stringify(data, null, 2));
-                resolve(data);
+            let read_params = {
+                TableName: TABLE_NAMES.upschool_quiz_table,
+                IndexName: Indexes.common_id_index,
+                KeyConditionExpression: "common_id = :common_id",
+                FilterExpression: `(${chapterFilter}) 
+                                   AND quiz_status = :quiz_status 
+                                   AND subject_id = :subject_id 
+                                   AND client_class_id = :client_class_id 
+                                   AND section_id = :section_id`,
+                ExpressionAttributeValues: expressionAttributeValues,
+            };
+
+            // console.log(`Executing Query for Chunk ${chunkIndex + 1}:`, JSON.stringify(read_params, null, 2));
+
+            const result = await new Promise((resolve, reject) => {
+                DATABASE_TABLE.queryRecord(docClient, read_params, (err, data) => {
+                    if (err) {
+                        console.error(`Error querying database for chunk ${chunkIndex + 1}:`, err);
+                        return reject(err);
+                    }
+                    // console.log(`Query Successful ✅ Chunk ${chunkIndex + 1} Data Received:`, JSON.stringify(data, null, 2));
+                    resolve(data);
+                });
             });
+
+            return result.Items || [];
         });
 
+        // Wait for all chunks to complete
+        const chunkResults = await Promise.all(chunkPromises);
+
+        // Flatten all results
+        const allItems = chunkResults.flat();
+
         // Sorting by created timestamp (descending order)
-        const sortedItems = result.Items.sort(
+        const sortedItems = allItems.sort(
             (a, b) => new Date(b.created_ts) - new Date(a.created_ts)
         );
 
-        return {Items : sortedItems};
+        // console.log(`Total items fetched from ${chapterChunks.length} chunks:`, sortedItems.length);
+
+        return { Items: sortedItems };
     } catch (error) {
         console.error("Error fetching quiz data:", error);
         throw new Error(error.message || constant.messages.DATABASE_ERROR);
@@ -909,8 +971,7 @@ exports.fetchAllQuizBasedonChapter2 = async (request, chapterIds) => {
 };
 
 
-
-
+////
 
 // exports.fetchAllQuizBasedOnSubject3 = async (request) => {
 //     let filterExpression = "quiz_status = :quiz_status AND subject_id = :subject_id AND client_class_id = :client_class_id AND section_id = :section_id ";

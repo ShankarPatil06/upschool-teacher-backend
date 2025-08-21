@@ -68,26 +68,76 @@ exports.fetchPreTopicData = function (request, callback) {
 }
 
 
+// exports.fetchPreTopicData2 = async (request) => {
+
+//     const chapterTopicIds = request.prelearning_topic_id;
+
+//     if (chapterTopicIds.length === 1) {
+//         const readParams = {
+//             TableName: TABLE_NAMES.upschool_topic_table,
+//             KeyConditionExpression: "topic_id = :topic_id",
+//             FilterExpression: "topic_status = :topic_status AND pre_post_learning = :pre_post_learning",
+//             ExpressionAttributeValues: {
+//                 ":topic_id": chapterTopicIds[0],
+//                 ":topic_status": "Active",
+//                 ":pre_post_learning": "Pre-Learning"
+//             },
+//             ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status",
+//         };
+//         return await DATABASE_TABLE2.query(readParams);
+//     }
+
+//     const keys = chapterTopicIds.map((id) => ({
+//         topic_id: id,
+//     }));
+
+//     const readParams = {
+//         RequestItems: {
+//             [TABLE_NAMES.upschool_topic_table]: {
+//                 Keys: keys,
+//                 ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status"
+//             }
+//         }
+//     };
+
+//     const data = await DATABASE_TABLE2.getByObjects(readParams);
+
+//     const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
+//         item => item.topic_status === "Active" && item.pre_post_learning === "Pre-Learning"
+//     );
+
+//     return filteredData;
+
+// };
+
+//chunk
 exports.fetchPreTopicData2 = async (request) => {
+    const chapterTopicIds = request.prelearning_topic_id;
 
-        const chapterTopicIds = request.prelearning_topic_id;
+    // Single topic ID - use query (more efficient)
+    if (chapterTopicIds.length === 1) {
+        const readParams = {
+            TableName: TABLE_NAMES.upschool_topic_table,
+            KeyConditionExpression: "topic_id = :topic_id",
+            FilterExpression: "topic_status = :topic_status AND pre_post_learning = :pre_post_learning",
+            ExpressionAttributeValues: {
+                ":topic_id": chapterTopicIds[0],
+                ":topic_status": "Active",
+                ":pre_post_learning": "Pre-Learning"
+            },
+            ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status",
+        };
+        return await DATABASE_TABLE2.query(readParams);
+    }
 
-        if (chapterTopicIds.length === 1) {
-            const readParams = {
-                TableName: TABLE_NAMES.upschool_topic_table,
-                KeyConditionExpression: "topic_id = :topic_id",
-                FilterExpression: "topic_status = :topic_status AND pre_post_learning = :pre_post_learning",
-                ExpressionAttributeValues: {
-                    ":topic_id": chapterTopicIds[0],
-                    ":topic_status": "Active",
-                    ":pre_post_learning": "Pre-Learning"
-                },
-                ProjectionExpression: "topic_id, topic_title, pre_post_learning, topic_description, display_name, topic_concept_id, topic_status",
-            };
-            return await DATABASE_TABLE2.query(readParams);
-        }
+    // Multiple topic IDs - use batchGet with chunking
+    const BATCH_SIZE = 100; // DynamoDB batchGetItem limit is 100 items
+    const chunks = helper.chunkArray(chapterTopicIds, BATCH_SIZE);
+    const allResults = [];
 
-        const keys = chapterTopicIds.map((id) => ({
+    // Process each chunk
+    for (const chunk of chunks) {
+        const keys = chunk.map((id) => ({
             topic_id: id,
         }));
 
@@ -100,17 +150,31 @@ exports.fetchPreTopicData2 = async (request) => {
             }
         };
 
-        const data = await DATABASE_TABLE2.getByObjects(readParams);
+        try {
+            const data = await DATABASE_TABLE2.getByObjects(readParams);
 
-        const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
-            item => item.topic_status === "Active" && item.pre_post_learning === "Pre-Learning"
-        );
+            if (data.Responses && data.Responses[TABLE_NAMES.upschool_topic_table]) {
+                allResults.push(...data.Responses[TABLE_NAMES.upschool_topic_table]);
+            }
 
-        return filteredData;
+            // Handle unprocessed keys (in case of throttling)
+            if (data.UnprocessedKeys && Object.keys(data.UnprocessedKeys).length > 0) {
+                console.warn('Unprocessed keys detected:', data.UnprocessedKeys);
+                // You might want to retry unprocessed keys here
+            }
+        } catch (error) {
+            console.error(`Error processing chunk:`, error);
+            throw error;
+        }
+    }
 
+    // Filter the combined results
+    const filteredData = allResults.filter(
+        item => item.topic_status === "Active" && item.pre_post_learning === "Pre-Learning"
+    );
+
+    return filteredData;
 };
-
-
 
 exports.fetchPostTopicData = function (request, callback) {
 
@@ -170,7 +234,7 @@ exports.fetchPostTopicData = function (request, callback) {
     });
 }
 
-exports.fetchPostTopicData2 = async (request) => { 
+exports.fetchPostTopicData2 = async (request) => {
     console.log("request.postlearning_topic_id - ", request.postlearning_topic_id);
     const chapter_topic_ids = request.postlearning_topic_id;
     let params;
@@ -270,7 +334,7 @@ exports.fetchTopicIDDisplayTitleData2 = async (request) => {
         KeyConditionExpression: "common_id = :common_id",
         FilterExpression: fromatedRequest.FilterExpression,
         ExpressionAttributeValues: fromatedRequest.ExpressionAttributeValues,
-        ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id"
+        ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id ,pre_post_learning"
     };
     const data = await DATABASE_TABLE2.query(params);
     return data;
@@ -383,6 +447,57 @@ exports.fetchTopicIDandTopicConceptID = function (request, callback) {
     });
 }
 
+// exports.fetchTopicIDandTopicConceptID2 = async (request) => {
+//     console.log("fetchTopicData : ", request);
+
+//     const topic_array = request.topic_array;
+
+//     if (!Array.isArray(topic_array) || topic_array.length === 0) {
+//         throw new Error(constant.messages.INVALID_REQUEST);
+//     }
+
+//     let readParams;
+
+//     if (topic_array.length === 1) {
+//         readParams = {
+//             TableName: TABLE_NAMES.upschool_topic_table,
+//             KeyConditionExpression: "topic_id = :topic_id",
+//             FilterExpression: "topic_status = :topic_status",
+//             ExpressionAttributeValues: {
+//                 ":topic_id": topic_array[0],
+//                 ":topic_status": "Active",
+//             },
+//             ProjectionExpression: "topic_id, topic_concept_id",
+//         };
+
+//         const data = await DATABASE_TABLE2.query(readParams);
+//         return data.Items;
+//     } else {
+//         const keys = topic_array.map(id => ({
+//             topic_id: id,
+//         }));
+
+//         readParams = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_topic_table]: {
+//                     Keys: keys,
+//                     ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+//                 },
+//             },
+//         };
+
+//         const data = await DATABASE_TABLE2.getByObjects(readParams);
+
+//         const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
+//             item => item.topic_status === "Active"
+//         );
+
+//         return filteredData;
+//     }
+// };
+
+
+//chunk
 exports.fetchTopicIDandTopicConceptID2 = async (request) => {
     console.log("fetchTopicData : ", request);
 
@@ -406,33 +521,42 @@ exports.fetchTopicIDandTopicConceptID2 = async (request) => {
             ProjectionExpression: "topic_id, topic_concept_id",
         };
 
-        const data =  await DATABASE_TABLE2.query(readParams);
+        const data = await DATABASE_TABLE2.query(readParams);
         return data.Items;
     } else {
-        const keys = topic_array.map(id => ({
-            topic_id: id,
-        }));
+        // Chunk the topic array to reduce load
+        const CHUNK_SIZE = 100; // DynamoDB batchGet limit
+        const chunks = helper.chunkArray(topic_array, CHUNK_SIZE);
 
-        readParams = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_topic_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+        const allResults = [];
+
+        // Process each chunk
+        for (const chunk of chunks) {
+            const keys = chunk.map(id => ({
+                topic_id: id,
+            }));
+
+            readParams = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_topic_table]: {
+                        Keys: keys,
+                        ProjectionExpression: "topic_id, topic_concept_id, topic_status",
+                    },
                 },
-            },
-        };
+            };
 
-        const data = await DATABASE_TABLE2.getByObjects(readParams);
+            const data = await DATABASE_TABLE2.getByObjects(readParams);
 
-        const filteredData = data.Responses[TABLE_NAMES.upschool_topic_table].filter(
-            item => item.topic_status === "Active"
-        );
+            const filteredData = (data.Responses[TABLE_NAMES.upschool_topic_table] || []).filter(
+                item => item.topic_status === "Active"
+            );
 
-        return filteredData; 
+            allResults.push(...filteredData);
+        }
+
+        return allResults;
     }
 };
-
-
 
 
 exports.fetchTopicByID = function (request, callback) {
@@ -524,10 +648,47 @@ exports.fetchBulkTopicsIDName = function (request, callback) {
 }
 
 
+// exports.fetchBulkTopicsIDName2 = async (request) => {
+//     const unit_Topic_id = [...new Set(request.unit_Topic_id)];
+
+//     if (unit_Topic_id.length === 1) {
+//         const params = {
+//             TableName: TABLE_NAMES.upschool_topic_table,
+//             KeyConditionExpression: "topic_id = :topic_id",
+//             ExpressionAttributeValues: {
+//                 ":topic_id": unit_Topic_id[0]
+//             },
+//             ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name, chapter_id",
+//         };
+
+//         const result = await DATABASE_TABLE2.query(params);
+//         return result.Items;
+//     } else {
+//         const keys = unit_Topic_id.map((id) => ({
+//             topic_id: id
+//         }));
+
+//         const params = {
+//             RequestItems: {
+//                 [TABLE_NAMES.upschool_topic_table]: {
+//                     Keys: keys,
+//                     ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name"
+//                 }
+//             }
+//         };
+//         const result = await DATABASE_TABLE2.getByObjects(params);
+
+//         return result.Responses[TABLE_NAMES.upschool_topic_table];
+//     }
+// };
+
+
+//chunk
 exports.fetchBulkTopicsIDName2 = async (request) => {
-    const unit_Topic_id = [...new Set(request.unit_Topic_id)];
+    const unit_Topic_id = [...new Set(request.unit_Topic_id)]; // Remove duplicates
 
     if (unit_Topic_id.length === 1) {
+        // When there is only one topic ID
         const params = {
             TableName: TABLE_NAMES.upschool_topic_table,
             KeyConditionExpression: "topic_id = :topic_id",
@@ -540,32 +701,49 @@ exports.fetchBulkTopicsIDName2 = async (request) => {
         const result = await DATABASE_TABLE2.query(params);
         return result.Items;
     } else {
-        const keys = unit_Topic_id.map((id) => ({
-            topic_id: id
-        }));
+        // When there are multiple topic IDs - use chunking
+        const CHUNK_SIZE = 100; // DynamoDB batch limit is 100 items
+        const chunks = helper.chunkArray(unit_Topic_id, CHUNK_SIZE);
+        const allResults = [];
 
-        const params = {
-            RequestItems: {
-                [TABLE_NAMES.upschool_topic_table]: {
-                    Keys: keys,
-                    ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name"
+        // Process chunks in parallel for better performance
+        const chunkPromises = chunks.map(async (chunk) => {
+            const keys = chunk.map((id) => ({
+                topic_id: id
+            }));
+
+            const params = {
+                RequestItems: {
+                    [TABLE_NAMES.upschool_topic_table]: {
+                        Keys: keys,
+                        ProjectionExpression: "topic_id, topic_title, pre_post_learning, display_name, chapter_id"
+                    }
                 }
-            }
-        };
-        const result = await DATABASE_TABLE2.getByObjects(params);
+            };
 
-        return result.Responses[TABLE_NAMES.upschool_topic_table];
+            const result = await DATABASE_TABLE2.getByObjects(params);
+            return result.Responses[TABLE_NAMES.upschool_topic_table] || [];
+        });
+
+        const chunkResults = await Promise.all(chunkPromises);
+
+        // Flatten all results
+        for (const chunkResult of chunkResults) {
+            allResults.push(...chunkResult);
+        }
+
+        return allResults;
     }
 };
 
 exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
-    const questionIds = topicids; 
+    const questionIds = topicids;
     console.log("Searching for question IDs:", questionIds);
 
     const queryParams = {
         TableName: TABLE_NAMES.upschool_topic_table,
         IndexName: Indexes.common_id_index,
-        KeyConditionExpression: "common_id = :common_id", 
+        KeyConditionExpression: "common_id = :common_id",
         ExpressionAttributeValues: {
             ":common_id": constant.constValues.common_id,
         },
@@ -573,13 +751,13 @@ exports.fetchTopicDatabasedonQuestionID3 = async function (topicids) {
     };
 
     const result = await DATABASE_TABLE2.query(queryParams);
-    
+
     const filteredGroups = result.Items.filter(group => {
-        
+
         return group.topic_concept_id.some(questionId => questionIds.includes(questionId));
     });
     console.log(filteredGroups)
-   
+
     return filteredGroups || [];
 };
 
@@ -614,4 +792,24 @@ exports.fetchBulkTopicsIDNameBlueprint = async (request) => {
         const data = await DATABASE_TABLE2.getByObjects(params);
         return data.Responses[TABLE_NAMES.upschool_topic_table]; // Return the fetched chapters
     }
+};
+
+exports.fetchPostLearningTopicData = async (request) => {
+    const fromatedRequest = await helper.getDataByFilterKey(request);
+    
+    const params = {
+        TableName: TABLE_NAMES.upschool_topic_table,
+        IndexName: Indexes.common_id_index,
+        KeyConditionExpression: "common_id = :common_id",
+        
+        FilterExpression: `(${fromatedRequest.FilterExpression}) AND pre_post_learning = :learning_type`,
+        ExpressionAttributeValues: {
+            ...fromatedRequest.ExpressionAttributeValues,
+            ":learning_type": "Post-Learning" 
+        },
+         ProjectionExpression: "topic_id, topic_title, display_name, topic_concept_id, pre_post_learning"
+    };
+
+    const data = await DATABASE_TABLE2.query(params);
+    return data;
 };
