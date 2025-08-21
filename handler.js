@@ -161,13 +161,11 @@ app.post("/v1/sendEmailToParent",studentController.sendEmailToParent);
 app.post("/v1/studentAvgVsClassAvg", studentController.studentAvgVsClassAvg);
 app.post("/v1/studentAvgVsClassAvgChapterWise", studentController.studentAvgVsClassAvgChapterWise);
 
-
 app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAndRecommendations);
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()
 }
-
 
 app.use((err, req, res, next) => {
     console.log(`Path: ${req.path} -> Status Code: ${err.status || ERROR.INTERNAL_SERVER_ERROR} -> Stack: ${err.stack}`)
