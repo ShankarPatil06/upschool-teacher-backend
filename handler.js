@@ -7,7 +7,7 @@ const fileUpload = require("express-fileupload");
 dotenv.config();
 const cors = require('cors');
 
-const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController } = require('./controller')
+const { commonController, digicardController, studentController, topicController, chapterController, blueprintController, conceptController, subjectController, teacherController, questionController, testQuestionPaperController, classTestController, scannerController, quizController, schoolAdminController, reportController, schoolController, sectionController,  } = require('./controller')
 
 const validator = require('./middleware/validator');
 const { ERROR } = require("./helper/helper");
@@ -47,6 +47,9 @@ app.post("/v1/fetchRelatedDigiCards", validator.validUser, digicardController.fe
 app.post("/v1/fetchAllStudents", studentController.fetchAllStudents); //n
 app.post("/v1/fetchAllQuizDetails", quizController.fetchAllQuizDetails); //n
 
+app.post("/v1/fetchAllChaptersBySubjectId", subjectController.fetchAllChaptersBySubjectId); 
+
+
 
 // app.post("/v1/unlockChapterPreLearning", validator.validUser, chapterController.unlockChapterPreLearning); 
 // app.post("/v1/chapterUnlock", validator.validUser, chapterController.chapterUnlock); // removed beacuse of not used
@@ -58,8 +61,9 @@ app.post("/v1/fetchTeacherClasses", validator.validUser, teacherController.fetch
 app.post("/v1/fetchTeacherSectionsBasedonClass", validator.validUser, teacherController.fetchTeacherSectionsBasedonClass); //n
 app.post("/v1/fetchTeacherSubjectsBasedonSection", validator.validUser, teacherController.fetchTeacherSubjectsBasedonSection); //n
 
-app.post("/v1/fetchTopicsBasedonChapters", validator.validUser, topicController.fetchTopicsBasedonChapters); //n
-app.post("/v1/fetchConceptsBasedonTopics", validator.validUser, conceptController.fetchConceptsBasedonTopics); //ch
+app.post("/v1/fetchTopicsBasedonChapters", validator.validUser, topicController.fetchTopicsBasedonChapters);
+app.post("/v1/fetchConceptsBasedonTopics", validator.validUser, conceptController.fetchConceptsBasedonTopics);
+app.post("/v1/fetchPostLearningTopics", validator.validUser, topicController.fetchPostLearningTopicsBasedonChapters);
 
 /** TEACHER ACTIVITY **/
 app.post("/v1/archivedActiveTopicsInChapter", validator.validUser, teacherController.archivedActiveTopicsInChapter); //n
@@ -89,7 +93,7 @@ app.post("/v1/viewTestQuestionPaper", validator.validUser, testQuestionPaperCont
 app.post("/v1/toggleQuestionPaper", validator.validUser, testQuestionPaperController.toggleQuestionPaper); //n
 
 /** BLUE PRINT **/
-app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);  //ch a
+app.post("/v1/fetchBlueprintById", validator.validUser, blueprintController.fetchBlueprintById);  //cha
 app.post("/v1/fetchBlueprintDetailsBasedonId", blueprintController.fetchBlueprintDetailsBasedonId); //ch
 app.post("/v1/fetchQuestionBasedOnBlueprint", blueprintController.fetchQuestionBasedOnBlueprint); // validator.validUser,  //ch a
 app.post("/v1/fetchAllBluePrints", validator.validUser, blueprintController.fetchAllBluePrints); // n
@@ -171,6 +175,7 @@ app.post("/v1/updateActionAndRecommendations", sectionController.updateActionAnd
 
 app.post("/v1/addAcademicPlanToSections", sectionController.addAcademicPlanToSections)
 app.post("/v1/getSectionById", sectionController.getSectionById)
+app.post('/v1/addCurriculumPlanToSection', sectionController.addCurriculumPlanToSection);
 //Section
 app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionController.saveTimetableConfiguration);
 
@@ -178,6 +183,8 @@ app.post("/v1/saveTimetableConfiguration", validator.validUser, sectionControlle
 app.post("/v1/upsertTeacherAttendance", teacherController.upsertTeacherAttendance);
 app.post("/v1/fetchTeacherAttendance", teacherController.fetchTeacherAttendance);
 // app.post("/v1/sendWhatsAppToParent", studentController.sendWhatsAppToParent);
+
+
 
 function haltOnTimedout(req, res, next) {
     if (!req.timedout) next()

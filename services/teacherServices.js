@@ -2217,6 +2217,8 @@ exports.sendMailtoTeacher = (request, callback) => {
 
 exports.upsertTeacherAttendance = function (request, callback) {
   // request: { id, date, last_clock_in_time?, last_clock_in_address?, last_clock_out_time?, last_clock_out_address?, working_hours? }
+  console.log({objecttttt: request});
+  
   teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
     if (err && err !== 404) {
       callback(500, err);

@@ -27,6 +27,7 @@ exports.messages = {
     SCHOOL_NAME_ALREADY_EXIST: "School Name Already Exist",
     SCHOOL_IS_ACTIVE: "Unable to delete the school as subscription status is active!",
     SCHOOL_IS_INACTIVE: "School is not active",
+    NOTIFICATION_SETTINGS_NOT_SET: 'There is no notification settings enabled for this school',
     INVALID_REQUEST_FORMAT: "Invaid Request Format",
     ERROR: "Error",
     DIDNT_SET_CONFIG: "Post Configuration is not set by School",
@@ -298,6 +299,14 @@ exports.groupTypes = {
     Intermediate: "Intermediate",
     Advanced: "Advanced"
 };
+
+exports.whatsappTemplate={
+    workSheet:"student_worksheet",
+    paperEvaluation:"answersheet_upload_url",
+    otpToScanAnswerSheets:"otp_for_scan",
+    testTemplate:"test_template",
+    markNotify:"notify_mark"
+}
 
 exports.awsConstants = {
     batchSize: 25

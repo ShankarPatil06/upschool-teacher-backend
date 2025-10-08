@@ -17,6 +17,9 @@ provider:
     MP_APP_ID: ${file(config/${self:provider.stage}-config.yml):data.mathPix.MP_APP_ID}
     MP_APP_KEY: ${file(config/${self:provider.stage}-config.yml):data.mathPix.MP_APP_KEY}
     PDF_GENERATION_URL: ${file(config/${self:provider.stage}-config.yml):data.pdfMake.generate_url}
+    WHATSAPP_ACCESS_TOKEN: ${file(config/${self:provider.stage}-config.yml):data.whatsappAccessToken}
+    WHATSAPP_PHONE_NUMBER_ID: ${file(config/${self:provider.stage}-config.yml):data.whatsappPhoneNumberId}
+    S3_BUCKET_URL: ${file(config/${self:provider.stage}-config.yml):data.s3Url}  
   iam:
     role:
       statements:
@@ -476,3 +479,15 @@ functions:
           path: /v1/saveTimetableConfiguration
           method: POST
           cors: true  
+      - http:
+          path: /v1/upsertTeacherAttendance
+          method: POST
+          cors: true  
+      - http:
+          path: /v1/fetchTeacherAttendance
+          method: POST
+          cors: true  
+      - http:
+          path: /v1/fetchPostLearningTopics
+          method: POST
+          cors: true
