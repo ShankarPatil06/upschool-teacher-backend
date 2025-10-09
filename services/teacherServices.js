@@ -1174,275 +1174,498 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
   await topicLoop(0);
 };
 
-exports.generateQuizForPostLearning = (request, callback) => {
+// exports.generateQuizForPostLearning = (request, callback) => {
 
+//   /** CHECK PRE QUIZ EXIST **/
+//   quizRepository.fetchQuizData(request, async function (postQuizData_err, postQuizData_res) {
+//     if (postQuizData_err) {
+//       console.log(postQuizData_err);
+//       callback(postQuizData_err, postQuizData_res);
+//     }
+//     else {
+//       schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
+//         if (schoolDataErr) {
+//           console.log(schoolDataErr);
+//           callback(schoolDataErr, schoolDataRes);
+//         }
+//         else {
+//           if (schoolDataRes.Items[0].post_quiz_config) {
+//             let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
+//             if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
+//               console.log(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+//               callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED);
+//             }
+//             else {
+//               request.data.pre_post_quiz_config = postQuizConfig;
+//               request.data.quiz_id = helper.getRandomString();
+//               request.data.quiz_duration = 0;
+
+//               if (request.data.quizType === constant.prePostConstans.automatedType) {
+//                 let selectedTop = [];
+//                 if (request.data.topicList.length > 0) {
+//                   await request.data.topicList.map(reqTop => {
+//                     selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
+//                   })
+
+//                   request.data.selectedTopics = selectedTop;
+//                   request.data.AcitveTopics = request.data.topicList;
+
+//                   exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
+//                     if (add_quiz_basedon_varient_err) {
+//                       callback(add_quiz_basedon_varient_err, 0);
+//                     } else {
+
+//                       if (add_quiz_basedon_varient_response === 200) {
+
+//                         if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+//                           console.log("test 4");
+
+//                           exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                             if (create_pdf_and_update_details_err) {
+
+//                               callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                             } else {
+//                               callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                             }
+//                           })
+
+//                         } else if (request.data.quizMode === "online") {
+
+//                           exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                             if (create_pdf_and_update_details_err) {
+//                               callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                             } else {
+//                               callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                             }
+//                           })
+
+//                         } else {
+//                           callback(400, constant.messages.INVALID_QUIZ_MODE)
+//                         }
+
+//                       } else {
+//                         callback(400, add_quiz_basedon_varient_response);
+//                       }
+//                     }
+//                   })
+//                 }
+//                 else {
+//                   // Generate for All Post Topics for the Chapter : 
+//                   /** FETCH TEACHING ACTIVITY **/
+//                   teachingActivityRepository.fetchTeachingActivity(request, async function (teachActivity_err, teachActivity_response) {
+//                     if (teachActivity_err) {
+//                       console.log(teachActivity_err);
+//                       callback(teachActivity_err, teachActivity_response);
+//                     } else {
+//                       let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
+//                       let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
+
+//                       /** FETCH CHAPTER DATA **/
+//                       chapterRepository.fetchChapterByID(request, async function (chapterData_err, chapterData_response) {
+//                         if (chapterData_err) {
+//                           console.log(chapterData_err);
+//                           callback(chapterData_err, chapterData_response);
+//                         } else {
+//                           let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
+
+//                           let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
+
+//                           if (AcitveTopics.length > 0) {
+//                             await AcitveTopics.forEach(actTop => {
+//                               selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
+//                             })
+
+//                             request.data.selectedTopics = selectedTop;
+//                             request.data.AcitveTopics = AcitveTopics;
+
+//                             exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
+//                               if (add_quiz_basedon_varient_err) {
+//                                 callback(add_quiz_basedon_varient_err, 0);
+//                               } else {
+
+//                                 if (add_quiz_basedon_varient_response === 200) {
+
+//                                   if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+
+//                                     exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                       if (create_pdf_and_update_details_err) {
+
+//                                         callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                       } else {
+//                                         callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                       }
+//                                     })
+
+//                                   } else if (request.data.quizMode === "online") {
+
+//                                     exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                       if (create_pdf_and_update_details_err) {
+//                                         callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                       } else {
+//                                         callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                       }
+//                                     })
+
+//                                   } else {
+//                                     callback(400, constant.messages.INVALID_QUIZ_MODE)
+//                                   }
+
+//                                 } else {
+//                                   callback(400, add_quiz_basedon_varient_response);
+//                                 }
+//                               }
+//                             })
+//                           }
+//                           else {
+//                             console.log(constant.messages.NO_ACTIVE_TOPICS);
+//                             callback(400, constant.messages.NO_ACTIVE_TOPICS);
+//                           }
+//                         }
+//                       })
+//                     }
+//                   })
+//                 }
+//                 // set selected topics to the request here 
+//               }
+//               else {
+//                 let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
+
+//                 topicRepository.fetchTopicConceptIDData({ topic_array: selectedTopics }, async function (fetch_topics_err, fetch_topics_response) {
+//                   if (fetch_topics_err) {
+//                     console.log(fetch_topics_err);
+//                     callback(fetch_topics_err, fetch_topics_response);
+//                   } else {
+//                     let topic_concept_id = [];
+//                     await fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
+
+//                     conceptRepository.fetchConceptData({ topic_concept_id: topic_concept_id }, async function (fetch_concepts_err, fetch_concepts_response) {
+//                       if (fetch_concepts_err) {
+//                         console.log(fetch_concepts_err);
+//                         callback(fetch_concepts_err, fetch_concepts_response);
+//                       } else {
+
+//                         if (request.data.quizType === constant.prePostConstans.expressType) {
+//                           // Express : 
+//                           exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
+//                             if (add_express_quiz_basedon_varient_err) {
+//                               callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
+//                             } else {
+
+//                               if (add_express_quiz_basedon_varient_response === 200) {
+
+//                                 if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+//                                   console.log("test 6");
+
+//                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                     if (create_pdf_and_update_details_err) {
+
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     } else {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     }
+//                                   })
+
+//                                 } else if (request.data.quizMode === "online") {
+
+//                                   exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                     if (create_pdf_and_update_details_err) {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     } else {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     }
+//                                   })
+
+//                                 } else {
+//                                   callback(400, constant.messages.INVALID_QUIZ_MODE)
+//                                 }
+
+//                               } else {
+//                                 callback(400, add_express_quiz_basedon_varient_response);
+//                               }
+//                             }
+//                           })
+
+//                         } else if (request.data.quizType === constant.prePostConstans.manualType) {
+//                           // Manual : 
+//                           exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
+//                             if (add_express_quiz_basedon_varient_err) {
+//                               callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
+//                             } else {
+
+//                               if (add_express_quiz_basedon_varient_response === 200) {
+
+//                                 if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+//                                   console.log("test 7");
+
+//                                   exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                     if (create_pdf_and_update_details_err) {
+
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     } else {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     }
+//                                   })
+
+//                                 } else if (request.data.quizMode === "online") {
+
+//                                   exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
+//                                     if (create_pdf_and_update_details_err) {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     } else {
+//                                       callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
+//                                     }
+//                                   })
+
+//                                 } else {
+//                                   callback(400, constant.messages.INVALID_QUIZ_MODE)
+//                                 }
+
+//                               } else {
+//                                 callback(400, add_express_quiz_basedon_varient_response);
+//                               }
+//                             }
+//                           })
+//                         }
+
+//                       }
+//                     })
+//                   }
+//                 })
+//               }
+//             }
+//           }
+//           else {
+//             console.log(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+//             callback(400, constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+//           }
+//         }
+//       })
+//     }
+//   })
+// }
+
+exports.generateQuizForPostLearning = (request, callback) => {
   /** CHECK PRE QUIZ EXIST **/
   quizRepository.fetchQuizData(request, async function (postQuizData_err, postQuizData_res) {
     if (postQuizData_err) {
       console.log(postQuizData_err);
-      callback(postQuizData_err, postQuizData_res);
+      return callback(postQuizData_err, postQuizData_res);
     }
-    else {
-      schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
-        if (schoolDataErr) {
-          console.log(schoolDataErr);
-          callback(schoolDataErr, schoolDataRes);
-        }
-        else {
-          if (schoolDataRes.Items[0].post_quiz_config) {
-            let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
-            if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
-              console.log(constant.messages.POST_QUIZ_ALREADY_GENERATED);
-              callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED);
-            }
-            else {
-              request.data.pre_post_quiz_config = postQuizConfig;
-              request.data.quiz_id = helper.getRandomString();
-              request.data.quiz_duration = 0;
 
-              if (request.data.quizType === constant.prePostConstans.automatedType) {
-                let selectedTop = [];
-                if (request.data.topicList.length > 0) {
-                  await request.data.topicList.map(reqTop => {
-                    selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
-                  })
+    schoolRepository.getSchoolDetailsById(request, async (schoolDataErr, schoolDataRes) => {
+      if (schoolDataErr) {
+        console.log(schoolDataErr);
+        return callback(schoolDataErr, schoolDataRes);
+      }
 
-                  request.data.selectedTopics = selectedTop;
-                  request.data.AcitveTopics = request.data.topicList;
+      if (!schoolDataRes.Items[0].post_quiz_config) {
+        console.log(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+        return callback(400, constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
+      }
 
-                  exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
-                    if (add_quiz_basedon_varient_err) {
-                      callback(add_quiz_basedon_varient_err, 0);
-                    } else {
+      let postQuizConfig = schoolDataRes.Items[0].post_quiz_config;
 
-                      if (add_quiz_basedon_varient_response === 200) {
+      if (postQuizData_res.Items.length > 0 && postQuizConfig.choose_topic === "No") {
+        console.log(constant.messages.POST_QUIZ_ALREADY_GENERATED);
+        return callback(400, constant.messages.POST_QUIZ_ALREADY_GENERATED);
+      }
 
-                        if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                          console.log("test 4");
+      request.data.pre_post_quiz_config = postQuizConfig;
+      request.data.quiz_id = helper.getRandomString();
+      request.data.quiz_duration = 0;
 
-                          exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                            if (create_pdf_and_update_details_err) {
+      // ========== AUTOMATED QUIZ TYPE ==========
+      if (request.data.quizType === constant.prePostConstans.automatedType) {
+        let selectedTop = [];
 
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            } else {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            }
-                          })
+        // If topics are provided manually
+        if (request.data.topicList.length > 0) {
+          await request.data.topicList.map(reqTop => {
+            selectedTop.push({ topic_id: reqTop, noOfQuestions: "N.A." });
+          });
 
-                        } else if (request.data.quizMode === "online") {
+          request.data.selectedTopics = selectedTop;
+          request.data.AcitveTopics = request.data.topicList;
 
-                          exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                            if (create_pdf_and_update_details_err) {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            } else {
-                              callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                            }
-                          })
+          exports.addAutomatedQuizBasedonVarient(request, (err, res) => {
+            if (err) return callback(err, 0);
+            handleQuizPostCreation(request, res, callback);
+          });
+        } else {
+          // Auto-select topics for post-learning
+          teachingActivityRepository.fetchTeachingActivity(request, async function (teachErr, teachRes) {
+            if (teachErr) return callback(teachErr, teachRes);
 
-                        } else {
-                          callback(400, constant.messages.INVALID_QUIZ_MODE)
-                        }
+            let chapterActivity = teachRes.Items.length > 0
+              ? teachRes.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id)
+              : [];
+            let archivedTopics = chapterActivity.length > 0
+              ? chapterActivity[0].post_learning.archivedTopics
+              : [];
 
-                      } else {
-                        callback(400, add_quiz_basedon_varient_response);
-                      }
-                    }
-                  })
-                }
-                else {
-                  // Generate for All Post Topics for the Chapter : 
-                  /** FETCH TEACHING ACTIVITY **/
-                  teachingActivityRepository.fetchTeachingActivity(request, async function (teachActivity_err, teachActivity_response) {
-                    if (teachActivity_err) {
-                      console.log(teachActivity_err);
-                      callback(teachActivity_err, teachActivity_response);
-                    } else {
-                      let chapterActivity = teachActivity_response.Items.length > 0 ? teachActivity_response.Items[0].chapter_data.filter(ce => ce.chapter_id === request.data.chapter_id) : [];
-                      let archivedTopics = chapterActivity.length > 0 ? chapterActivity[0].post_learning.archivedTopics : [];
+            chapterRepository.fetchChapterByID(request, async function (chapErr, chapRes) {
+              if (chapErr) return callback(chapErr, chapRes);
 
-                      /** FETCH CHAPTER DATA **/
-                      chapterRepository.fetchChapterByID(request, async function (chapterData_err, chapterData_response) {
-                        if (chapterData_err) {
-                          console.log(chapterData_err);
-                          callback(chapterData_err, chapterData_response);
-                        } else {
-                          let postLearningTopicIds = chapterData_response.Items.length > 0 ? chapterData_response.Items[0].postlearning_topic_id : [];
+              let postLearningTopicIds = chapRes.Items.length > 0
+                ? chapRes.Items[0].postlearning_topic_id
+                : [];
+              let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
 
-                          let AcitveTopics = await helper.getDifferenceValueFromTwoArray(postLearningTopicIds, archivedTopics);
-
-                          if (AcitveTopics.length > 0) {
-                            await AcitveTopics.forEach(actTop => {
-                              selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
-                            })
-
-                            request.data.selectedTopics = selectedTop;
-                            request.data.AcitveTopics = AcitveTopics;
-
-                            exports.addAutomatedQuizBasedonVarient(request, (add_quiz_basedon_varient_err, add_quiz_basedon_varient_response) => {
-                              if (add_quiz_basedon_varient_err) {
-                                callback(add_quiz_basedon_varient_err, 0);
-                              } else {
-
-                                if (add_quiz_basedon_varient_response === 200) {
-
-                                  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-
-                                    exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                      if (create_pdf_and_update_details_err) {
-
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      } else {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      }
-                                    })
-
-                                  } else if (request.data.quizMode === "online") {
-
-                                    exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                      if (create_pdf_and_update_details_err) {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      } else {
-                                        callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                      }
-                                    })
-
-                                  } else {
-                                    callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                  }
-
-                                } else {
-                                  callback(400, add_quiz_basedon_varient_response);
-                                }
-                              }
-                            })
-                          }
-                          else {
-                            console.log(constant.messages.NO_ACTIVE_TOPICS);
-                            callback(400, constant.messages.NO_ACTIVE_TOPICS);
-                          }
-                        }
-                      })
-                    }
-                  })
-                }
-                // set selected topics to the request here 
+              if (!AcitveTopics.length) {
+                console.log(constant.messages.NO_ACTIVE_TOPICS);
+                return callback(400, constant.messages.NO_ACTIVE_TOPICS);
               }
-              else {
-                let selectedTopics = request.data.selectedTopics.map((topicDetails) => topicDetails.topic_id);
 
-                topicRepository.fetchTopicConceptIDData({ topic_array: selectedTopics }, async function (fetch_topics_err, fetch_topics_response) {
-                  if (fetch_topics_err) {
-                    console.log(fetch_topics_err);
-                    callback(fetch_topics_err, fetch_topics_response);
-                  } else {
-                    let topic_concept_id = [];
-                    await fetch_topics_response.Items.forEach((e) => topic_concept_id.push(...e.topic_concept_id));
+              AcitveTopics.forEach(actTop => {
+                selectedTop.push({ topic_id: actTop, noOfQuestions: "N.A." });
+              });
 
-                    conceptRepository.fetchConceptData({ topic_concept_id: topic_concept_id }, async function (fetch_concepts_err, fetch_concepts_response) {
-                      if (fetch_concepts_err) {
-                        console.log(fetch_concepts_err);
-                        callback(fetch_concepts_err, fetch_concepts_response);
-                      } else {
+              request.data.selectedTopics = selectedTop;
+              request.data.AcitveTopics = AcitveTopics;
 
-                        if (request.data.quizType === constant.prePostConstans.expressType) {
-                          // Express : 
-                          exports.addExpressQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
+              exports.addAutomatedQuizBasedonVarient(request, (err, res) => {
+                if (err) return callback(err, 0);
+                handleQuizPostCreation(request, res, callback);
+              });
+            });
+          });
+        }
+      }
 
-                              if (add_express_quiz_basedon_varient_response === 200) {
+      // ========== EXPRESS / MANUAL QUIZ TYPE ==========
+      else {
+        let selectedTopics = request.data.selectedTopics.map(topicDetails => topicDetails.topic_id);
 
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                                  console.log("test 6");
+        topicRepository.fetchTopicConceptIDData(
+          { topic_array: selectedTopics },
+          async function (fetchTopicsErr, fetchTopicsRes) {
+            if (fetchTopicsErr) return callback(fetchTopicsErr, fetchTopicsRes);
 
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
+            let topic_concept_id = [];
+            fetchTopicsRes.Items.forEach(e => topic_concept_id.push(...e.topic_concept_id));
 
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
+            conceptRepository.fetchConceptData(
+              { topic_concept_id },
+              async function (fetchConceptsErr, fetchConceptsRes) {
+                if (fetchConceptsErr) return callback(fetchConceptsErr, fetchConceptsRes);
 
-                                } else if (request.data.quizMode === "online") {
+                // Add total quiz duration based on concept difficulty levels
+                try {
+                  const totalDuration = fetchConceptsRes.Items.reduce((acc, concept) => {
+                    // You can customize this based on your data
+                    const baseDuration =
+                      concept.difficulty === "advanced"
+                        ? 3
+                        : concept.difficulty === "intermediate"
+                          ? 2
+                          : 1; // minutes
+                    return acc + baseDuration;
+                  }, 0);
 
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
+                  request.data.quiz_duration = totalDuration;
+                } catch (err) {
+                  console.log("Error calculating quiz duration:", err);
+                }
 
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
+                // ========== EXPRESS QUIZ ==========
+                if (request.data.quizType === constant.prePostConstans.expressType) {
+                  exports.addExpressQuizBasedonVarient(
+                    request,
+                    fetchTopicsRes.Items,
+                    fetchConceptsRes.Items,
+                    (err, res) => {
+                      if (err) return callback(err, res);
+                      handleQuizPostCreation(request, res, callback);
+                    }
+                  );
+                }
 
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
+                // ========== MANUAL QUIZ ==========
+                else if (request.data.quizType === constant.prePostConstans.manualType) {
+                  // ✅ Validation for marks and keyword weightages
+                  try {
+                    const allConcepts = fetchConceptsRes.Items || [];
 
-                        } else if (request.data.quizType === constant.prePostConstans.manualType) {
-                          // Manual : 
-                          exports.addManualQuizBasedonVarient(request, fetch_topics_response.Items, fetch_concepts_response.Items, (add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response) => {
-                            if (add_express_quiz_basedon_varient_err) {
-                              callback(add_express_quiz_basedon_varient_err, add_express_quiz_basedon_varient_response);
-                            } else {
+                    for (const concept of allConcepts) {
+                      if (concept.answerOptions && concept.totalMarks) {
+                        const totalMarks = Number(concept.totalMarks ?? 0);
 
-                              if (add_express_quiz_basedon_varient_response === 200) {
+                        const sumOfSubQuestionMarks = concept.answerOptions?.reduce(
+                          (acc, ele) => acc + Number(ele?.marks ?? 0),
+                          0
+                        );
 
-                                if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
-                                  console.log("test 7");
-
-                                  exports.createPDFandUpdateTemplateDetails(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else if (request.data.quizMode === "online") {
-
-                                  exports.sendMailtoTeacher(request, (create_pdf_and_update_details_err, create_pdf_and_update_details_response) => {
-                                    if (create_pdf_and_update_details_err) {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    } else {
-                                      callback(create_pdf_and_update_details_err, create_pdf_and_update_details_response);
-                                    }
-                                  })
-
-                                } else {
-                                  callback(400, constant.messages.INVALID_QUIZ_MODE)
-                                }
-
-                              } else {
-                                callback(400, add_express_quiz_basedon_varient_response);
-                              }
-                            }
-                          })
+                        if (sumOfSubQuestionMarks !== totalMarks) {
+                          console.log(
+                            `Mismatch in total marks for concept ${concept.concept_id}. Expected ${totalMarks}, got ${sumOfSubQuestionMarks}`
+                          );
+                          return callback(
+                            400,
+                            `Subquestion marks must total exactly ${totalMarks} for concept ${concept.concept_id}`
+                          );
                         }
 
+                        for (const sub of concept.answerOptions) {
+                          const subMarks = Number(sub.marks ?? 0);
+                          const totalKeywordWeight = sub.keywords?.reduce(
+                            (acc, keyword) => acc + Number(keyword?.answer_weightage ?? 0),
+                            0
+                          );
+
+                          if (totalKeywordWeight !== subMarks) {
+                            console.log(
+                              `Mismatch in keyword weightages for subquestion in concept ${concept.concept_id}. Expected ${subMarks}, got ${totalKeywordWeight}`
+                            );
+                            return callback(
+                              400,
+                              `Keyword weightages must total ${subMarks} for a subquestion in concept ${concept.concept_id}`
+                            );
+                          }
+                        }
                       }
-                    })
+                    }
+
+                    console.log("✅ All weightages and marks validated successfully");
+                  } catch (err) {
+                    console.error("Validation Error:", err);
+                    return callback(400, "Error validating subquestion marks or keyword weightages.");
                   }
-                })
+
+                  exports.addManualQuizBasedonVarient(
+                    request,
+                    fetchTopicsRes.Items,
+                    fetchConceptsRes.Items,
+                    (err, res) => {
+                      if (err) return callback(err, res);
+                      handleQuizPostCreation(request, res, callback);
+                    }
+                  );
+                }
               }
-            }
+            );
           }
-          else {
-            console.log(constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
-            callback(400, constant.messages.SCHOOL_DOESNT_HAVE_PREQUIZ_CONFIG);
-          }
-        }
-      })
-    }
-  })
+        );
+      }
+    });
+  });
+};
+
+/** Helper: handle common post-generation logic (PDF creation, mail, etc.) */
+function handleQuizPostCreation(request, response, callback) {
+  if (response !== 200) return callback(400, response);
+
+  if (request.data.quizMode === "offline" || request.data.quizMode === "online") {
+    console.log("Generating PDF & updating template...");
+    exports.createPDFandUpdateTemplateDetails(request, (err, res) => callback(err, res));
+  } else if (request.data.quizMode === "online") {
+    console.log("Sending quiz mail to teacher...");
+    exports.sendMailtoTeacher(request, (err, res) => callback(err, res));
+  } else {
+    callback(400, constant.messages.INVALID_QUIZ_MODE);
+  }
 }
+
+
 exports.addteacherDigicardExtension = async (request) => {
   try {
     const digiExtensionResponse = await digicardExtension.getExtensionDetails2(request);
