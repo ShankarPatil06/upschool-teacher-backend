@@ -1,5 +1,5 @@
 const chapterServices = require("../services/chapterServices");
-const { schoolRepository, chapterRepository, topicRepository, teachingActivityRepository, conceptRepository, groupRepository } = require("../repository")
+const { schoolRepository, chapterRepository, topicRepository, teachingActivityRepository, conceptRepository, groupRepository, questionRepository } = require("../repository")
 const constant = require('../constants/constant');
 const helper = require('../helper/helper');
 
@@ -348,6 +348,9 @@ exports.calculateCountUsingMatrix = function (basic_groups, intermediate_groups,
 
     callback(0, questionsCount);
 }
+
+exports.fetchQuestionDurationByIds = async (request) => await questionRepository.fetchQuestionDurationByIds(request);
+
 
 
 

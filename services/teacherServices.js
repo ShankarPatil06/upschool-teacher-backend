@@ -507,8 +507,13 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
                       } else {
                         // Final 
-                        await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
-                        request.data.quiz_duration += quiz_duration;
+
+                        let question_ids = (group_list?.map(ele => ele?.group_question_id))?.flat();
+                        let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
+                        const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
+
+                        // await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
+                        // request.data.quiz_duration += quiz_duration;
 
                         let indheck = [];
                         async function qtnLoop(ind) {
@@ -526,6 +531,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                                 qtnLoop(ind);
                               } else {
                                 questions_list.push(qtn_id);
+                                quiz_duration = quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
                                 randomDupCheck.push(qtn_id);
                                 ind++;
                                 qtnLoop(ind);
@@ -580,7 +586,12 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                   } else if (request.data.varient === "randomQuestions") {
 
                     await helper.getRandomGroups(group_response.Items, request.data.noOfQuestionsForAuto, quiz_duration).then(async (data) => {
-                      request.data.quiz_duration += data.quiz_duration;
+                      // request.data.quiz_duration += data.quiz_duration;
+
+                      let question_ids = (data.group_list?.map(ele => ele?.group_question_id))?.flat();
+                      let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
+                      const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
+
                       request.data.question_track_details = {};
                       // Declcare all topics as selected in an Obj 
                       let non_considered_topic_data = {};
@@ -594,6 +605,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
 
                           let indheck = [];
                           let questions_list = [];
+                          let set_quiz_duration = 0
                           randomDupCheck = [];
 
                           async function qtnLoop(ind) {
@@ -612,7 +624,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                                 } else {
                                   questions_list.push(qtn_id);
                                   randomDupCheck.push(qtn_id)
-
+                                  set_quiz_duration = set_quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
                                   ind++;
                                   qtnLoop(ind);
                                 }
@@ -626,7 +638,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                               let { res_questionTrackData, res_non_considered_topic_data } = await helper.getQuestionTrackForAutomatic(request.data.selectedTopics, fetch_topics_response.Items, fetch_concepts_response.Items, questions_list, non_considered_topic_data, data.group_list);
 
                               res_questionTrackData = await helper.removeDuplicatesFromArrayOfObj(res_questionTrackData, 'question_id');
-
+                              request.data.quiz_duration = set_quiz_duration;
                               if (setIndex === 1) {
                                 request.data.quiz_question_details.qp_set_a = questions_list
                                 request.data.question_track_details.qp_set_a = res_questionTrackData
@@ -682,7 +694,6 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
   })
 }
 exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_response, callback) => {
-
   let randomOrderQuestions = [];
   let setAQuestions = [];
   let setBQuestions = [];
@@ -706,34 +717,25 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
   request.data.question_track_details = {};
 
   request.data.selectedTopics.forEach((topic) => {
-    non_considered_topic_data[topic.topic_id] = true
+    non_considered_topic_data[topic.topic_id] = true;
   });
 
   async function topicLoop(topicIndex) {
     if (topicIndex < topic_response.length) {
-
       let topicData = topic_response[topicIndex];
-
       let splitGroups = await helper.splitGroups(topicData, concepts_response);
-
       let basic_groups = splitGroups.basic_groups;
       let intermediate_groups = splitGroups.intermediate_groups;
       let advanced_groups = splitGroups.advanced_groups;
-
-      // basic_groups = helper.removeDuplicates(basic_groups);
-      // intermediate_groups = helper.removeDuplicates(intermediate_groups);
-      // advanced_groups = helper.removeDuplicates(advanced_groups);
 
       basic_groups = await questionServices.processGroups(basic_groups);
       intermediate_groups = await questionServices.processGroups(intermediate_groups);
       advanced_groups = await questionServices.processGroups(advanced_groups);
 
-
       questionServices.calculateCountUsingMatrix(basic_groups, intermediate_groups, advanced_groups, request.data.pre_post_quiz_config, async (matrix_err, matrix_response) => {
         if (matrix_err) {
           callback(400, matrix_err);
         } else {
-
           basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
           intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
           advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
@@ -748,20 +750,39 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
               console.log(group_err);
               callback(group_err, group_response);
             } else {
-
+              // ================================
+              // VARIANT: RANDOM ORDER
+              // ================================
               if (request.data.varient === "randomOrder") {
-
-                await helper.getRandomQuestionsFromGroups(group_response.Items, topicData.noOfQuestions, randomDupCheck, quiz_duration).then((data) => {
-
+                // Get random questions
+                await helper.getRandomQuestionsFromGroups(group_response.Items, topicData.noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
                   if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
                     callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
                   } else {
+                    // Fetch question durations
+                    let question_ids = (data.group_list?.map(ele => ele?.group_question_id))?.flat();
+                    let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
+                    const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
+
+                    // Sum up durations for chosen questions
+                    let topic_quiz_duration = 0;
+                    data.questions_list.forEach(qtn_id => {
+                      topic_quiz_duration += Number(QuestionIdsNDurationMap.get(qtn_id)?.duration_per_question || 0);
+                    });
+
+                    request.data.quiz_duration += topic_quiz_duration;
                     randomOrderQuestions.push(...data.questions_list);
                     randomDupCheck = data.randomDupCheck;
-                    request.data.quiz_duration += data.quiz_duration;
 
-                    // getting Question tracking per each topic : 
-                    let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, data.questions_list, non_considered_topic_data, data.group_list);
+                    // Track questions per topic
+                    let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(
+                      topicData,
+                      topic_response,
+                      concepts_response,
+                      data.questions_list,
+                      non_considered_topic_data,
+                      data.group_list
+                    );
 
                     non_considered_topic_data = res_non_considered_topic_data;
                     questionTrackData.push(...res_topic);
@@ -769,66 +790,74 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                     topicIndex++;
                     topicLoop(topicIndex);
                   }
-                })
-                  .catch(function (err) {
-                    console.log(err);
-                    callback(400, err);
-                  })
+                }).catch(function (err) {
+                  console.log(err);
+                  callback(400, err);
+                });
+              }
 
-              } else if (request.data.varient === "randomQuestions") {
-
+              // ================================
+              // VARIANT: RANDOM QUESTIONS
+              // ================================
+              else if (request.data.varient === "randomQuestions") {
                 await helper.getRandomGroups(group_response.Items, topicData.noOfQuestions, quiz_duration).then(async (data) => {
-                  request.data.quiz_duration += data.quiz_duration;
+                  // Fetch question durations
+                  let question_ids = (data.group_list?.map(ele => ele?.group_question_id))?.flat();
+                  let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
+                  const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
 
-                  // Create 3 Sets of Question Paper : 
                   async function splitSetQuestions(setIndex) {
                     if (setIndex < 4) {
-
                       let indheck = [];
                       let questions_list = [];
+                      let set_quiz_duration = 0;
 
                       function qtnLoop(ind) {
                         if (ind < data.group_list.length) {
-
                           if (indheck.length < Number(topicData.noOfQuestions)) {
                             if (data.group_list[ind].group_question_id.length > 0) {
-
-                              // Pick Random Questions out of each group : 
                               const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
                               let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                              let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
+                              let dupCheck = setIndex === 1 ? setADupCheck.includes(qtn_id)
+                                : setIndex === 2 ? setBDupCheck.includes(qtn_id)
+                                  : setCDupCheck.includes(qtn_id);
 
                               !indheck.includes(randomIndex) && indheck.push(randomIndex);
 
-                              if (dupCheck.length > 0) {
+                              if (dupCheck) {
                                 qtnLoop(ind);
                               } else {
                                 questions_list.push(qtn_id);
-                                if (setIndex === 1) {
-                                  setADupCheck.push(qtn_id)
-                                } else if (setIndex === 2) {
-                                  setBDupCheck.push(qtn_id)
-                                } else if (setIndex === 3) {
-                                  setCDupCheck.push(qtn_id)
-                                }
+                                set_quiz_duration += Number(QuestionIdsNDurationMap.get(qtn_id)?.duration_per_question || 0);
+
+                                if (setIndex === 1) setADupCheck.push(qtn_id);
+                                if (setIndex === 2) setBDupCheck.push(qtn_id);
+                                if (setIndex === 3) setCDupCheck.push(qtn_id);
 
                                 ind++;
                                 qtnLoop(ind);
                               }
                             } else {
                               ind++;
-                              qtnLoop(ind)
+                              qtnLoop(ind);
                             }
-
                           } else {
                             console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                            callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
+                            callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
                           }
-
                         } else {
-                          // getting Question tracking per each topic : 
-                          let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(topicData, topic_response, concepts_response, questions_list, non_considered_topic_data, data.group_list);
+                          // Track question info
+                          let { res_topic, res_non_considered_topic_data } = helper.getQuestionTrackForExpress(
+                            topicData,
+                            topic_response,
+                            concepts_response,
+                            questions_list,
+                            non_considered_topic_data,
+                            data.group_list
+                          );
+
                           non_considered_topic_data = res_non_considered_topic_data;
+                          request.data.quiz_duration += set_quiz_duration;
 
                           if (setIndex === 1) {
                             setAQuestions.push(...questions_list);
@@ -846,50 +875,40 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
                           setIndex++;
                           splitSetQuestions(setIndex);
                         }
-                      };
+                      }
                       qtnLoop(0);
-
                     } else {
                       topicIndex++;
                       topicLoop(topicIndex);
                     }
                   }
                   await splitSetQuestions(1);
-
-                })
-                  .catch(function (err) {
-                    console.log(err);
-                    callback(400, err);
-                  })
+                }).catch(function (err) {
+                  console.log(err);
+                  callback(400, err);
+                });
               }
-
             }
-          })
+          });
         }
       });
-
     } else {
-      // After Topic Loop is Over : 
+      // ✅ After all topics processed
       if (request.data.varient === "randomOrder") {
-
         questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
-
-        // // Formatting Topic-Concept-Group-Question level DS 
-        request.data.question_track_details.qp_set_a = questionTrackData
-        request.data.question_track_details.qp_set_b = questionTrackData
-        request.data.question_track_details.qp_set_c = questionTrackData
+        request.data.question_track_details.qp_set_a = questionTrackData;
+        request.data.question_track_details.qp_set_b = questionTrackData;
+        request.data.question_track_details.qp_set_c = questionTrackData;
 
         request.data.quiz_question_details.qp_set_a = await helper.shuffleArray(randomOrderQuestions);
         request.data.quiz_question_details.qp_set_b = await helper.shuffleArray(randomOrderQuestions);
         request.data.quiz_question_details.qp_set_c = await helper.shuffleArray(randomOrderQuestions);
 
-        // add Non considered topics to DB : 
         request.data.not_considered_topics = [];
         for (var i in non_considered_topic_data) {
           non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-        };
+        }
 
-        // Add Quiz : 
         quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
           if (addQuiz_err) {
             console.log(addQuiz_err);
@@ -898,10 +917,8 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
             console.log("QUIZ GENERATED!");
             callback(0, 200);
           }
-        })
+        });
       } else if (request.data.varient === "randomQuestions") {
-
-        // get Questions track based on Set of Diff. questions 
         request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
         request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');
         request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');
@@ -910,13 +927,11 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
         request.data.quiz_question_details.qp_set_b = setBQuestions;
         request.data.quiz_question_details.qp_set_c = setCQuestions;
 
-        // Add Non considered topics to DB : 
         request.data.not_considered_topics = [];
         for (var i in non_considered_topic_data) {
           non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-        };
+        }
 
-        // Add Quiz : 
         quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
           if (addQuiz_err) {
             console.log(addQuiz_err);
@@ -925,13 +940,14 @@ exports.addExpressQuizBasedonVarient = async (request, topic_response, concepts_
             console.log("QUIZ GENERATED!");
             callback(0, 200);
           }
-        })
+        });
       }
-
     }
   }
+
   await topicLoop(0);
-}
+};
+
 exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_response, callback) => {
 
   let randomOrderQuestions = [];
@@ -952,19 +968,18 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
 
   concepts_response = await helper.assignNumberofQuestions(concepts_response, request.data.selectedTopics, "concepts");
 
-  // Declcare all topics as selected in an Obj 
+  // Declare all topics as selected in an Obj 
   let non_considered_topic_data = {};
   request.data.question_track_details = {};
 
   request.data.selectedTopics.forEach((topic) => {
-    non_considered_topic_data[topic.topic_id] = true
+    non_considered_topic_data[topic.topic_id] = true;
   });
 
   async function topicLoop(topicIndex) {
     if (topicIndex < topic_response.length) {
 
       async function conceptLoop(conceptIndex) {
-
         if (conceptIndex < request.data.selectedTopics[topicIndex].selectedConcepts.length) {
 
           let conceptId = request.data.selectedTopics[topicIndex].selectedConcepts[conceptIndex].concept_id;
@@ -974,10 +989,6 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
           let intermediate_groups = conceptData[0].concept_group_id.intermediate;
           let advanced_groups = conceptData[0].concept_group_id.advanced;
 
-          // basic_groups = helper.removeDuplicates(basic_groups);
-          // intermediate_groups = helper.removeDuplicates(intermediate_groups);
-          // advanced_groups = helper.removeDuplicates(advanced_groups);
-
           basic_groups = await questionServices.processGroups(basic_groups);
           intermediate_groups = await questionServices.processGroups(intermediate_groups);
           advanced_groups = await questionServices.processGroups(advanced_groups);
@@ -986,7 +997,6 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
             if (matrix_err) {
               callback(400, matrix_err);
             } else {
-
               basic_groups = basic_groups.slice(0, Number(matrix_response.basic_count));
               intermediate_groups = intermediate_groups.slice(0, Number(matrix_response.intermediate_count));
               advanced_groups = advanced_groups.slice(0, Number(matrix_response.advance_count));
@@ -1001,194 +1011,169 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
                   callback(group_err, group_response);
                 } else {
 
+                  // ✅ Fetch question durations from DB
+                  let question_ids = (group_response?.Items?.map(ele => ele?.group_question_id))?.flat();
+                  let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
+                  const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
+
                   if (request.data.varient === "randomOrder") {
-
-                    await helper.getRandomQuestionsFromGroups(group_response.Items, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration).then(async (data) => {
-
-                      if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
-                        callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
-                      } else {
-                        randomOrderQuestions.push(...data.questions_list);
-                        randomDupCheck = data.randomDupCheck;
-                        request.data.quiz_duration += data.quiz_duration;
-
-                        // getting Question tracking per each topic : 
-                        let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, data.questions_list, non_considered_topic_data, data.group_list);
-
-                        non_considered_topic_data = res_non_considered_topic_data;
-                        questionTrackData.push(...res_concept);
-
-                        conceptIndex++;
-                        conceptLoop(conceptIndex);
-                      }
-
-                    })
-                      .catch(function (err) {
-                        console.log(err);
-                        callback(400, err);
-                      })
-
-                  } else if (request.data.varient === "randomQuestions") {
-
-                    await helper.getRandomGroups(group_response.Items, conceptData[0].noOfQuestions, quiz_duration).then(async (data) => {
-                      request.data.quiz_duration += data.quiz_duration;
-
-                      // Create 3 Sets of Question Paper : 
-                      function splitSetQuestions(setIndex) {
-                        if (setIndex < 4) {
-
-                          let indheck = [];
-                          let questions_list = [];
-                          async function qtnLoop(ind) {
-                            if (ind < data.group_list.length) {
-
-                              if (indheck.length < Number(conceptData[0].noOfQuestions)) { // data.group_list[ind].group_question_id.length
-                                // Pick Random Questions out of each group : 
-                                const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
-                                let qtn_id = data.group_list[ind].group_question_id[randomIndex];
-                                let dupCheck = setIndex === 1 ? setADupCheck.filter((id) => id === qtn_id) : setIndex === 2 ? setBDupCheck.filter((id) => id === qtn_id) : setCDupCheck.filter((id) => id === qtn_id);
-
-                                !indheck.includes(randomIndex) && indheck.push(randomIndex);
-
-                                if (dupCheck.length > 0) {
-                                  qtnLoop(ind);
-                                } else {
-                                  questions_list.push(qtn_id);
-                                  if (setIndex === 1) {
-                                    setADupCheck.push(qtn_id)
-                                  } else if (setIndex === 2) {
-                                    setBDupCheck.push(qtn_id)
-                                  } else if (setIndex === 3) {
-                                    setCDupCheck.push(qtn_id)
-                                  }
-                                  ind++;
-                                  qtnLoop(ind);
-                                }
-                              } else {
-                                console.log(constant.messages.INSUFFICIENT_QUESTIONS);
-                                callback(0, constant.messages.INSUFFICIENT_QUESTIONS)
-                              }
-
-                            } else {
-
-                              // getting Question tracking per each topic : 
-                              let { res_concept, res_non_considered_topic_data } = await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id, conceptData, questions_list, non_considered_topic_data, data.group_list);
-
-                              non_considered_topic_data = res_non_considered_topic_data;
-
-                              if (setIndex === 1) {
-                                setAQuestions.push(...questions_list);
-                                setAQuestionTrackData.push(...res_concept)
-                              };
-                              if (setIndex === 2) {
-                                setBQuestions.push(...questions_list);
-                                setBQuestionTrackData.push(...res_concept)
-                              };
-                              if (setIndex === 3) {
-                                setCQuestions.push(...questions_list);
-                                setCQuestionTrackData.push(...res_concept)
-                              };
-
-                              setIndex++;
-                              splitSetQuestions(setIndex);
-
-                            }
-                          };
-                          qtnLoop(0);
-
+                    await helper.getRandomQuestionsFromGroups(group_response.Items, conceptData[0].noOfQuestions, randomDupCheck, quiz_duration)
+                      .then(async (data) => {
+                        if (data === constant.messages.INSUFFICIENT_QUESTIONS) {
+                          callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
                         } else {
+                          randomOrderQuestions.push(...data.questions_list);
+                          randomDupCheck = data.randomDupCheck;
+
+                          // ✅ Add duration for each selected question
+                          let topicQuizDuration = data.questions_list.reduce((acc, qid) => {
+                            return acc + (QuestionIdsNDurationMap.get(qid)?.duration_per_question || 0);
+                          }, 0);
+                          request.data.quiz_duration += topicQuizDuration;
+
+                          let { res_concept, res_non_considered_topic_data } =
+                            await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id,
+                              conceptData, data.questions_list, non_considered_topic_data, data.group_list);
+
+                          non_considered_topic_data = res_non_considered_topic_data;
+                          questionTrackData.push(...res_concept);
 
                           conceptIndex++;
                           conceptLoop(conceptIndex);
                         }
-                      }
-                      await splitSetQuestions(1);
-
-                    })
+                      })
                       .catch(function (err) {
                         console.log(err);
                         callback(400, err);
+                      });
+
+                  } else if (request.data.varient === "randomQuestions") {
+                    await helper.getRandomGroups(group_response.Items, conceptData[0].noOfQuestions, quiz_duration)
+                      .then(async (data) => {
+                        // We'll compute duration per set instead of relying on data.quiz_duration
+                        async function splitSetQuestions(setIndex) {
+                          if (setIndex < 4) {
+                            let indheck = [];
+                            let questions_list = [];
+                            let set_quiz_duration = 0;
+
+                            async function qtnLoop(ind) {
+                              if (ind < data.group_list.length) {
+                                if (indheck.length < Number(conceptData[0].noOfQuestions)) {
+                                  const randomIndex = Math.floor(Math.random() * data.group_list[ind].group_question_id.length);
+                                  let qtn_id = data.group_list[ind].group_question_id[randomIndex];
+                                  let dupCheck =
+                                    setIndex === 1 ? setADupCheck.includes(qtn_id)
+                                      : setIndex === 2 ? setBDupCheck.includes(qtn_id)
+                                        : setCDupCheck.includes(qtn_id);
+
+                                  if (!dupCheck) {
+                                    questions_list.push(qtn_id);
+                                    set_quiz_duration += (QuestionIdsNDurationMap.get(qtn_id)?.duration_per_question || 0);
+
+                                    if (setIndex === 1) setADupCheck.push(qtn_id);
+                                    if (setIndex === 2) setBDupCheck.push(qtn_id);
+                                    if (setIndex === 3) setCDupCheck.push(qtn_id);
+                                  }
+                                  ind++;
+                                  qtnLoop(ind);
+                                } else {
+                                  console.log(constant.messages.INSUFFICIENT_QUESTIONS);
+                                  callback(0, constant.messages.INSUFFICIENT_QUESTIONS);
+                                }
+                              } else {
+                                let { res_concept, res_non_considered_topic_data } =
+                                  await helper.getQuestionTrackForManual(request.data.selectedTopics[topicIndex].topic_id,
+                                    conceptData, questions_list, non_considered_topic_data, data.group_list);
+
+                                non_considered_topic_data = res_non_considered_topic_data;
+                                request.data.quiz_duration += set_quiz_duration; // ✅ accumulate duration for this set
+
+                                if (setIndex === 1) {
+                                  setAQuestions.push(...questions_list);
+                                  setAQuestionTrackData.push(...res_concept);
+                                }
+                                if (setIndex === 2) {
+                                  setBQuestions.push(...questions_list);
+                                  setBQuestionTrackData.push(...res_concept);
+                                }
+                                if (setIndex === 3) {
+                                  setCQuestions.push(...questions_list);
+                                  setCQuestionTrackData.push(...res_concept);
+                                }
+
+                                setIndex++;
+                                splitSetQuestions(setIndex);
+                              }
+                            }
+                            qtnLoop(0);
+                          } else {
+                            conceptIndex++;
+                            conceptLoop(conceptIndex);
+                          }
+                        }
+                        await splitSetQuestions(1);
                       })
-
+                      .catch(function (err) {
+                        console.log(err);
+                        callback(400, err);
+                      });
                   }
-
                 }
-              })
+              });
             }
-          })
-
+          });
         } else {
-          // Loop Topic : 
           topicIndex++;
           topicLoop(topicIndex);
         }
-
       }
       conceptLoop(0);
-
     } else {
-      // After Topic Loop is Over : 
+      // ✅ After Topic Loop is Over
       if (request.data.varient === "randomOrder") {
-
         questionTrackData = await helper.removeDuplicatesFromArrayOfObj(questionTrackData, 'question_id');
 
-        // // // Formatting Topic-Concept-Group-Question level DS 
-        request.data.question_track_details.qp_set_a = questionTrackData
-        request.data.question_track_details.qp_set_b = questionTrackData
-        request.data.question_track_details.qp_set_c = questionTrackData
+        request.data.question_track_details.qp_set_a = questionTrackData;
+        request.data.question_track_details.qp_set_b = questionTrackData;
+        request.data.question_track_details.qp_set_c = questionTrackData;
 
         request.data.quiz_question_details.qp_set_a = await helper.shuffleArray(randomOrderQuestions);
         request.data.quiz_question_details.qp_set_b = await helper.shuffleArray(randomOrderQuestions);
         request.data.quiz_question_details.qp_set_c = await helper.shuffleArray(randomOrderQuestions);
-
-        // add Non considered topics to DB : 
-        request.data.not_considered_topics = [];
-        for (var i in non_considered_topic_data) {
-          non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-        };
-
-        // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
       } else if (request.data.varient === "randomQuestions") {
-
-        // // get Questions track based on Set of Diff. questions 
         request.data.question_track_details.qp_set_a = await helper.removeDuplicatesFromArrayOfObj(setAQuestionTrackData, 'question_id');
-        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');;
-        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');;
+        request.data.question_track_details.qp_set_b = await helper.removeDuplicatesFromArrayOfObj(setBQuestionTrackData, 'question_id');
+        request.data.question_track_details.qp_set_c = await helper.removeDuplicatesFromArrayOfObj(setCQuestionTrackData, 'question_id');
 
         request.data.quiz_question_details.qp_set_a = setAQuestions;
         request.data.quiz_question_details.qp_set_b = setBQuestions;
         request.data.quiz_question_details.qp_set_c = setCQuestions;
-
-        // add Non considered topics to DB : 
-        request.data.not_considered_topics = [];
-        for (var i in non_considered_topic_data) {
-          non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
-        };
-
-        // Add Quiz : 
-        quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
-          if (addQuiz_err) {
-            console.log(addQuiz_err);
-            callback(addQuiz_err, addQuiz_response);
-          } else {
-            console.log("QUIZ GENERATED!");
-            callback(0, 200);
-          }
-        })
       }
+
+      // Non-considered topics
+      request.data.not_considered_topics = [];
+      for (var i in non_considered_topic_data) {
+        non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
+      }
+
+      // ✅ Log total computed duration
+      console.log("FINAL TOTAL QUIZ DURATION (Manual):", request.data.quiz_duration);
+
+      quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
+        if (addQuiz_err) {
+          console.log(addQuiz_err);
+          callback(addQuiz_err, addQuiz_response);
+        } else {
+          console.log("QUIZ GENERATED!");
+          callback(0, 200);
+        }
+      });
     }
   }
   await topicLoop(0);
-}
+};
+
 exports.generateQuizForPostLearning = (request, callback) => {
 
   /** CHECK PRE QUIZ EXIST **/
@@ -2217,8 +2202,8 @@ exports.sendMailtoTeacher = (request, callback) => {
 
 exports.upsertTeacherAttendance = function (request, callback) {
   // request: { id, date, last_clock_in_time?, last_clock_in_address?, last_clock_out_time?, last_clock_out_address?, working_hours? }
-  console.log({objecttttt: request});
-  
+  console.log({ objecttttt: request });
+
   teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
     if (err && err !== 404) {
       callback(500, err);
@@ -2255,19 +2240,19 @@ exports.upsertTeacherAttendance = function (request, callback) {
 };
 
 exports.fetchTeacherAttendance = function (request, callback) {
-    // request: { id, date }
-    teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
-        if (err) {
-            callback(500, err);
-        } else if (!data.Item || !Array.isArray(data.Item.Attendance)) {
-            callback(null, null); // No attendance found
-        } else {
-            // Find attendance for the requested date
-            const attendanceArr = data.Item.Attendance;
-            const attendanceObj = attendanceArr.find(obj => obj[request.date]);
-            callback(null, attendanceObj ? attendanceObj[request.date] : null);
-        }
-    });
+  // request: { id, date }
+  teacherRepository.getTeacherAttendanceRaw(request.id, function (err, data) {
+    if (err) {
+      callback(500, err);
+    } else if (!data.Item || !Array.isArray(data.Item.Attendance)) {
+      callback(null, null); // No attendance found
+    } else {
+      // Find attendance for the requested date
+      const attendanceArr = data.Item.Attendance;
+      const attendanceObj = attendanceArr.find(obj => obj[request.date]);
+      callback(null, attendanceObj ? attendanceObj[request.date] : null);
+    }
+  });
 };
 
 
