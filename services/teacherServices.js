@@ -488,6 +488,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                     let questions_list = [];
                     let group_list = [];
                     let dupcheck = [];
+                    let set_quiz_duration = 0;
 
                     async function getRandomGroups(i) {
                       if (group_list.length < Number(request.data.noOfQuestionsForAuto)) {
@@ -515,6 +516,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                         // await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
                         // request.data.quiz_duration += quiz_duration;
 
+
                         let indheck = [];
                         async function qtnLoop(ind) {
                           if (ind < group_list.length) {
@@ -531,7 +533,8 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                                 qtnLoop(ind);
                               } else {
                                 questions_list.push(qtn_id);
-                                quiz_duration = quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
+                                // quiz_duration = quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
+                                set_quiz_duration = set_quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
                                 randomDupCheck.push(qtn_id);
                                 ind++;
                                 qtnLoop(ind);
@@ -552,6 +555,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             request.data.question_track_details.qp_set_a = res_questionTrackData
                             request.data.question_track_details.qp_set_b = res_questionTrackData
                             request.data.question_track_details.qp_set_c = res_questionTrackData
+                            request.data.quiz_duration = set_quiz_duration;
 
                             // Create Shuffled Orders of same questions based on admin -  no of random order :
                             // Later Changed to Fixed 3 sets by Vishal :  
@@ -564,7 +568,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             for (var i in non_considered_topic_data) {
                               non_considered_topic_data[i] && (request.data.not_considered_topics.push(i));
                             };
-                            console.log({ request, "quiz_duration": quiz_duration, questions_list });
+                            console.log({ request, "quiz_duration": request.data.quiz_duration, questions_list });
 
                             quizRepository.addQuiz(request, async function (addQuiz_err, addQuiz_response) {
                               if (addQuiz_err) {
