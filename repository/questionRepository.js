@@ -2,7 +2,7 @@ const dynamoDbCon = require("../awsConfig");
 const { DATABASE_TABLE } = require("./baseRepository");
 const { DATABASE_TABLE2 } = require('./baseRepositoryNew');
 const { constant, indexes: { Indexes }, tables: { TABLE_NAMES } } = require('../constants');
-const { chunkArray } = require("../helper/helper");
+const { chunkArray, isEmptyArray } = require("../helper/helper");
 const { helper } = require("../helper");
 
 
@@ -695,6 +695,32 @@ exports.fetchBulkQuestionsNameById5 = async (request) => {
     }
 
 };
+
+exports.fetchQuestionDurationByIds = async (request) => {
+    if (isEmptyArray(request)) {
+        return []
+    }
+    const BATCH_SIZE = 100;
+    let allResults = [];
+
+    for (let i = 0; i < request?.length; i += BATCH_SIZE) {
+        const BatchIds = request?.slice(i, i + BATCH_SIZE);
+
+        const params = {
+            RequestItems: {
+                [TABLE_NAMES.upschool_question_table]: {
+                    Keys: BatchIds?.map(id => ({ question_id: id })),
+                    ProjectionExpression: "question_id, duration_per_question"
+                }
+            }
+        }
+
+        const result = await DATABASE_TABLE2.getByObjects(params);
+        allResults = [...allResults, ...(result.Responses[TABLE_NAMES.upschool_question_table] || [])]
+    }
+
+    return allResults
+}
 
 
 
