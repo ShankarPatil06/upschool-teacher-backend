@@ -533,7 +533,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                               } else {
                                 questions_list.push(qtn_id);
                                 // quiz_duration = quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
-                                set_quiz_duration = set_quiz_duration + (QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
+                                set_quiz_duration = set_quiz_duration + Number(QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
                                 randomDupCheck.push(qtn_id);
                                 ind++;
                                 qtnLoop(ind);
@@ -630,7 +630,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                                 } else {
                                   questions_list.push(qtn_id);
                                   randomDupCheck.push(qtn_id)
-                                  set_quiz_duration = set_quiz_duration + (QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
+                                  set_quiz_duration = set_quiz_duration + Number(QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
                                   ind++;
                                   qtnLoop(ind);
                                 }
@@ -1075,7 +1075,7 @@ exports.addManualQuizBasedonVarient = async (request, topic_response, concepts_r
 
                                   if (!dupCheck) {
                                     questions_list.push(qtn_id);
-                                    set_quiz_duration += (QuestionIdsNDurationMap.get(qtn_id)?.duration_per_question || 0);
+                                    set_quiz_duration += Number(QuestionIdsNDurationMap.get(qtn_id)?.duration_per_question || 0);
 
                                     if (setIndex === 1) setADupCheck.push(qtn_id);
                                     if (setIndex === 2) setBDupCheck.push(qtn_id);
