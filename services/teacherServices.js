@@ -512,7 +512,6 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                         let question_ids = (group_list?.map(ele => ele?.group_question_id))?.flat();
                         let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
                         const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
-
                         // await group_list.forEach((Grp) => quiz_duration += Number(Grp.question_duration));
                         // request.data.quiz_duration += quiz_duration;
 
@@ -534,7 +533,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                               } else {
                                 questions_list.push(qtn_id);
                                 // quiz_duration = quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
-                                set_quiz_duration = set_quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
+                                set_quiz_duration = set_quiz_duration + (QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
                                 randomDupCheck.push(qtn_id);
                                 ind++;
                                 qtnLoop(ind);
@@ -555,6 +554,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                             request.data.question_track_details.qp_set_a = res_questionTrackData
                             request.data.question_track_details.qp_set_b = res_questionTrackData
                             request.data.question_track_details.qp_set_c = res_questionTrackData
+                            // console.log({ set_quiz_duration });
                             request.data.quiz_duration = set_quiz_duration;
 
                             // Create Shuffled Orders of same questions based on admin -  no of random order :
@@ -596,6 +596,8 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                       let QuestionIdsNDuration = await questionServices.fetchQuestionDurationByIds(question_ids);
                       const QuestionIdsNDurationMap = new Map(QuestionIdsNDuration?.map(e => [e?.question_id, e]));
 
+                      // console.log({ QuestionIdsNDurationMap });
+
                       request.data.question_track_details = {};
                       // Declcare all topics as selected in an Obj 
                       let non_considered_topic_data = {};
@@ -628,7 +630,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                                 } else {
                                   questions_list.push(qtn_id);
                                   randomDupCheck.push(qtn_id)
-                                  set_quiz_duration = set_quiz_duration + QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question;
+                                  set_quiz_duration = set_quiz_duration + (QuestionIdsNDurationMap?.get(qtn_id)?.duration_per_question ?? 0);
                                   ind++;
                                   qtnLoop(ind);
                                 }
