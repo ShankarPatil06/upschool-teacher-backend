@@ -489,6 +489,7 @@ exports.addAutomatedQuizBasedonVarient = async (request, callback) => {
                     let group_list = [];
                     let dupcheck = [];
                     let set_quiz_duration = 0;
+                    // test
 
                     async function getRandomGroups(i) {
                       if (group_list.length < Number(request.data.noOfQuestionsForAuto)) {
