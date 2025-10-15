@@ -381,7 +381,7 @@ exports.fetchBlueprintQuestions = (request, callback) => {
                                         TableName : TABLE_NAMES.upschool_question_table,
                                         questionStatus : "Publish",
                                         sourceIds : request.data.source_ids,
-                                        projectionExp : [ "question_id", "answers_of_question", "appears_in", "cognitive_skill", "difficulty_level", "marks", "question_active_status", "question_category", "question_content", "question_source", "question_status", "question_type" ]
+                                        projectionExp : [ "question_id", "answers_of_question", "appears_in", "cognitive_skill", "difficulty_level", "marks", "question_active_status", "question_category", "question_content", "question_source", "question_status", "question_type", "sub_questions" ]
                                     }
 
                                     questionRepository.fetchBulkQuestionsWithPublishStatusAndProjection(fetchBulkquesReq, async function (questionsData_err, questionsData_res) {
@@ -563,7 +563,7 @@ exports.fetchBlueprintQuestions = (request, callback) => {
 exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topicData, conceptData, questionData, callback) => { 
     
     console.log("Starting question paper creation...");
-
+    
     let responseData = JSON.parse(JSON.stringify(request.data.question_details));
     // let responseData = JSON.parse(JSON.stringify(blueprint.sections));
     let blueSections = blueprint.sections;
@@ -892,7 +892,8 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
                 difficulty_level : blueQues?.difficulty_level || "N.A.",
                 question_id : "N.A.",
                 question_content : "N.A.",
-                answers_of_question : "N.A."
+                answers_of_question : "N.A.",
+                sub_questions:"N.A."
             },
             questionExistId: questionExistId
         }; 
@@ -934,7 +935,8 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
                 difficulty_level : blueQues?.difficulty_level,
                 question_id : getQuestion[0].question_id,
                 question_content : getQuestion[0].question_content,
-                answers_of_question : contUrl
+                answers_of_question : contUrl,
+                sub_questions:getQuestion[0]?.sub_questions ??[]
             },
             questionExistId: questionExistId
         }; 
@@ -949,7 +951,8 @@ exports.getResQuestionObj = async (avalQues_data, blueQues, questionExistId, cal
                 difficulty_level : blueQues.difficulty_level,
                 question_id : "N.A.",
                 question_content : "N.A.",
-                answers_of_question : "N.A."
+                answers_of_question : "N.A.",
+                sub_questions:"N.A."
             },
             questionExistId: questionExistId
         };  
