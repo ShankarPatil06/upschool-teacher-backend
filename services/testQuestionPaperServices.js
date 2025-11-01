@@ -210,49 +210,57 @@ exports.validateQuestionPaperName2 = async (request) => {
 // }
 
 exports.viewTestQuestionPaper2 = async (request) => {
-
   const fetchQuestionPaperRes = await testQuestionPaperRepository.fetchTestQuestionPaperByID2(request);
 
   if (!fetchQuestionPaperRes.Items || fetchQuestionPaperRes.Items.length === 0) {
-    console.log(constant.messages.NO_DATA);
     return { statusCode: 400, message: constant.messages.NO_DATA };
   }
 
-  const questionsData = fetchQuestionPaperRes.Items[0].questions;
+  const questionPaper = fetchQuestionPaperRes.Items[0];
+  const { blueprint_id, questions } = questionPaper;
+
+  // Fetch blueprint data (for section/question instructions)
+  const blueprintData = await blueprintRepository.fetchBlueprintById2({ data: { blueprint_id } });
+
+  // Collect all question IDs including Sub & OR
   let questionIDs = [];
-
-  questionsData.forEach(questionSet => {
-    if (Array.isArray(questionSet.question_id)) {
-      questionIDs = questionIDs.concat(questionSet.question_id);
-    }
+  questions.forEach(section => {
+    section.question_id.forEach(q => {
+      if (typeof q === "string") questionIDs.push(q);
+      else if (q["Sub-Question"]) questionIDs.push(...q["Sub-Question"]);
+      else if (q["OR Question"]) questionIDs.push(...q["OR Question"]);
+    });
   });
-
   questionIDs = helper.removeDuplicates(questionIDs);
 
-  if (questionIDs.length === 0) {
-    console.log("No questions found in the question paper.");
-    return fetchQuestionPaperRes;
-  }
+  if (questionIDs.length === 0) return fetchQuestionPaperRes;
 
+  // Fetch question data from question table
   const fetchBulkCatReq = {
     IdArray: questionIDs,
     fetchIdName: "question_id",
     TableName: TABLE_NAMES.upschool_question_table,
-    projectionExp: ["question_id", "question_content", "answers_of_question", "question_type", "marks", "display_answer"]
+    projectionExp: [
+      "question_id",
+      "question_content",
+      "answers_of_question",
+      "question_type",
+      "marks",
+      "display_answer",
+      "sub_questions"
+    ]
   };
 
   const fetchQuestionsRes = await commonRepository.fetchBulkDataWithProjection3(fetchBulkCatReq);
 
-
   if (!fetchQuestionsRes || fetchQuestionsRes.length === 0) {
-    console.log("No questions found for the given IDs.");
     return { statusCode: 400, message: "Questions not found." };
   }
 
-  const finalQuestionsData = await exports.setQuestionPaperView2(questionsData, fetchQuestionsRes);
+  // Generate final structured data
+  const structuredData = await exports.setQuestionPaperView2(questions, fetchQuestionsRes, blueprintData);
 
-  fetchQuestionPaperRes.Items[0].questions = finalQuestionsData;
-
+  questionPaper.questions = structuredData;
   return fetchQuestionPaperRes;
 };
 
@@ -303,41 +311,111 @@ exports.setQuestionPaperView = (questionsSectionData, questionData, callback) =>
 
 }
 
-exports.setQuestionPaperView2 = async (questionsSectionData, questionData) => {
-  const tempQuestionArr = [];
+exports.setQuestionPaperView2 = async (sectionsData, questionData, blueprintData) => {
+  const result = [];
 
-  // Iterate through each section of questions
-  for (let i = 0; i < questionsSectionData.length; i++) {
-    const section = questionsSectionData[i];
+  for (let s = 0; s < sectionsData.length; s++) {
+    const section = sectionsData[s];
+    const structuredQuestions = [];
+    let questionNumber = 1;
 
-    // Map over each question_id in the section and resolve their respective data
-    const questionsPromises = section.question_id.map(async (questionId) => {
-      const individualQuestion = questionData.find(value => value.question_id === questionId) || {};
-
-      try {
-        // If the question has an answer content URL, attempt to fetch it
-        if (individualQuestion.answers_of_question) {
-          const url = await helper.getAnswerContentFileUrl(individualQuestion.answers_of_question);
-          individualQuestion.answers_of_question = url;
-        }
-      } catch (err) {
-        // In case of an error, assign a default value
-        individualQuestion.answers_of_question = "N.A.";
-        console.error(`Error fetching answer content for question ID ${questionId}:`, err);
+    for (const qItem of section.question_id) {
+      // CASE 1: General Question
+      if (typeof qItem === "string") {
+        const q = await resolveSingleQuestion(qItem, questionData);
+        structuredQuestions.push({
+          question_structure_type: "General Question",
+          question_number: `${questionNumber++}`,
+          ...q
+        });
       }
 
-      return individualQuestion;
+      // CASE 2: Sub-Question
+      else if (qItem["Sub-Question"]) {
+        const subQuestionIds = qItem["Sub-Question"];
+        const subQuestions = await Promise.all(
+          subQuestionIds.map(async (id) => {
+            const q = await resolveSingleQuestion(id, questionData);
+            return { question_structure_type: "General Question", ...q };
+          })
+        );
+
+        const blueprintInstruction = getBlueprintInstruction(blueprintData, section.section_name, "Sub-Question");
+
+        structuredQuestions.push({
+          question_structure_type: "Sub-Question",
+          question_number: `${questionNumber++}`,
+          question_description: blueprintInstruction || "Answer all the following:",
+          sub_questions: subQuestions
+        });
+      }
+
+      // CASE 3: OR Question
+      else if (qItem["OR Question"]) {
+        const orQuestionIds = qItem["OR Question"];
+        const orQuestions = await Promise.all(
+          orQuestionIds.map(async (id) => {
+            const q = await resolveSingleQuestion(id, questionData);
+            return { question_structure_type: "General Question", ...q };
+          })
+        );
+
+        const blueprintInstruction = getBlueprintInstruction(blueprintData, section.section_name, "OR Question");
+
+        structuredQuestions.push({
+          question_structure_type: "OR Question",
+          question_description: blueprintInstruction || "Answer any one:",
+          or_questions: orQuestions
+        });
+      }
+    }
+
+    result.push({
+      section_name: section.section_name,
+      questions: structuredQuestions
     });
-
-    // Await all promises to ensure questions are fully resolved before proceeding
-    const resolvedQuestions = await Promise.all(questionsPromises);
-
-    // Assign the resolved questions back to the section
-    questionsSectionData[i].questions = resolvedQuestions;
   }
 
-  return questionsSectionData;
+  return result;
 };
+// Helper to resolve a single question
+async function resolveSingleQuestion(questionId, questionData) {
+  const q = questionData.find(v => v.question_id === questionId) || {};
+
+  try {
+    if (q.answers_of_question) {
+      const url = await helper.getAnswerContentFileUrl(q.answers_of_question);
+      q.answers_of_question = url;
+    }
+  } catch (err) {
+    q.answers_of_question = "N.A.";
+    console.error(`Error fetching answer content for question ID ${questionId}:`, err);
+  }
+
+  return q;
+}
+// fetch instructions from blueprint
+function getBlueprintInstruction(blueprintData, sectionName, type) {
+  if (!blueprintData || !blueprintData.Items || blueprintData.Items.length === 0)
+    return null;
+
+  const blueprint = blueprintData.Items[0];
+  const section = (blueprint.sections || []).find(
+    (s) => s.section_name === sectionName
+  );
+
+  if (!section) return null;
+
+  if (type === "Sub-Question") {
+    return section.sub_question_description || section.sub_question_instruction;
+  }
+
+  if (type === "OR Question") {
+    return section.or_question_description || section.or_question_instruction;
+  }
+
+  return null;
+}
 
 
 exports.toggleQuestionPaperBasedOnId = function (request, callback) {

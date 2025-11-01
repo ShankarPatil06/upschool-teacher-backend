@@ -121,6 +121,21 @@ exports.fetchBlueprintById = function (request, callback) {
         }
     });
 }
+
+exports.fetchBlueprintById2 = async (request) => {
+    let read_params = {
+        TableName: TABLE_NAMES.upschool_blueprint_table,
+
+        KeyConditionExpression: "blueprint_id = :blueprint_id",
+        ExpressionAttributeValues: {
+            ":blueprint_id": request.data?.blueprint_id
+        }
+    }
+
+    const data = await DATABASE_TABLE2.query(read_params);
+    return data.Items;
+}
+
 exports.fetchBluePrintData = function (request, callback) {
 
     dynamoDbCon.getDB(function (DBErr, dynamoDBCall) {
