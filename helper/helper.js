@@ -444,15 +444,58 @@ exports.checkPriorityQuestions = async (quesDetails) => {
         async function secLoop(i) {
             if (i < quesDetails.length) {
                 await quesDetails[i].questions.forEach((qes, j) => {
-                    console.log({objectttt: qes.concept_ids.length})
-                    priorityOrder.push(
-                        {
-                            "sec": i,
-                            "que": j,
-                            "pre": (qes.concept_ids.length > 0) ? 0 : (qes.concept_ids.length == 0 && quesDetails[i].topic_ids.length > 0) ? 1 : 2,
-                            "qStatus": "No"
+
+                    if(qes.sub_concept_ids  ){
+                        if(qes.sub_concept_ids.length > 0) {
+
+                            let subPriorityOrder = [];
+                            qes.sub_concept_ids.forEach((subQues, k) => {
+                                if(subQues && subQues.length > 0) {
+                                    subPriorityOrder.push(
+                                        {
+                                            "sec": i,
+                                            "que": j,
+                                            "subQue": k,
+                                            "pre": (subQues.length > 0) ? 0 : (subQues.length == 0 && quesDetails[i].topic_ids.length > 0) ? 1 : 2,
+                                            "subQueNo": (k+1),
+                                            "qStatus": "No"
+                                        }
+                                    )
+                                } else {
+                                    subPriorityOrder.push(
+                                        {
+                                            "sec": i,
+                                            "que": j,
+                                            "subQue": k,
+                                            "pre": (quesDetails[i].topic_ids.length > 0) ? 1 : 2,
+                                            "subQueNo": (k+1),
+                                            "qStatus": "No"
+                                        }
+                                    )
+                                }
+                            })
+                            priorityOrder.push(
+                                {
+                                    "sec": i,
+                                    "que": j,
+                                    "subQueArray": subPriorityOrder,
+                                    "pre": 0,
+                                    "qStatus": "No"
+                                }
+                            )
                         }
-                    )
+                    } else {
+                        console.log({objectttt: qes.concept_ids.length})
+                        priorityOrder.push(
+                            {
+                                "sec": i,
+                                "que": j,
+                                "pre": (qes.concept_ids.length > 0) ? 0 : (qes.concept_ids.length == 0 && quesDetails[i].topic_ids.length > 0) ? 1 : 2,
+                                "qStatus": "No"
+                            }
+                            // pre = 0 => concept, pre = 1 => topic, pre = 2 => chapter
+                        )
+                    }
                 });
                 i++;
                 secLoop(i);

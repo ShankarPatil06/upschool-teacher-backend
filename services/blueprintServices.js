@@ -400,7 +400,7 @@ exports.fetchBlueprintQuestions = (request, callback) => {
                                                 priorities = priData;
                                             })                                            
 
-                                            console.log("PRIORITY : ", priorities);
+                                            // console.log("PRIORITY : ", JSON.stringify(priorities, null, 2));
 
                                             /** GET QUESTION PAPER **/
                                             exports.createQuestionPaper(priorities, request, blueprint_res.Items[0], chapData_res.Items, topicData_res.Items, conceptData_res.Items, filteredQuestionData, (createQues_err, createQues_data) => {
@@ -411,7 +411,7 @@ exports.fetchBlueprintQuestions = (request, callback) => {
                                                 }
                                                 else
                                                 {
-                                                    console.log("QUESTION PAPER CREATED!");
+                                                    // console.log("QUESTION PAPER CREATED!", JSON.stringify(createQues_data, null, 2));
                                                     callback(createQues_err, createQues_data);
                                                 }
                                             })
@@ -576,7 +576,7 @@ exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topi
     {
         if(i < 3) // This loop handles the 3 priority levels (Concept, Topic, Chapter)
         {   
-            async function priLoop(j){
+            async function priLoop(j) {
                 if(j < priorities.length)
                 {
                     // Only process for the current priority level
@@ -586,49 +586,79 @@ exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topi
                         return;
                     }
 
-                    secPos = priorities[j].sec;
-                    quePos = priorities[j].que;
+                    // i = 0 => Concept, i = 1 => Topic, i = 2 => Chapter
+
+                    secPos = priorities[j].sec; // section index
+                    quePos = priorities[j].que; // question index
+                    let subQueArray = priorities[j].subQueArray; // sub-question priority array
+
+                    // console.log("-------new question----------", {section:secPos, question:quePos, subQueArray: subQueArray ? subQueArray.length : null});
 
                     if(priorities[j].qStatus === "No")
                     {
                         let questionsToSearchFrom = [];
 
-                        // Step 1: Determine the pool of available questions based on the current priority
-                        if(priorities[j].pre === 0) {
-                            console.log(`Priority 0: Fetching by Concept for Sec:${secPos}, Que:${quePos}`);
-                            questionsToSearchFrom = await new Promise((resolve, reject) => {
-                                exports.getConceptAvailQuestions(responseData[secPos].questions[quePos].concept_ids, conceptData, questionData, (err, data) => {
-                                    if (err) return reject(err);
-                                    resolve(data || []);
-                                });
-                            });
-                        } else if(priorities[j].pre === 1) {
-                            console.log(`Priority 1: Fetching by Topic for Sec:${secPos}, Que:${quePos}`);
-                            questionsToSearchFrom = await new Promise((resolve, reject) => {
-                            //     exports.getTopicsAvailQuestions(responseData[secPos].questions[quePos].topic_ids, topicData, conceptData, questionData, (err, data) => {
-                            //         if (err) return reject(err);
-                            //         resolve(data || []);
-                            //     });
-                            // });
+                        // This is the blueprint question structure we need to populate.
+                        const blueprintQuestionNode = blueSections[secPos].questions[quePos];
 
-                                exports.getTopicsAvailQuestions(responseData[secPos].topic_ids, topicData, conceptData, questionData, (err, data) => {
-                                    if (err) return reject(err);
-                                    resolve(data || []);
-                                });
-                            });
-                        } else if(priorities[j].pre === 2) {
-                            console.log(`Priority 2: Fetching by Chapter for Sec:${secPos}, Que:${quePos}`);
-                            // For chapter level, the pool is all available questions.
-                            questionsToSearchFrom = questionData;
+                        let checkForSubConcepts = false;
+
+                        if (blueprintQuestionNode.question_structure_type === 'Sub-Question' && subQueArray && subQueArray.length) {
+                            for (const [subQuePos, subQue] of subQueArray.entries()) {
+                                try {
+                                    const questionsSourceForEachSubQue = await fetchQuestionBasedOnPripority(
+                                        secPos,
+                                        quePos,
+                                        subQue.pre,
+                                        responseData,
+                                        conceptData,
+                                        topicData,
+                                        questionData,
+                                        responseData[secPos].questions[quePos].sub_concept_ids[subQuePos]
+                                    );
+
+                                    questionsToSearchFrom.push(questionsSourceForEachSubQue);
+                                    checkForSubConcepts = true;
+                                } catch (err) {
+                                    console.error('fetch failed', err);
+                                    return callback(400, err);
+                                }
+                            }
                         }
+                        else if (blueprintQuestionNode.question_structure_type === 'OR Question' && subQueArray && subQueArray.length) {
+                            for (const [subQuePos, subQue] of subQueArray.entries()) {
+                                try {
+                                    const questionsSourceForEachSubQue = await fetchQuestionBasedOnPripority(
+                                        secPos,
+                                        quePos,
+                                        subQue.pre,
+                                        responseData,
+                                        conceptData,
+                                        topicData,
+                                        questionData,
+                                        responseData[secPos].questions[quePos].sub_concept_ids[subQuePos]
+                                    );
+
+                                    questionsToSearchFrom.push(questionsSourceForEachSubQue);
+                                    checkForSubConcepts = true;
+                                } catch (err) {
+                                    console.error('fetch failed', err);
+                                    return callback(400, err);
+                                }
+                            }
+                        }
+                        else {
+                            // Determine question pool based on current priority level
+                            questionsToSearchFrom = await fetchQuestionBasedOnPripority(secPos, quePos, priorities[j].pre, responseData, conceptData, topicData, questionData)
+                        }
+
+                        console.log("questionsToSearchFrom:---", questionsToSearchFrom.length)
 
                         // Step 2: Call the recursive function to process the blueprint node
                         try {
-                            // This is the blueprint question structure we need to populate.
-                            const blueprintQuestionNode = blueSections[secPos].questions[quePos];
 
                             // This single call handles all complexity (General, OR, Sub-Question, nesting).
-                            const result = await exports.processAndFetchQuestion(blueprintQuestionNode, questionsToSearchFrom, exitingQuesIds);
+                            const result = await exports.processAndFetchQuestion(blueprintQuestionNode, questionsToSearchFrom, exitingQuesIds, checkForSubConcepts);
 
                             // Update the final response with the fully populated question object/tree.
                             responseData[secPos].questions[quePos] = result.quesObj;
@@ -653,11 +683,43 @@ exports.createQuestionPaper = (priorities, request, blueprint, chapterData, topi
             }
             priLoop(0);            
         } else {
-            console.log("FINALLY CREATED QUESTION PAPER:", JSON.stringify(responseData, null, 2));
+            // console.log("FINALLY CREATED QUESTION PAPER:", JSON.stringify(responseData, null, 2));
             callback(0, responseData);
         }
     }
     mainLoop(0);
+}
+
+const fetchQuestionBasedOnPripority = async (secPos, quePos, pre, responseData, conceptData, topicData, questionData, concept_ids = null) => {
+
+    let questionsToSearchFrom = [];
+
+    // pre = 0 => concept, pre = 1 => topic, pre = 2 => chapter
+    // Step 1: Determine the pool of available questions based on the current priority
+    if(pre === 0) {
+        console.log(`Priority 0: Fetching by Concept for Sec:${secPos}, Que:${quePos}`,{concept_ids, pre});
+        questionsToSearchFrom = await new Promise((resolve, reject) => {
+            exports.getConceptAvailQuestions(concept_ids || responseData[secPos].questions[quePos].concept_ids, conceptData, questionData, (err, data) => {
+                if (err) return reject(err);
+                resolve(data || []);
+            });
+        });
+    } else if(pre === 1) {
+        console.log(`Priority 1: Fetching by Topic for Sec:${secPos}, Que:${quePos}`);
+        questionsToSearchFrom = await new Promise((resolve, reject) => {
+        
+            exports.getTopicsAvailQuestions(responseData[secPos].topic_ids, topicData, conceptData, questionData, (err, data) => {
+                if (err) return reject(err);
+                resolve(data || []);
+            });
+        });
+    } else if(pre === 2) {
+        console.log(`Priority 2: Fetching by Chapter for Sec:${secPos}, Que:${quePos}`);
+        // For chapter level, the pool is all available questions.
+        questionsToSearchFrom = questionData;
+    }
+
+    return questionsToSearchFrom;
 }
 
 exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas, callback) => {
@@ -695,7 +757,7 @@ exports.getConceptAvailQuestions = async (conceptId, conceptData, questionDatas,
         else
         {
             /** END **/
-            console.log("AVAILABLE QUESTION : ", avalQuestion);
+            // console.log("AVAILABLE QUESTION : ", avalQuestion.length);
             callback(0, avalQuestion);
         }
     }
@@ -817,17 +879,19 @@ exports.getTopicsAvailQuestions = async (topicId, topicData, conceptData, questi
 //     callback(0, endRes);
 // }
 
-exports.processAndFetchQuestion = async (blueQues, availableQuestions, existingQuestionIds) => {
+exports.processAndFetchQuestion = async (blueQues, availableQuestions, existingQuestionIds, hasSubQueConcept = null) => {
     // --- Recursive Case 1: The node is a container for Sub-Questions ---
     if (blueQues.question_structure_type === 'Sub-Question' && blueQues.sub_questions) {
         const processedSubQuestions = [];
+        let i=0;
         // Loop through each child sub-question
         for (const subQuestion of blueQues.sub_questions) {
             // Recursively process the child. It might be a General question or another container (like an OR question).
-            const fetchedResult = await exports.processAndFetchQuestion(subQuestion, availableQuestions, existingQuestionIds);
+            const fetchedResult = await exports.processAndFetchQuestion(subQuestion, hasSubQueConcept ? availableQuestions[i] : availableQuestions, existingQuestionIds);
             processedSubQuestions.push(fetchedResult.quesObj);
             // CRUCIAL: Update the list of used IDs to pass to the next iteration.
             existingQuestionIds = fetchedResult.questionExistId;
+            i++;
         }
         // Return the original container, but with its children now fully processed and populated.
         return {
@@ -841,11 +905,13 @@ exports.processAndFetchQuestion = async (blueQues, availableQuestions, existingQ
 
     // --- Recursive Case 2: The node is a container for OR-Questions ---
     if (blueQues.question_structure_type === 'OR Question' && blueQues.or_questions) {
+        let i=0;
         const processedOrQuestions = [];
         for (const orQuestion of blueQues.or_questions) {
-            const fetchedResult = await exports.processAndFetchQuestion(orQuestion, availableQuestions, existingQuestionIds);
+            const fetchedResult = await exports.processAndFetchQuestion(orQuestion, hasSubQueConcept ? availableQuestions[i] : availableQuestions, existingQuestionIds);
             processedOrQuestions.push(fetchedResult.quesObj);
             existingQuestionIds = fetchedResult.questionExistId;
+            i++;
         }
         return {
             quesObj: {
