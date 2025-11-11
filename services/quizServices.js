@@ -409,7 +409,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
         let intermediateQuestions = 0, intermediateMarks = 0, intermediateObtained = 0;
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
-        console.log(" res.marks_details - ", res.marks_details);
+        // console.log(" res.marks_details - ", JSON.stringify(res.marks_details));
 
         let questionSetData = [];
         res.marks_details.forEach((req) => {
@@ -934,12 +934,8 @@ exports.startQuizEvaluationProcess = async (request) => {
                 };
             });
 
+            console.log("questionAnswerPairs", JSON.stringify(questionAnswerPairs))
             // console.log("correct answers:::",correctAnswer)
-
-            // const userPrompt = `Please compare the following answers for similarity. Provide a similarity score between 0 and 100 for each.\n\n` +
-            //     questionAnswerPairs.map(
-            //         (pair, index) => `Question ${index + 1}:\nAnswer 1 (Student): ${pair.studentAnswer}\nAnswer 2 (Correct): ${pair.correctAnswer}\n`
-            //     ).join("\n") + `.In the response content just return similarity score without any key or Question No (like 100\n + 85\n etc ) and donot consider html and css which are provided in answer.`;
 
             const normalizeAnswer = (answer) => {
                 if (!answer) return " ";
@@ -958,90 +954,223 @@ exports.startQuizEvaluationProcess = async (request) => {
                     .filter(Boolean);
             };
 
-            const userPrompt = `Parameters for evaluation: The student's response 'Student Answer' should be analyzed properly, comparing it with the rubrics/marking scheme provided in the 'Correct Answers' to perform a semantic evaluation and provide a similarity score.
+            const userPrompt = `Parameters for evaluation:
+Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
+Grammar, punctuation, and spelling errors — even for key terms — must be **highlighted in blue** but **not penalized**.
+Irrelevant or off-topic content – must be **highlighted in red** Mandatorily.
+Only content-related gaps, factual inaccuracies, or irrelevant information should cause mark loss.
 
-            ### Evaluation Criteria for **Question Type: "Subjective"**:
+---
 
-            1. **Per-Numbered Comparison**:  
-                - Each numbered response in 'Student Answer' must be compared against the corresponding numbered response in 'Correct Answers'.  
+### 1) Scoring Tiers
+- **90–100:** All key ideas covered with accurate facts and context; coherent, well-structured; negligible language issues.  
+- **70–89:** Mostly accurate; minor gaps or mild language errors; overall coherence maintained.  
+- **50–69:** Several missing/incorrect points; weak/exposed logic; multiple language issues.  
+- **0–49:** Major conceptual errors; largely irrelevant/disorganized; poor explanation.
 
-            2. **Partial Credit Scaling**:  
-                - **Full points (90-100%)** if the response contains **all key details**.  
-                - **High partial score (60-80%)** if the main idea is captured but lacks details.  
-                - **Medium score (40-60%)** if the response is somewhat related but incomplete.  
-                - **Low score (0-40%)** only if the response is completely incorrect.  
+---
 
-            3. **Weighted Average Calculation**:  
-                - Compute **an individual similarity score** (0-100) for each numbered answer.  
-                - Take the **weighted average** for the **final similarity score**.
+### 2) Evaluation Rules
+- Grade **only what is written**; do not infer unstated meaning.  
+- Accept alternate valid reasoning/examples if factually sound.  
+- For timeline/process/data answers, verify sequence and completeness.  
+- Penalize only for:  
+    a) Irrelevant/off-topic content  
+    b) Factual inaccuracies  
+- Do **not** penalize for grammar, punctuation, or spelling — simply highlight them.
 
-            For **all other question types**, perform a direct correctness-based comparison.
+---
 
-            Provide a similarity score between **0 and 100** for each question.\n\n` +
-                questionAnswerPairs.map((pair, index) => {
-                    return `Question ${index + 1}:
-            Question Type: "${pair.question_type}"
-            Student Answer (Structured List):
-            ${normalizeAnswer(pair.studentAnswer)}
+### 3) Highlighting Protocol
 
-            Correct Answers (Structured List):
-            ${pair.correctAnswer}\n`;
-                }).join("\n") + `.
+**RED UNDERLINE - CONTENT ERRORS (these cause mark loss):**
+- Irrelevant or off-topic content
+- Factually incorrect information (wrong formulas, wrong values, wrong concepts) 
+- Wrong symbols or variables or wrong case for mathematical variables
 
-            ### Response Format:
-            **Only return the final similarity scores** as numbers separated by new lines (e.g., "100\n85\n").  
-            **Strictly return just the similarity scores.** No additional text, labels, or question numbers.`;
+Format: \`<span style="color:red; text-decoration:underline;">[irrelevant text]</span>\`  
+
+**BLUE UNDERLINE - LANGUAGE ERRORS ONLY (NO mark penalty):**
+- Grammar, punctuation, or spelling issues (including key terms)
+    
+Format: \`<span style="color:blue; text-decoration:underline;">[incorrect text]</span>\`  
+
+---
+
+${questionAnswerPairs.map((pair, index) => {
+                return `Question ${index + 1}:
+Question Type: "${pair.question_type}"
+
+Student Answer:
+${pair.studentAnswer}
+
+Correct Answer:
+${pair.correctAnswer}`;
+            }).join("\n\n")}
+
+---
+
+### Response Format
+1. **Marked Student Answer:**  
+Return the student's response with the red underlines applied for incorrect/ irrelevant context and blue underlines applied for grammatical/ punctual errors.   
+2. **Lost Marks (with Reasons):**  
+Explicitly list what content points were **missing** or **incorrect/ irrelevant** and explain *why* marks were lost for each that mentioning the marks lost in this format: (-0.5)  
+Do **not** mention grammar/spelling or punctual issues here since they do not affect marks.
+3. Return similarity scores as numbers, each on a new line (e.g., "100\\n80\\n")
+
+**IMPORTANT:** Respond in the following format for each question:
+
+---QUESTION_1_START---
+**Marked Answer:**
+[Student answer with highlighting]
+
+**Deduction Reason:**
+[Explanation with (-X) format for marks lost]
+
+**Score:**
+[Similarity score number]
+---QUESTION_1_END---
+
+---QUESTION_2_START---
+**Marked Answer:**
+[Student answer with highlighting]
+
+**Deduction Reason:**
+[Explanation with (-X) format for marks lost]
+
+**Score:**
+[Similarity score number]
+---QUESTION_2_END---
+
+Continue this format for all questions.`;
 
             const response = await openai.chat.completions.create({
                 model: 'gpt-4-turbo',
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a helpful assistant that compares answers and provides similarity scores between 0 and 100.'
+                        content: 'You are an expert educational evaluator that provides detailed, structured feedback on student answers with proper highlighting and clear deduction explanations.'
                     },
                     { role: 'user', content: userPrompt }
                 ],
             });
 
-            console.log("prompt - ", userPrompt);
-            console.log("response - ", response);
+            // Parse the OpenAI response
+            let evaluationResults = [];
+            let scores = [];
 
-            const scores = response.choices[0].message.content.split("\n").map(score => parseFloat(score.trim())).filter(value => !isNaN(value));
-            console.log("scores - ", scores);
+            try {
+                const responseContent = response.choices[0].message.content;
+                console.log("Raw OpenAI Response:", responseContent);
+
+                // Parse the structured response
+                const questionBlocks = responseContent.split(/---QUESTION_\d+_START---/).filter(block => block.trim());
+
+                evaluationResults = questionBlocks.map((block, index) => {
+                    // Remove the END marker
+                    const cleanBlock = block.replace(/---QUESTION_\d+_END---/g, '').trim();
+
+                    // Extract marked answer
+                    const markedAnswerMatch = cleanBlock.match(/\*\*Marked Answer:\*\*\s*([\s\S]*?)(?=\*\*Deduction Reason:|$)/i);
+                    const markedAnswer = markedAnswerMatch ? markedAnswerMatch[1].trim() : "";
+
+                    // Extract deduction reason
+                    const deductionMatch = cleanBlock.match(/\*\*Deduction Reason:\*\*\s*([\s\S]*?)(?=\*\*Score:|$)/i);
+                    const deductionReason = deductionMatch ? deductionMatch[1].trim() : "";
+
+                    // Extract score
+                    const scoreMatch = cleanBlock.match(/\*\*Score:\*\*\s*(\d+(?:\.\d+)?)/i);
+                    const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+
+                    return {
+                        question_number: index + 1,
+                        marked_answer: markedAnswer,
+                        deduction_reason: deductionReason,
+                        similarity_score: score
+                    };
+                });
+
+                scores = evaluationResults.map(q => q.similarity_score);
+
+                console.log("Parsed evaluation results - ", evaluationResults);
+                console.log("scores - ", scores);
+
+            } catch (parseError) {
+                console.error("Error parsing OpenAI response:", parseError);
+
+                // Fallback: Try to extract scores from any format
+                const scoreMatches = response.choices[0].message.content.match(/\d+(\.\d+)?/g);
+                if (scoreMatches) {
+                    scores = scoreMatches.map(score => parseFloat(score)).filter(value => !isNaN(value) && value <= 100);
+                    // Take only as many scores as there are questions
+                    scores = scores.slice(0, questionAnswerPairs.length);
+                } else {
+                    scores = questionAnswerPairs.map(() => 0);
+                }
+
+                // Create minimal evaluation results if parsing failed
+                evaluationResults = questionAnswerPairs.map((pair, index) => ({
+                    question_number: index + 1,
+                    marked_answer: pair.studentAnswer || "",
+                    deduction_reason: "Error parsing evaluation response",
+                    similarity_score: scores[index] || 0
+                }));
+            }
+
+            // Ensure we have evaluation results for all questions
+            while (evaluationResults.length < questionAnswerPairs.length) {
+                evaluationResults.push({
+                    question_number: evaluationResults.length + 1,
+                    marked_answer: questionAnswerPairs[evaluationResults.length]?.studentAnswer || "",
+                    deduction_reason: "No evaluation available",
+                    similarity_score: 0
+                });
+            }
+
             let totalMarks = 0;
             let totalExpectedMarks = 0;
             qa_detailsCopyArray.push([]);
+
             await marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
-                // console.log("type", questionAnswerPairs[index].question_type)
 
+                const evaluationResult = evaluationResults[index] || {
+                    marked_answer: questionAnswerPairs[index]?.studentAnswer || "",
+                    deduction_reason: "",
+                    similarity_score: scores[index] || 0
+                };
+
+                // Calculate obtained marks with 0.5 increments
                 if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
-                    // console.log("Descriptive -  ", questionAnswerPairs[index].marks);
-                    const range = 100 / Number(questionAnswerPairs[index].marks)
-                    if (Number.isNaN(scores[index]) || scores[index] < 10) mark.obtained_marks = 0;
-                    else {
-                        for (let i = 1; i <= questionAnswerPairs[index].marks; i++) {
+                    const maxMarks = Number(questionAnswerPairs[index].marks);
+
+                    if (Number.isNaN(scores[index]) || scores[index] < 10) {
+                        mark.obtained_marks = 0;
+                    } else {
+                        // Calculate range for 0.5 increments (double the number of bands)
+                        const totalBands = maxMarks * 2; // Each mark has 2 bands (x.0 and x.5)
+                        const range = 100 / totalBands;
+
+                        // Loop through all possible 0.5 increments
+                        for (let i = 1; i <= totalBands; i++) {
                             if (scores[index] <= i * range) {
-                                // console.log("questiondesc - ",scores[index], i);
-                                mark.obtained_marks = i;
-                                // totalMarks += i;
-                                // totalMarks -= (i-1);
+                                mark.obtained_marks = i * 0.5; // Convert band number to marks (0.5, 1.0, 1.5, 2.0, etc.)
                                 break;
                             }
                         }
-                        // console.log("mark for that question  -- - ", totalMarks);
-                    }
-                }
-                else {
-                    if (scores[index] > 90) {
-                        // console.log("questionAnswerPairs[index].marks - ", questionAnswerPairs[index].marks);
-                        mark.obtained_marks = questionAnswerPairs[index].marks;
-                        // totalMarks += questionAnswerPairs[index].marks;
-                        // console.log("mark for that question  -- - ", totalMarks);
-                        // console.log("non Descriptive ");
 
+                        // Fallback: if loop completes without setting marks, give full marks
+                        if (!mark.obtained_marks) {
+                            mark.obtained_marks = maxMarks;
+                        }
                     }
-                    if (scores[index] === NaN) {
+                } else {
+                    // Objective questions
+                    if (scores[index] > 90) {
+                        mark.obtained_marks = questionAnswerPairs[index].marks;
+                    } else if (Number.isNaN(scores[index])) {
+                        mark.obtained_marks = 0;
+                    } else {
                         mark.obtained_marks = 0;
                     }
                 }
@@ -1049,9 +1178,12 @@ exports.startQuizEvaluationProcess = async (request) => {
                 totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
                 mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
                 mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
-                // console.log("scores[index] - ", scores[index]);
 
-                let newMarksData = { ...mark }
+                // Add the new parameters
+                mark.student_answer_highlighted = evaluationResult.marked_answer || questionAnswerPairs[index]?.studentAnswer || "";
+                mark.deduction_reason = evaluationResult.deduction_reason || "";
+
+                let newMarksData = { ...mark };
                 qa_detailsCopyArray[i]?.push(newMarksData);
 
                 answerCompareArray.push({
@@ -1062,14 +1194,14 @@ exports.startQuizEvaluationProcess = async (request) => {
                 });
             });
 
-            // console.log("totalMark -- - ", totalMarks);
             studentMetaRes.Items[i].marks_details[0].qa_details = marksToUpdate;
             studentMetaRes.Items[i].evaluated = "Yes";
             studentMetaRes.Items[i].marks_details[0].expectedMarks = totalExpectedMarks;
             studentMetaRes.Items[i].marks_details[0].totalMark = totalMarks;
             studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
 
-            totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark })
+            totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark });
+
         }
         // ));
         // await Promise.all(tasks);
@@ -1093,7 +1225,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
 
-        // console.log("markAssignRes - ", markAssignRes);
+        console.log("markAssignRes - ", JSON.stringify(markAssignRes, null, 2));
+
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
 
@@ -1374,6 +1507,3 @@ exports.fetchAllQuizDetails = function (request, callback) {
 
 //     return pass ? "Pass" : "Fail";
 // }
-
-
-
