@@ -850,84 +850,106 @@ const getGPTBasedScore = async (request, subject_id) => {
         const userPrompt = `${/* objective_prompt ?? */
             `Parameters for evaluation:
 Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in *blue* but must *NOT* cause mark deduction and must *NOT* appear in the Reason section.
+Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
 
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in *red* and must be listed in the Reason section with mark deductions.
+Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
 
 Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
 
 ---
 
 ### 1) Scoring Tiers
-*90–100:* All key ideas covered with accurate facts and context; coherent, well-structured; negligible content issues.  
-*70–89:* Mostly accurate; minor factual gaps or mild inaccuracies; overall coherence maintained.  
-*50–69:* Several missing/incorrect content points; weak logic; important ideas partially covered.  
-*0–49:* Major conceptual errors; largely irrelevant/disorganized; key ideas missing.
+Similarity scores (0–100) indicate closeness to the correct answer:  
+90–100: Highly accurate  
+70–89: Mostly correct with small gaps  
+50–69: Moderate issues  
+0–49: Major conceptual issues
 
 ---
 
 ### 2) Evaluation Rules
-Grade *only what is written* — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically or historically sound.  
+Grade only what is written — do not assume unstated meaning.  
+Accept alternate correct reasoning if scientifically valid.  
 Penalize only for:
-    a) Irrelevant/off-topic content  
-    b) Factual inaccuracies  
-    c) Wrong symbols or wrong variable usage  
-    d) Missing essential points  
-*Do NOT* penalize language issues (grammar, punctuation, spelling).
+  a) Irrelevant/off-topic content  
+  b) Factual inaccuracies  
+  c) Wrong symbols or variable usage  
+  d) Missing essential points  
+Do NOT penalize grammar or spelling.
 
 ---
 
 ### 3) Highlighting Protocol
 
-*RED UNDERLINE — CONTENT ERRORS (cause mark loss):*  
-Irrelevant or off-topic content  
-Factually incorrect information  
-Wrong formula / wrong numeric value  
-Wrong symbol or variable (including case differences that change meaning)  
-Wrong concept name or scientific term  
+RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
+<span style="color:red; text-decoration:underline;">incorrect text</span>  
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:red; text-decoration:underline;">[incorrect text]</span>  
+BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
+<span style="color:blue; text-decoration:underline;">language error</span>
 
-*BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):*  
-Grammar  
-Punctuation  
-Spelling  
-Capitalization  
+PRIORITY RULE:  
+If a text chunk has both content + language error → mark *RED only*.
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:blue; text-decoration:underline;">[language error]</span>
+---
 
-*PRIORITY RULE:*  
-If a piece of text is both grammatically wrong AND conceptually wrong, mark it *RED* (content error).
+### 4) MARK–ALLOCATION LOGIC (MANDATORY)
+
+Each question has a known \total_marks\ value.
+
+1. First compute raw marks:
+   raw_marks = total_marks × (similarity_score / 100)
+
+2. Round to nearest *0.5 mark*:
+   awarded_marks = round_to_nearest_0.5(raw_marks)
+
+3. Marks lost:
+   marks_lost = total_marks – awarded_marks
+
+4. Allowed similarity values must match mark steps:
+   similarity = (awarded_marks / total_marks) × 100  
+   Round similarity to 2 decimals.
+
+Examples:  
+- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
+- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
+- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+
+5. *Deduction bullets must add up exactly to \marks_lost\*.
+
+Use small deduction units:  
+- Minor content error: (-0.5 Mark)  
+- Moderate error: (-1 Mark)  
+- Major conceptual error: (-1.5 Marks)  
+- Severe / formula completely wrong: (-2 Marks)
+
+Never exceed total marks lost.
 
 ---`}
 
 ${data.map((pair, index) => {
                 return `Question ${index + 1}:
 question_id: ${pair?.question_id}
-Question Type: "${pair.question_type}"
+total_marks: ${pair?.marks}
+Question Type: "${pair?.question_type}"
 
 Student Answer:
-${pair.studentAnswer}
+${pair?.studentAnswer}
 
 Correct Answer:
-${pair.correctAnswer}`;
+${pair?.correctAnswer}`;
             }).join("\n\n")}
 
 ---
 
 ### RESPONSE FORMAT (STRICT)
-
-For *each question*, return the following sections *in order* as a JSON object:
+Return ONLY a JSON array of objects, one per question, in order:
 
 {
   "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with HTML span annotations for errors",
-  "deduction_reason": "Bullet list of content issues with mark deductions",
-  "misconception": "1-2 sentence summary of core misunderstanding",
-  "score": 85
+  "marked_answer": "Student's answer with red/blue HTML spans",
+  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
+  "misconception": "1-2 sentence conceptual misunderstanding",
+  "score": similarity_score_snapped_to_allowed_value
 }
 
 **CRITICAL JSON FORMATTING RULES:**
@@ -937,47 +959,35 @@ For *each question*, return the following sections *in order* as a JSON object:
 4. Ensure all strings are properly escaped
 5. Return valid JSON that can be parsed by JSON.parse()
 
-### Guidelines for each field:
+---
 
-*1. marked_answer:*  
-Return the student's answer *with HTML spans applied*:
-- Red underline = content errors  
-- Blue underline = language errors  
-- Do NOT add new sentences or paraphrase
-- Only annotate what is already present  
+### FIELD RULES
 
-*2. deduction_reason:*  
-List each content issue in bullet format:
-- wrong student phrase > correct phrase (-X Mark)
-- Do NOT mention grammar, spelling, or punctuation
+*marked_answer:*  
+- Annotate ONLY the student's answer.  
+- Red = incorrect content  
+- Blue = grammar/punctuation  
+- No new sentences or paraphrasing.
 
-*3. misconception:*  
-Summarize core misunderstanding in 1-2 sentences
+*deduction_reason:*  
+- Bullet format  
+- Each bullet:  
+  - wrong phrase > correct phrase (-X Mark)  
+- Must add up EXACTLY to marks_lost  
+- Do not include grammar issues.
 
-*4. score:*  
-Numeric similarity score between 0-100
+*misconception:*  
+- 1–2 line conceptual misunderstanding summary.
 
-### RESPONSE FORMAT:
-Return ONLY a JSON array of objects, one for each question, in the exact order they were presented.
-Example:
-[
-  {
-    "question_id": "2d6cbf18-5933-52ad-ba81-b10abc100bbe",
-    "marked_answer": "The student wrote...",
-    "deduction_reason": "• wrong formula...",
-    "misconception": "The student confuses...",
-    "score": 85
-  },
-  {
-    "question_id": "another-id",
-    "marked_answer": "...",
-    "deduction_reason": "...",
-    "misconception": "...",
-    "score": 92
-  }
-]
+*score:*  
+- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
+- Must match the nearest-0.5 marking rule.
 
-**Strictly return only valid JSON array.** No additional text before or after.`;
+---
+
+### OUTPUT:
+Return ONLY a valid JSON array. No text before or after.
+`;
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4-turbo',
@@ -1057,86 +1067,108 @@ Example:
         };
 
         const userPrompt = `${/* descriptive_prompt ?? */
-            `Parameters for evaluation:
+                       `Parameters for evaluation:
 Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in *blue* but must *NOT* cause mark deduction and must *NOT* appear in the Reason section.
+Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
 
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in *red* and must be listed in the Reason section with mark deductions.
+Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
 
 Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
 
 ---
 
 ### 1) Scoring Tiers
-*90–100:* All key ideas covered with accurate facts and context; coherent, well-structured; negligible content issues.  
-*70–89:* Mostly accurate; minor factual gaps or mild inaccuracies; overall coherence maintained.  
-*50–69:* Several missing/incorrect content points; weak logic; important ideas partially covered.  
-*0–49:* Major conceptual errors; largely irrelevant/disorganized; key ideas missing.
+Similarity scores (0–100) indicate closeness to the correct answer:  
+90–100: Highly accurate  
+70–89: Mostly correct with small gaps  
+50–69: Moderate issues  
+0–49: Major conceptual issues
 
 ---
 
 ### 2) Evaluation Rules
-Grade *only what is written* — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically or historically sound.  
+Grade only what is written — do not assume unstated meaning.  
+Accept alternate correct reasoning if scientifically valid.  
 Penalize only for:
-    a) Irrelevant/off-topic content  
-    b) Factual inaccuracies  
-    c) Wrong symbols or wrong variable usage  
-    d) Missing essential points  
-*Do NOT* penalize language issues (grammar, punctuation, spelling).
+  a) Irrelevant/off-topic content  
+  b) Factual inaccuracies  
+  c) Wrong symbols or variable usage  
+  d) Missing essential points  
+Do NOT penalize grammar or spelling.
 
 ---
 
 ### 3) Highlighting Protocol
 
-*RED UNDERLINE — CONTENT ERRORS (cause mark loss):*  
-Irrelevant or off-topic content  
-Factually incorrect information  
-Wrong formula / wrong numeric value  
-Wrong symbol or variable (including case differences that change meaning)  
-Wrong concept name or scientific term  
+RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
+<span style="color:red; text-decoration:underline;">incorrect text</span>  
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:red; text-decoration:underline;">[incorrect text]</span>  
+BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
+<span style="color:blue; text-decoration:underline;">language error</span>
 
-*BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):*  
-Grammar  
-Punctuation  
-Spelling  
-Capitalization  
+PRIORITY RULE:  
+If a text chunk has both content + language error → mark *RED only*.
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:blue; text-decoration:underline;">[language error]</span>
+---
 
-*PRIORITY RULE:*  
-If a piece of text is both grammatically wrong AND conceptually wrong, mark it *RED* (content error).
+### 4) MARK–ALLOCATION LOGIC (MANDATORY)
+
+Each question has a known \total_marks\ value.
+
+1. First compute raw marks:
+   raw_marks = total_marks × (similarity_score / 100)
+
+2. Round to nearest *0.5 mark*:
+   awarded_marks = round_to_nearest_0.5(raw_marks)
+
+3. Marks lost:
+   marks_lost = total_marks – awarded_marks
+
+4. Allowed similarity values must match mark steps:
+   similarity = (awarded_marks / total_marks) × 100  
+   Round similarity to 2 decimals.
+
+Examples:  
+- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
+- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
+- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+
+5. *Deduction bullets must add up exactly to \marks_lost\*.
+
+Use small deduction units:  
+- Minor content error: (-0.5 Mark)  
+- Moderate error: (-1 Mark)  
+- Major conceptual error: (-1.5 Marks)  
+- Severe / formula completely wrong: (-2 Marks)
+
+Never exceed total marks lost.
 
 ---`}
 
 ${data.map((pair, index) => {
                 return `Question ${index + 1}:
 question_id: ${pair?.question_id}
-Question Type: "${pair.question_type}"
+total_marks: ${pair?.marks}
+Question Type: "${pair?.question_type}"
 
 Student Answer:
-${pair.studentAnswer}
+${pair?.studentAnswer}
 
 Correct Answer:
-${pair.correctAnswer}`;
+${pair?.correctAnswer}`;
             }).join("\n\n")}
 
 ---
 
 ### RESPONSE FORMAT (STRICT)
-
-For *each question*, return the following sections *in order* as a JSON object:
+Return ONLY a JSON array of objects, one per question, in order:
 
 {
   "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with HTML span annotations for errors",
-  "deduction_reason": "Bullet list of content issues with mark deductions",
-  "misconception": "1-2 sentence summary of core misunderstanding",
-  "score": 85
+  "marked_answer": "Student's answer with red/blue HTML spans",
+  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
+  "misconception": "1-2 sentence conceptual misunderstanding",
+  "score": similarity_score_snapped_to_allowed_value
 }
 
 **CRITICAL JSON FORMATTING RULES:**
@@ -1146,47 +1178,35 @@ For *each question*, return the following sections *in order* as a JSON object:
 4. Ensure all strings are properly escaped
 5. Return valid JSON that can be parsed by JSON.parse()
 
-### Guidelines for each field:
+---
 
-*1. marked_answer:*  
-Return the student's answer *with HTML spans applied*:
-- Red underline = content errors  
-- Blue underline = language errors  
-- Do NOT add new sentences or paraphrase
-- Only annotate what is already present  
+### FIELD RULES
 
-*2. deduction_reason:*  
-List each content issue in bullet format:
-- wrong student phrase > correct phrase (-X Mark)
-- Do NOT mention grammar, spelling, or punctuation
+*marked_answer:*  
+- Annotate ONLY the student's answer.  
+- Red = incorrect content  
+- Blue = grammar/punctuation  
+- No new sentences or paraphrasing.
 
-*3. misconception:*  
-Summarize core misunderstanding in 1-2 sentences
+*deduction_reason:*  
+- Bullet format  
+- Each bullet:  
+  - wrong phrase > correct phrase (-X Mark)  
+- Must add up EXACTLY to marks_lost  
+- Do not include grammar issues.
 
-*4. score:*  
-Numeric similarity score between 0-100
+*misconception:*  
+- 1–2 line conceptual misunderstanding summary.
 
-### RESPONSE FORMAT:
-Return ONLY a JSON array of objects, one for each question, in the exact order they were presented.
-Example:
-[
-  {
-    "question_id": "2d6cbf18-5933-52ad-ba81-b10abc100bbe",
-    "marked_answer": "The student wrote...",
-    "deduction_reason": "• wrong formula...",
-    "misconception": "The student confuses...",
-    "score": 85
-  },
-  {
-    "question_id": "another-id",
-    "marked_answer": "...",
-    "deduction_reason": "...",
-    "misconception": "...",
-    "score": 92
-  }
-]
+*score:*  
+- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
+- Must match the nearest-0.5 marking rule.
 
-**Strictly return only valid JSON array.** No additional text before or after.`;
+---
+
+### OUTPUT:
+Return ONLY a valid JSON array. No text before or after.
+`;
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4-turbo',
@@ -1266,86 +1286,108 @@ Example:
         };
 
         const userPrompt = `${/* subjective_prompt ?? */
-            `Parameters for evaluation:
+                      `Parameters for evaluation:
 Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in *blue* but must *NOT* cause mark deduction and must *NOT* appear in the Reason section.
+Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
 
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in *red* and must be listed in the Reason section with mark deductions.
+Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
 
 Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
 
 ---
 
 ### 1) Scoring Tiers
-*90–100:* All key ideas covered with accurate facts and context; coherent, well-structured; negligible content issues.  
-*70–89:* Mostly accurate; minor factual gaps or mild inaccuracies; overall coherence maintained.  
-*50–69:* Several missing/incorrect content points; weak logic; important ideas partially covered.  
-*0–49:* Major conceptual errors; largely irrelevant/disorganized; key ideas missing.
+Similarity scores (0–100) indicate closeness to the correct answer:  
+90–100: Highly accurate  
+70–89: Mostly correct with small gaps  
+50–69: Moderate issues  
+0–49: Major conceptual issues
 
 ---
 
 ### 2) Evaluation Rules
-Grade *only what is written* — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically or historically sound.  
+Grade only what is written — do not assume unstated meaning.  
+Accept alternate correct reasoning if scientifically valid.  
 Penalize only for:
-    a) Irrelevant/off-topic content  
-    b) Factual inaccuracies  
-    c) Wrong symbols or wrong variable usage  
-    d) Missing essential points  
-*Do NOT* penalize language issues (grammar, punctuation, spelling).
+  a) Irrelevant/off-topic content  
+  b) Factual inaccuracies  
+  c) Wrong symbols or variable usage  
+  d) Missing essential points  
+Do NOT penalize grammar or spelling.
 
 ---
 
 ### 3) Highlighting Protocol
 
-*RED UNDERLINE — CONTENT ERRORS (cause mark loss):*  
-Irrelevant or off-topic content  
-Factually incorrect information  
-Wrong formula / wrong numeric value  
-Wrong symbol or variable (including case differences that change meaning)  
-Wrong concept name or scientific term  
+RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
+<span style="color:red; text-decoration:underline;">incorrect text</span>  
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:red; text-decoration:underline;">[incorrect text]</span>  
+BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
+<span style="color:blue; text-decoration:underline;">language error</span>
 
-*BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):*  
-Grammar  
-Punctuation  
-Spelling  
-Capitalization  
+PRIORITY RULE:  
+If a text chunk has both content + language error → mark *RED only*.
 
-Format (use double quotes for JSON compatibility):  
-<span style="color:blue; text-decoration:underline;">[language error]</span>
+---
 
-*PRIORITY RULE:*  
-If a piece of text is both grammatically wrong AND conceptually wrong, mark it *RED* (content error).
+### 4) MARK–ALLOCATION LOGIC (MANDATORY)
+
+Each question has a known \total_marks\ value.
+
+1. First compute raw marks:
+   raw_marks = total_marks × (similarity_score / 100)
+
+2. Round to nearest *0.5 mark*:
+   awarded_marks = round_to_nearest_0.5(raw_marks)
+
+3. Marks lost:
+   marks_lost = total_marks – awarded_marks
+
+4. Allowed similarity values must match mark steps:
+   similarity = (awarded_marks / total_marks) × 100  
+   Round similarity to 2 decimals.
+
+Examples:  
+- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
+- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
+- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+
+5. *Deduction bullets must add up exactly to \marks_lost\*.
+
+Use small deduction units:  
+- Minor content error: (-0.5 Mark)  
+- Moderate error: (-1 Mark)  
+- Major conceptual error: (-1.5 Marks)  
+- Severe / formula completely wrong: (-2 Marks)
+
+Never exceed total marks lost.
 
 ---`}
 
 ${data.map((pair, index) => {
                 return `Question ${index + 1}:
 question_id: ${pair?.question_id}
-Question Type: "${pair.question_type}"
+total_marks: ${pair?.marks}
+Question Type: "${pair?.question_type}"
 
 Student Answer:
-${pair.studentAnswer}
+${pair?.studentAnswer}
 
 Correct Answer:
-${pair.correctAnswer}`;
+${pair?.correctAnswer}`;
             }).join("\n\n")}
 
 ---
 
 ### RESPONSE FORMAT (STRICT)
-
-For *each question*, return the following sections *in order* as a JSON object:
+Return ONLY a JSON array of objects, one per question, in order:
 
 {
   "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with HTML span annotations for errors",
-  "deduction_reason": "Bullet list of content issues with mark deductions",
-  "misconception": "1-2 sentence summary of core misunderstanding",
-  "score": 85
+  "marked_answer": "Student's answer with red/blue HTML spans",
+  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
+  "misconception": "1-2 sentence conceptual misunderstanding",
+  "score": similarity_score_snapped_to_allowed_value
 }
 
 **CRITICAL JSON FORMATTING RULES:**
@@ -1355,47 +1397,35 @@ For *each question*, return the following sections *in order* as a JSON object:
 4. Ensure all strings are properly escaped
 5. Return valid JSON that can be parsed by JSON.parse()
 
-### Guidelines for each field:
+---
 
-*1. marked_answer:*  
-Return the student's answer *with HTML spans applied*:
-- Red underline = content errors  
-- Blue underline = language errors  
-- Do NOT add new sentences or paraphrase
-- Only annotate what is already present  
+### FIELD RULES
 
-*2. deduction_reason:*  
-List each content issue in bullet format:
-- wrong student phrase > correct phrase (-X Mark)
-- Do NOT mention grammar, spelling, or punctuation
+*marked_answer:*  
+- Annotate ONLY the student's answer.  
+- Red = incorrect content  
+- Blue = grammar/punctuation  
+- No new sentences or paraphrasing.
 
-*3. misconception:*  
-Summarize core misunderstanding in 1-2 sentences
+*deduction_reason:*  
+- Bullet format  
+- Each bullet:  
+  - wrong phrase > correct phrase (-X Mark)  
+- Must add up EXACTLY to marks_lost  
+- Do not include grammar issues.
 
-*4. score:*  
-Numeric similarity score between 0-100
+*misconception:*  
+- 1–2 line conceptual misunderstanding summary.
 
-### RESPONSE FORMAT:
-Return ONLY a JSON array of objects, one for each question, in the exact order they were presented.
-Example:
-[
-  {
-    "question_id": "2d6cbf18-5933-52ad-ba81-b10abc100bbe",
-    "marked_answer": "The student wrote...",
-    "deduction_reason": "• wrong formula...",
-    "misconception": "The student confuses...",
-    "score": 85
-  },
-  {
-    "question_id": "another-id",
-    "marked_answer": "...",
-    "deduction_reason": "...",
-    "misconception": "...",
-    "score": 92
-  }
-]
+*score:*  
+- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
+- Must match the nearest-0.5 marking rule.
 
-**Strictly return only valid JSON array.** No additional text before or after.`;
+---
+
+### OUTPUT:
+Return ONLY a valid JSON array. No text before or after.
+`;
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4-turbo',
