@@ -409,7 +409,7 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
         let basicQuestions = 0, basicMarks = 0, basicObtained = 0;
         let intermediateQuestions = 0, intermediateMarks = 0, intermediateObtained = 0;
         let advancedQuestions = 0, advancedMarks = 0, advancedObtained = 0;
-        console.log(" res.marks_details - ", res.marks_details);
+        // console.log(" res.marks_details - ", JSON.stringify(res.marks_details));
 
         let questionSetData = [];
         res.marks_details.forEach((req) => {
@@ -802,734 +802,6 @@ function addIndividualGroupPerformance(markAssignRes, questionDataRes, group_pas
 //     }
 // };
 
-
-const getGPTBasedScore = async (request, subject_id) => {
-
-    const normalizeAnswer = (answer) => {
-        if (!answer) return " ";
-        let normalized = answer.trim().toLowerCase();
-        if (!isNaN(normalized)) {
-            return parseFloat(normalized).toString();
-        }
-        normalized = normalized.replace(/[,;!?]/g, "");
-        return normalized;
-    };
-
-    const { subjective_prompt, descriptive_prompt, objective_prompt } = (await subjectRepository.getSubjetById2({ data: { subject_id } }))?.Items[0];
-
-    // console.log("11111111111", subject_id, subjective_prompt, descriptive_prompt, objective_prompt)
-
-    const questionIdFormat = new Map(request?.map((e, i) => [i, e?.question_id]));
-
-    const separatedData = request?.reduce((acc, current) => {
-        const { question_type, question_id } = current;
-        if (!acc[question_type]) {
-            acc[question_type] = new Map();
-        }
-        acc[question_type].set(question_id, current);
-        return acc;
-    }, {
-        Objective: new Map(),
-        Descriptive: new Map(),
-        Subjective: new Map()
-    })
-
-    const { Objective, Descriptive, Subjective } = separatedData;
-
-    const ObjectiveArray = Array.from(Objective.values());
-    const DescriptiveArray = Array.from(Descriptive.values());
-    const SubjectiveArray = Array.from(Subjective.values());
-
-    let ObjectiveScore, DescriptiveScore, SubjectiveScore = [];
-
-    const evaluateObjective = async (data) => {
-        if (helper.isEmptyArray(data)) {
-            return { scores: {}, details: {} };
-        };
-
-        const userPrompt = `${/* objective_prompt ?? */
-            `Parameters for evaluation:
-Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
-
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
-
-Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
-
----
-
-### 1) Scoring Tiers
-Similarity scores (0–100) indicate closeness to the correct answer:  
-90–100: Highly accurate  
-70–89: Mostly correct with small gaps  
-50–69: Moderate issues  
-0–49: Major conceptual issues
-
----
-
-### 2) Evaluation Rules
-Grade only what is written — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically valid.  
-Penalize only for:
-  a) Irrelevant/off-topic content  
-  b) Factual inaccuracies  
-  c) Wrong symbols or variable usage  
-  d) Missing essential points  
-Do NOT penalize grammar or spelling.
-
----
-
-### 3) Highlighting Protocol
-
-RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
-<span style="color:red; text-decoration:underline;">incorrect text</span>  
-
-BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
-<span style="color:blue; text-decoration:underline;">language error</span>
-
-PRIORITY RULE:  
-If a text chunk has both content + language error → mark *RED only*.
-
----
-
-### 4) MARK–ALLOCATION LOGIC (MANDATORY)
-
-Each question has a known \total_marks\ value.
-
-1. First compute raw marks:
-   raw_marks = total_marks × (similarity_score / 100)
-
-2. Round to nearest *0.5 mark*:
-   awarded_marks = round_to_nearest_0.5(raw_marks)
-
-3. Marks lost:
-   marks_lost = total_marks – awarded_marks
-
-4. Allowed similarity values must match mark steps:
-   similarity = (awarded_marks / total_marks) × 100  
-   Round similarity to 2 decimals.
-
-Examples:  
-- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
-- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
-- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
-
-5. *Deduction bullets must add up exactly to \marks_lost\*.
-
-Use small deduction units:  
-- Minor content error: (-0.5 Mark)  
-- Moderate error: (-1 Mark)  
-- Major conceptual error: (-1.5 Marks)  
-- Severe / formula completely wrong: (-2 Marks)
-
-Never exceed total marks lost.
-
----`}
-
-${data.map((pair, index) => {
-                return `Question ${index + 1}:
-question_id: ${pair?.question_id}
-total_marks: ${pair?.marks}
-Question Type: "${pair?.question_type}"
-
-Student Answer:
-${pair?.studentAnswer}
-
-Correct Answer:
-${pair?.correctAnswer}`;
-            }).join("\n\n")}
-
----
-
-### RESPONSE FORMAT (STRICT)
-Return ONLY a JSON array of objects, one per question, in order:
-
-{
-  "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with red/blue HTML spans",
-  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
-  "misconception": "1-2 sentence conceptual misunderstanding",
-  "score": similarity_score_snapped_to_allowed_value
-}
-
-**CRITICAL JSON FORMATTING RULES:**
-1. Use ONLY double quotes (") in JSON - never single quotes (')
-2. Use double quotes in HTML attributes: style="color:red" NOT style='color:red'
-3. Escape backslashes properly: use \\\\ for LaTeX formulas like \\\\( \\\\)
-4. Ensure all strings are properly escaped
-5. Return valid JSON that can be parsed by JSON.parse()
-
----
-
-### FIELD RULES
-
-*marked_answer:*  
-- Annotate ONLY the student's answer.  
-- Red = incorrect content  
-- Blue = grammar/punctuation  
-- No new sentences or paraphrasing.
-
-*deduction_reason:*  
-- Bullet format  
-- Each bullet:  
-  - wrong phrase > correct phrase (-X Mark)  
-- Must add up EXACTLY to marks_lost  
-- Do not include grammar issues.
-
-*misconception:*  
-- 1–2 line conceptual misunderstanding summary.
-
-*score:*  
-- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
-- Must match the nearest-0.5 marking rule.
-
----
-
-### OUTPUT:
-Return ONLY a valid JSON array. No text before or after.
-`;
-
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a helpful assistant that evaluates student answers and provides detailed feedback with similarity scores. Always respond with valid JSON only.'
-                },
-                { role: 'user', content: userPrompt }
-            ],
-        });
-
-        const responseContent = response.choices[0].message.content.trim();
-
-        // Parse the JSON response
-        let parsedResponse;
-        try {
-            // Remove markdown code blocks if present
-            let cleanedContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-            // Fix common JSON escaping issues from GPT responses
-            // Replace single quotes in HTML attributes with double quotes
-            cleanedContent = cleanedContent.replace(/style='([^']*)'/g, 'style="$1"');
-
-            // Ensure proper escaping of backslashes in LaTeX formulas
-            cleanedContent = cleanedContent.replace(/\\\(/g, '\\\\(').replace(/\\\)/g, '\\\\)');
-
-            parsedResponse = JSON.parse(cleanedContent);
-        } catch (error) {
-            console.error("OBJ-Error parsing GPT response:", error);
-            console.error("OBJ-Response content:", responseContent);
-
-            // Try alternative parsing with more aggressive cleaning
-            try {
-                let altContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                // Use regex to fix any single quotes in style attributes
-                altContent = altContent.replace(/style='([^']*)'/gi, (match, p1) => {
-                    return `style="${p1}"`;
-                });
-                parsedResponse = JSON.parse(altContent);
-                console.log("OBJ-Successfully parsed with alternative method");
-            } catch (altError) {
-                console.error("OBJ-Alternative parsing also failed:", altError);
-                throw new Error("Failed to parse GPT evaluation response");
-            }
-        }
-
-        // Create score and details objects
-        const scores = {};
-        const details = {};
-
-        parsedResponse.forEach(item => {
-            scores[item.question_id] = item.score;
-
-            // Handle deduction_reason as either string or array
-            let deductionReason = item.deduction_reason;
-            if (Array.isArray(deductionReason)) {
-                deductionReason = deductionReason.join('\n');
-            }
-
-            details[item.question_id] = {
-                marked_answer: item.marked_answer,
-                deduction_reason: deductionReason,
-                misconception: item.misconception,
-                score: item.score
-            };
-        });
-
-        console.log("OBJ-parsedResponse", parsedResponse)
-        // console.log("OBJ- scores, details >>>>", { scores, details })
-        return { scores, details };
-    }
-
-    const evaluateDescriptive = async (data) => {
-        if (helper.isEmptyArray(data)) {
-            return { scores: {}, details: {} };
-        };
-
-        const userPrompt = `${/* descriptive_prompt ?? */
-                       `Parameters for evaluation:
-Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
-
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
-
-Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
-
----
-
-### 1) Scoring Tiers
-Similarity scores (0–100) indicate closeness to the correct answer:  
-90–100: Highly accurate  
-70–89: Mostly correct with small gaps  
-50–69: Moderate issues  
-0–49: Major conceptual issues
-
----
-
-### 2) Evaluation Rules
-Grade only what is written — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically valid.  
-Penalize only for:
-  a) Irrelevant/off-topic content  
-  b) Factual inaccuracies  
-  c) Wrong symbols or variable usage  
-  d) Missing essential points  
-Do NOT penalize grammar or spelling.
-
----
-
-### 3) Highlighting Protocol
-
-RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
-<span style="color:red; text-decoration:underline;">incorrect text</span>  
-
-BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
-<span style="color:blue; text-decoration:underline;">language error</span>
-
-PRIORITY RULE:  
-If a text chunk has both content + language error → mark *RED only*.
-
----
-
-### 4) MARK–ALLOCATION LOGIC (MANDATORY)
-
-Each question has a known \total_marks\ value.
-
-1. First compute raw marks:
-   raw_marks = total_marks × (similarity_score / 100)
-
-2. Round to nearest *0.5 mark*:
-   awarded_marks = round_to_nearest_0.5(raw_marks)
-
-3. Marks lost:
-   marks_lost = total_marks – awarded_marks
-
-4. Allowed similarity values must match mark steps:
-   similarity = (awarded_marks / total_marks) × 100  
-   Round similarity to 2 decimals.
-
-Examples:  
-- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
-- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
-- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
-
-5. *Deduction bullets must add up exactly to \marks_lost\*.
-
-Use small deduction units:  
-- Minor content error: (-0.5 Mark)  
-- Moderate error: (-1 Mark)  
-- Major conceptual error: (-1.5 Marks)  
-- Severe / formula completely wrong: (-2 Marks)
-
-Never exceed total marks lost.
-
----`}
-
-${data.map((pair, index) => {
-                return `Question ${index + 1}:
-question_id: ${pair?.question_id}
-total_marks: ${pair?.marks}
-Question Type: "${pair?.question_type}"
-
-Student Answer:
-${pair?.studentAnswer}
-
-Correct Answer:
-${pair?.correctAnswer}`;
-            }).join("\n\n")}
-
----
-
-### RESPONSE FORMAT (STRICT)
-Return ONLY a JSON array of objects, one per question, in order:
-
-{
-  "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with red/blue HTML spans",
-  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
-  "misconception": "1-2 sentence conceptual misunderstanding",
-  "score": similarity_score_snapped_to_allowed_value
-}
-
-**CRITICAL JSON FORMATTING RULES:**
-1. Use ONLY double quotes (") in JSON - never single quotes (')
-2. Use double quotes in HTML attributes: style="color:red" NOT style='color:red'
-3. Escape backslashes properly: use \\\\ for LaTeX formulas like \\\\( \\\\)
-4. Ensure all strings are properly escaped
-5. Return valid JSON that can be parsed by JSON.parse()
-
----
-
-### FIELD RULES
-
-*marked_answer:*  
-- Annotate ONLY the student's answer.  
-- Red = incorrect content  
-- Blue = grammar/punctuation  
-- No new sentences or paraphrasing.
-
-*deduction_reason:*  
-- Bullet format  
-- Each bullet:  
-  - wrong phrase > correct phrase (-X Mark)  
-- Must add up EXACTLY to marks_lost  
-- Do not include grammar issues.
-
-*misconception:*  
-- 1–2 line conceptual misunderstanding summary.
-
-*score:*  
-- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
-- Must match the nearest-0.5 marking rule.
-
----
-
-### OUTPUT:
-Return ONLY a valid JSON array. No text before or after.
-`;
-
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a helpful assistant that evaluates student answers and provides detailed feedback with similarity scores. Always respond with valid JSON only.'
-                },
-                { role: 'user', content: userPrompt }
-            ],
-        });
-
-        const responseContent = response.choices[0].message.content.trim();
-
-        // Parse the JSON response
-        let parsedResponse;
-        try {
-            // Remove markdown code blocks if present
-            let cleanedContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-            // Fix common JSON escaping issues from GPT responses
-            // Replace single quotes in HTML attributes with double quotes
-            cleanedContent = cleanedContent.replace(/style='([^']*)'/g, 'style="$1"');
-
-            // Ensure proper escaping of backslashes in LaTeX formulas
-            cleanedContent = cleanedContent.replace(/\\\(/g, '\\\\(').replace(/\\\)/g, '\\\\)');
-
-            parsedResponse = JSON.parse(cleanedContent);
-        } catch (error) {
-            console.error("DES-Error parsing GPT response:", error);
-            console.error("DES-Response content:", responseContent);
-
-            // Try alternative parsing with more aggressive cleaning
-            try {
-                let altContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                // Use regex to fix any single quotes in style attributes
-                altContent = altContent.replace(/style='([^']*)'/gi, (match, p1) => {
-                    return `style="${p1}"`;
-                });
-                parsedResponse = JSON.parse(altContent);
-                console.log("Successfully parsed with alternative method");
-            } catch (altError) {
-                console.error("Alternative parsing also failed:", altError);
-                throw new Error("Failed to parse GPT evaluation response");
-            }
-        }
-
-        // Create score and details objects
-        const scores = {};
-        const details = {};
-
-        parsedResponse.forEach(item => {
-            scores[item.question_id] = item.score;
-
-            // Handle deduction_reason as either string or array
-            let deductionReason = item.deduction_reason;
-            if (Array.isArray(deductionReason)) {
-                deductionReason = deductionReason.join('\n');
-            }
-
-            details[item.question_id] = {
-                marked_answer: item.marked_answer,
-                deduction_reason: deductionReason,
-                misconception: item.misconception,
-                score: item.score
-            };
-        });
-
-        console.log("DES-parsedResponse", parsedResponse)
-        // console.log("DES- scores, details >>>>", { scores, details })
-        return { scores, details };
-    }
-
-    const evaluateSubjective = async (data) => {
-        if (helper.isEmptyArray(data)) {
-            return { scores: {}, details: {} };
-        };
-
-        const userPrompt = `${/* subjective_prompt ?? */
-                      `Parameters for evaluation:
-Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
-Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in blue but must NOT cause mark deduction and must NOT appear in the Reason section.
-
-Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in red and must be listed in the Reason section with mark deductions.
-
-Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
-
----
-
-### 1) Scoring Tiers
-Similarity scores (0–100) indicate closeness to the correct answer:  
-90–100: Highly accurate  
-70–89: Mostly correct with small gaps  
-50–69: Moderate issues  
-0–49: Major conceptual issues
-
----
-
-### 2) Evaluation Rules
-Grade only what is written — do not assume unstated meaning.  
-Accept alternate correct reasoning if scientifically valid.  
-Penalize only for:
-  a) Irrelevant/off-topic content  
-  b) Factual inaccuracies  
-  c) Wrong symbols or variable usage  
-  d) Missing essential points  
-Do NOT penalize grammar or spelling.
-
----
-
-### 3) Highlighting Protocol
-
-RED UNDERLINE — CONTENT ERRORS (cause mark loss):  
-<span style="color:red; text-decoration:underline;">incorrect text</span>  
-
-BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):  
-<span style="color:blue; text-decoration:underline;">language error</span>
-
-PRIORITY RULE:  
-If a text chunk has both content + language error → mark *RED only*.
-
----
-
-### 4) MARK–ALLOCATION LOGIC (MANDATORY)
-
-Each question has a known \total_marks\ value.
-
-1. First compute raw marks:
-   raw_marks = total_marks × (similarity_score / 100)
-
-2. Round to nearest *0.5 mark*:
-   awarded_marks = round_to_nearest_0.5(raw_marks)
-
-3. Marks lost:
-   marks_lost = total_marks – awarded_marks
-
-4. Allowed similarity values must match mark steps:
-   similarity = (awarded_marks / total_marks) × 100  
-   Round similarity to 2 decimals.
-
-Examples:  
-- For 2-mark questions: valid similarities = 0, 25, 50, 75, 100
-- For 3-mark questions: valid similarities = 0, 16.67, 33.33, 50, 66.67, 83.33, 100  
-- For 5-mark questions: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
-
-5. *Deduction bullets must add up exactly to \marks_lost\*.
-
-Use small deduction units:  
-- Minor content error: (-0.5 Mark)  
-- Moderate error: (-1 Mark)  
-- Major conceptual error: (-1.5 Marks)  
-- Severe / formula completely wrong: (-2 Marks)
-
-Never exceed total marks lost.
-
----`}
-
-${data.map((pair, index) => {
-                return `Question ${index + 1}:
-question_id: ${pair?.question_id}
-total_marks: ${pair?.marks}
-Question Type: "${pair?.question_type}"
-
-Student Answer:
-${pair?.studentAnswer}
-
-Correct Answer:
-${pair?.correctAnswer}`;
-            }).join("\n\n")}
-
----
-
-### RESPONSE FORMAT (STRICT)
-Return ONLY a JSON array of objects, one per question, in order:
-
-{
-  "question_id": "actual-question-id-here",
-  "marked_answer": "Student's answer with red/blue HTML spans",
-  "deduction_reason": "Bullet points with wrong > correct and mark deductions totaling marks_lost",
-  "misconception": "1-2 sentence conceptual misunderstanding",
-  "score": similarity_score_snapped_to_allowed_value
-}
-
-**CRITICAL JSON FORMATTING RULES:**
-1. Use ONLY double quotes (") in JSON - never single quotes (')
-2. Use double quotes in HTML attributes: style="color:red" NOT style='color:red'
-3. Escape backslashes properly: use \\\\ for LaTeX formulas like \\\\( \\\\)
-4. Ensure all strings are properly escaped
-5. Return valid JSON that can be parsed by JSON.parse()
-
----
-
-### FIELD RULES
-
-*marked_answer:*  
-- Annotate ONLY the student's answer.  
-- Red = incorrect content  
-- Blue = grammar/punctuation  
-- No new sentences or paraphrasing.
-
-*deduction_reason:*  
-- Bullet format  
-- Each bullet:  
-  - wrong phrase > correct phrase (-X Mark)  
-- Must add up EXACTLY to marks_lost  
-- Do not include grammar issues.
-
-*misconception:*  
-- 1–2 line conceptual misunderstanding summary.
-
-*score:*  
-- Must reflect the *snapped similarity score* (= awarded_marks ÷ total_marks × 100).  
-- Must match the nearest-0.5 marking rule.
-
----
-
-### OUTPUT:
-Return ONLY a valid JSON array. No text before or after.
-`;
-
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a helpful assistant that evaluates student answers and provides detailed feedback with similarity scores. Always respond with valid JSON only.'
-                },
-                { role: 'user', content: userPrompt }
-            ],
-        });
-
-        const responseContent = response.choices[0].message.content.trim();
-
-        // Parse the JSON response
-        let parsedResponse;
-        try {
-            // Remove markdown code blocks if present
-            let cleanedContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-            // Fix common JSON escaping issues from GPT responses
-            // Replace single quotes in HTML attributes with double quotes
-            cleanedContent = cleanedContent.replace(/style='([^']*)'/g, 'style="$1"');
-
-            // Ensure proper escaping of backslashes in LaTeX formulas
-            cleanedContent = cleanedContent.replace(/\\\(/g, '\\\\(').replace(/\\\)/g, '\\\\)');
-
-            parsedResponse = JSON.parse(cleanedContent);
-        } catch (error) {
-            console.error("SUB-Error parsing GPT response:", error);
-            console.error("SUB-Response content:", responseContent);
-
-            // Try alternative parsing with more aggressive cleaning
-            try {
-                let altContent = responseContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                // Use regex to fix any single quotes in style attributes
-                altContent = altContent.replace(/style='([^']*)'/gi, (match, p1) => {
-                    return `style="${p1}"`;
-                });
-                parsedResponse = JSON.parse(altContent);
-                console.log("SUB-Successfully parsed with alternative method");
-            } catch (altError) {
-                console.error("SUB-Alternative parsing also failed:", altError);
-                throw new Error("Failed to parse GPT evaluation response");
-            }
-        }
-
-        // Create score and details objects
-        const scores = {};
-        const details = {};
-
-        parsedResponse.forEach(item => {
-            scores[item.question_id] = item.score;
-
-            // Handle deduction_reason as either string or array
-            let deductionReason = item.deduction_reason;
-            if (Array.isArray(deductionReason)) {
-                deductionReason = deductionReason.join('\n');
-            }
-
-            details[item.question_id] = {
-                marked_answer: item.marked_answer,
-                deduction_reason: deductionReason,
-                misconception: item.misconception,
-                score: item.score
-            };
-        });
-
-        console.log("SUB-parsedResponse", parsedResponse)
-        // console.log("SUB- scores, details >>>>", { scores, details })
-        return { scores, details };
-    }
-
-    const [ObjectiveScoreValue, DescriptiveScoreValue, SubjectiveScoreValue] = await Promise.all([
-        evaluateObjective(ObjectiveArray),
-        evaluateDescriptive(DescriptiveArray),
-        evaluateSubjective(SubjectiveArray)
-    ])
-
-    // console.info("1.555555555555", ObjectiveArray, DescriptiveArray, SubjectiveArray)
-
-    // Merge scores from all question types
-    const finalScore = {
-        ...ObjectiveScoreValue.scores,
-        ...DescriptiveScoreValue?.scores,
-        ...SubjectiveScoreValue.scores
-    };
-
-    // Merge details from all question types
-    const finalDetails = {
-        ...ObjectiveScoreValue.details,
-        ...DescriptiveScoreValue?.details,
-        ...SubjectiveScoreValue.details
-    };
-
-    // console.info("2222222222", ObjectiveScoreValue, DescriptiveScoreValue, SubjectiveScoreValue)
-
-    const scoresArray = (Array.from(questionIdFormat?.values()))?.map(e => finalScore?.[e]) ?? [];
-
-    console.info("2.55555555", { scores: scoresArray, details: finalDetails })
-    return { scores: scoresArray, details: finalDetails };
-
-}
-
 exports.startQuizEvaluationProcess = async (request) => {
     try {
         const quizSets = constant.quizSets;
@@ -1582,6 +854,8 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         let answerCompareArray = [];
         const setsMarkFormat = await helper.getQuizMarksDetailsFormat(quizTestRes.Item.quiz_question_details);
+
+        // console.log("setsMarkFormat - ", setsMarkFormat);
 
         let totalMarkCopyArray = []
         let qa_detailsCopyArray = []
@@ -1660,6 +934,9 @@ exports.startQuizEvaluationProcess = async (request) => {
                 };
             });
 
+            console.log("questionAnswerPairs", JSON.stringify(questionAnswerPairs))
+            // console.log("correct answers:::",correctAnswer)
+
             const normalizeAnswer = (answer) => {
                 if (!answer) return " ";
                 let normalized = answer.trim().toLowerCase();
@@ -1676,15 +953,228 @@ exports.startQuizEvaluationProcess = async (request) => {
                     ?.map(normalizeAnswer)
                     .filter(Boolean);
             };
-            console.info("33333333333333", questionAnswerPairs ?? "NO_DATA")
 
-            let evaluationResult = await getGPTBasedScore(questionAnswerPairs, quizTestRes?.Item?.subject_id);
-            let scores = evaluationResult?.scores;
-            let evaluationDetails = evaluationResult?.details;
+            const userPrompt = `Parameters for evaluation:
+Evaluate each student's descriptive response for factual and conceptual accuracy, completeness, logical flow, chronology, and clarity of explanation.  
+Grammar, punctuation, and spelling errors — even for key terms — must be highlighted in *blue* but must *NOT* cause mark deduction and must *NOT* appear in the Reason section.
 
+Irrelevant, incorrect, or misleading content — including wrong symbols, wrong variable case, wrong definitions, wrong examples, or wrong factual statements — must be highlighted in *red* and must be listed in the Reason section with mark deductions.
 
-            console.log("44444444", scores);
-            console.log("Evaluation Details:", evaluationDetails);
+Only content-related gaps, factual inaccuracies, irrelevance, or wrong scientific terms should cause mark loss.
+
+---
+
+### 1) Scoring Tiers
+*90–100:* All key ideas covered with accurate facts and context; coherent, well-structured; negligible content issues.  
+*70–89:* Mostly accurate; minor factual gaps or mild inaccuracies; overall coherence maintained.  
+*50–69:* Several missing/incorrect content points; weak logic; important ideas partially covered.  
+*0–49:* Major conceptual errors; largely irrelevant/disorganized; key ideas missing.
+
+---
+
+### 2) Evaluation Rules
+Grade *only what is written* — do not assume unstated meaning.  
+Accept alternate correct reasoning if scientifically or historically sound.  
+Penalize only for:
+    a) Irrelevant/off-topic content  
+    b) Factual inaccuracies  
+    c) Wrong symbols or wrong variable usage  
+    d) Missing essential points  
+*Do NOT* penalize language issues (grammar, punctuation, spelling).
+
+---
+
+### 3) Highlighting Protocol
+
+*RED UNDERLINE — CONTENT ERRORS (cause mark loss):*  
+Irrelevant or off-topic content  
+Factually incorrect information  
+Wrong formula / wrong numeric value  
+Wrong symbol or variable (including case differences that change meaning)  
+Wrong concept name or scientific term  
+
+Format:  
+\<span style="color:red; text-decoration:underline;">[incorrect text]</span>\  
+
+*BLUE UNDERLINE — LANGUAGE ERRORS (NO mark loss):*  
+Grammar  
+Punctuation  
+Spelling  
+Capitalization  
+
+Format:  
+\<span style="color:blue; text-decoration:underline;">[language error]</span>\
+
+*PRIORITY RULE:*  
+If a piece of text is both grammatically wrong AND conceptually wrong, mark it *RED* (content error).
+
+---
+
+${questionAnswerPairs.map((pair, index) => {
+                return `Question ${index + 1}:
+Question Type: "${pair.question_type}"
+
+Student Answer:
+${pair.studentAnswer}
+
+Correct Answer:
+${pair.correctAnswer}`;
+            }).join("\n\n")}
+
+---
+
+### RESPONSE FORMAT (STRICT)
+
+For *each question, return the following 4 sections **in order*:
+
+---
+
+### *1. Student's Answer:*  
+Return the student's answer *with HTML spans applied*:
+Red underline = content errors  
+Blue underline = language errors  
+Do NOT add new sentences  
+Do NOT paraphrase  
+Only annotate what is already present  
+
+---
+
+### *2. Reason:*  
+List each content issue in *bullet format*, using the structure:
+
+wrong student phrase > correct or expected phrase (-X Mark)  
+
+Examples:
+Q = mhg > U = mgh (wrong formula and wrong symbol) (-1 Mark)  
+heavy rainfall occurs because clouds break > rainfall occurs due to condensation (incorrect scientific reason) (-1 Mark)  
+[Missing point]: Did not mention that energy depends on height (-0.5 Mark)
+
+*Do NOT mention grammar, spelling, or punctuation here.*
+
+---
+
+### *3. Misconception:*  
+Summarize the core misunderstanding in *1–2 sentences*.  
+Example:  
+Misconception: The student confuses energy with force and misunderstands the meaning of scientific symbols, showing incomplete conceptual clarity.
+
+---
+
+### *4. Similarity Score:*  
+At the *very end of the entire response, output the similarity score(s) **only as numbers, one per line, with **no labels*, e.g., 100, 80
+
+**IMPORTANT:** Respond in the following format for each question:
+
+---QUESTION_1_START---
+**Marked Answer:**
+[Return the student's answer *with HTML spans applied*]
+
+**Deduction Reason:**
+[List each content issue in *bullet format*, using the structure:
+wrong student phrase > correct or expected phrase (-X Mark)]
+
+**Score:**
+[Similarity score]
+---QUESTION_1_END---
+
+---QUESTION_2_START---
+**Marked Answer:**
+[Return the student's answer *with HTML spans applied*]
+
+**Deduction Reason:**
+[List each content issue in *bullet format*, using the structure:
+wrong student phrase > correct or expected phrase (-X Mark)]
+
+**Score:**
+[Similarity score]
+---QUESTION_2_END---
+
+Continue this format for all questions.`;
+
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are an expert educational evaluator that provides detailed, structured feedback on student answers with proper highlighting and clear deduction explanations.'
+                    },
+                    { role: 'user', content: userPrompt }
+                ],
+            });
+
+            console.log("userPrompt >>>>> ", userPrompt)
+            // Parse the OpenAI response
+            let evaluationResults = [];
+            let scores = [];
+            console.log("OPEN AI response", JSON.stringify(response))
+
+            try {
+                const responseContent = response.choices[0].message.content;
+                console.log("Raw OpenAI Response:", responseContent);
+
+                // Parse the structured response
+                const questionBlocks = responseContent.split(/---QUESTION_\d+_START---/).filter(block => block.trim());
+
+                evaluationResults = questionBlocks.map((block, index) => {
+                    // Remove the END marker
+                    const cleanBlock = block.replace(/---QUESTION_\d+_END---/g, '').trim();
+
+                    // Extract marked answer
+                    const markedAnswerMatch = cleanBlock.match(/\*\*Marked Answer:\*\*\s*([\s\S]*?)(?=\*\*Deduction Reason:|$)/i);
+                    const markedAnswer = markedAnswerMatch ? markedAnswerMatch[1].trim() : "";
+
+                    // Extract deduction reason
+                    const deductionMatch = cleanBlock.match(/\*\*Deduction Reason:\*\*\s*([\s\S]*?)(?=\*\*Score:|$)/i);
+                    const deductionReason = deductionMatch ? deductionMatch[1].trim() : "";
+
+                    // Extract score
+                    const scoreMatch = cleanBlock.match(/\*\*Score:\*\*\s*(\d+(?:\.\d+)?)/i);
+                    const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+
+                    return {
+                        question_number: index + 1,
+                        marked_answer: markedAnswer,
+                        deduction_reason: deductionReason,
+                        similarity_score: score
+                    };
+                });
+
+                scores = evaluationResults.map(q => q.similarity_score);
+
+                console.log("Parsed evaluation results - ", evaluationResults);
+                console.log("scores - ", scores);
+
+            } catch (parseError) {
+                console.error("Error parsing OpenAI response:", parseError);
+
+                // Fallback: Try to extract scores from any format
+                const scoreMatches = response.choices[0].message.content.match(/\d+(\.\d+)?/g);
+                if (scoreMatches) {
+                    scores = scoreMatches.map(score => parseFloat(score)).filter(value => !isNaN(value) && value <= 100);
+                    // Take only as many scores as there are questions
+                    scores = scores.slice(0, questionAnswerPairs.length);
+                } else {
+                    scores = questionAnswerPairs.map(() => 0);
+                }
+
+                // Create minimal evaluation results if parsing failed
+                evaluationResults = questionAnswerPairs.map((pair, index) => ({
+                    question_number: index + 1,
+                    marked_answer: pair.studentAnswer || "",
+                    deduction_reason: "Error parsing evaluation response",
+                    similarity_score: scores[index] || 0
+                }));
+            }
+
+            // Ensure we have evaluation results for all questions
+            while (evaluationResults.length < questionAnswerPairs.length) {
+                evaluationResults.push({
+                    question_number: evaluationResults.length + 1,
+                    marked_answer: questionAnswerPairs[evaluationResults.length]?.studentAnswer || "",
+                    deduction_reason: "No evaluation available",
+                    similarity_score: 0
+                });
+            }
 
             let totalMarks = 0;
             let totalExpectedMarks = 0;
@@ -1692,8 +1182,14 @@ exports.startQuizEvaluationProcess = async (request) => {
 
             await marksToUpdate.forEach((mark, index) => {
                 totalExpectedMarks += questionAnswerPairs[index].marks;
-                const questionId = questionAnswerPairs[index].question_id;
 
+                const evaluationResult = evaluationResults[index] || {
+                    marked_answer: questionAnswerPairs[index]?.studentAnswer || "",
+                    deduction_reason: "",
+                    similarity_score: scores[index] || 0
+                };
+
+                // Calculate obtained marks with 0.5 increments
                 if (questionAnswerPairs[index].question_type === "Descriptive" || questionAnswerPairs[index].question_type === "Subjective") {
                     const maxMarks = Number(questionAnswerPairs[index].marks);
 
@@ -1717,16 +1213,7 @@ exports.startQuizEvaluationProcess = async (request) => {
                             mark.obtained_marks = maxMarks;
                         }
                     }
-
-                    // Add detailed feedback for Descriptive/Subjective questions
-                    if (evaluationDetails[questionId]) {
-                        mark.marked_answer = evaluationDetails[questionId].marked_answer;
-                        mark.deduction_reason = evaluationDetails[questionId].deduction_reason;
-                        mark.misconception = evaluationDetails[questionId].misconception;
-                        mark.similarity_score = evaluationDetails[questionId].score;
-                    }
-                }
-                else {
+                } else {
                     // Objective questions
                     if (scores[index] > 90) {
                         mark.obtained_marks = questionAnswerPairs[index].marks;
@@ -1735,35 +1222,24 @@ exports.startQuizEvaluationProcess = async (request) => {
                     } else {
                         mark.obtained_marks = 0;
                     }
-
-                    // Add similarity score for objective questions too
-                    // mark.similarity_score = scores[index];
-                    if (evaluationDetails[questionId]) {
-                        mark.marked_answer = evaluationDetails[questionId].marked_answer;
-                        mark.deduction_reason = evaluationDetails[questionId].deduction_reason;
-                        mark.misconception = evaluationDetails[questionId].misconception;
-                        mark.similarity_score = scores[index];
-                    }
                 }
 
                 totalMarks += mark.obtained_marks !== "N.A." ? mark.obtained_marks : 0;
                 mark.obtained_marks = mark.obtained_marks === "N.A." ? 0 : mark.obtained_marks;
                 mark.student_answer = questionAnswerPairs[index]?.studentAnswer;
 
-                let newMarksData = { ...mark }
+                // Add the new parameters
+                mark.student_answer_highlighted = evaluationResult.marked_answer || questionAnswerPairs[index]?.studentAnswer || "";
+                mark.deduction_reason = evaluationResult.deduction_reason || "";
+
+                let newMarksData = { ...mark };
                 qa_detailsCopyArray[i]?.push(newMarksData);
 
                 answerCompareArray.push({
                     question_id: questionAnswerPairs[index].question_id,
                     extractedAns: questionAnswerPairs[index].studentAnswer,
                     actualAns: questionAnswerPairs[index].correctAnswer,
-                    similarityScore: scores[index],
-                    // Add new detailed fields
-                    ...(evaluationDetails[questionId] && {
-                        marked_answer: evaluationDetails[questionId].marked_answer,
-                        deduction_reason: evaluationDetails[questionId].deduction_reason,
-                        misconception: evaluationDetails[questionId].misconception
-                    })
+                    similarityScore: scores[index]
                 });
             });
 
@@ -1774,6 +1250,7 @@ exports.startQuizEvaluationProcess = async (request) => {
             studentMetaRes.Items[i].isPassed = (totalMarks / totalExpectedMarks) * 100 > classPassPercentage;
 
             totalMarkCopyArray.push({ totalMark: studentMetaRes.Items[i].marks_details[0].totalMark });
+
         }
         // ));
         // await Promise.all(tasks);
@@ -1797,16 +1274,23 @@ exports.startQuizEvaluationProcess = async (request) => {
 
         const markAssignRes = addIndividualGroupPerformance(studentMetaRes.Items, questionDataRes, groupPassPercentage, quizTestRes);
 
-        console.log("55555555555");
-        console.dir(markAssignRes, { depth: null });
+        console.log("markAssignRes - ", JSON.stringify(markAssignRes, null, 2));
 
         await commonRepository.bulkBatchWrite(markAssignRes, TABLE_NAMES.upschool_quiz_result);
 
+
+        // console.dir({quizTestRes:quizTestRes.Item},{studentMetaRes:studentMetaRes.Items[0]},{depth: null});
         const studentIds = studentMetaRes.Items.map((val) => val.student_id);
+        // console.log("studentIds - ", studentIds);
         const fetchStudents = await studentRepository.fetchStudentsByIds(studentIds);
+        // console.log("fetchStudents - ", fetchStudents);
+        // console.dir("fetchStudents - ", fetchStudents,{depth: null});
         const parentIds = fetchStudents.map((val) => (val.parent_id));
+        // console.log("parentIds - ", parentIds);
         const fetchParents = await studentRepository.fetchParentsByIds(parentIds);
+        // console.log("fetchParents - ", fetchParents);
         const fetchSubject = await subjectRepository.getSubjectByIdAsync({ data: { subject_id: quizTestRes.Item.subject_id } });
+        // console.log("fetchSubject - ", fetchSubject.Items[0]);
 
         const WhatsAppData = fetchStudents.map((val) => {
             const parent = fetchParents.find((parent) => parent.parent_id === val.parent_id);
@@ -1823,9 +1307,12 @@ exports.startQuizEvaluationProcess = async (request) => {
             };
         });
 
+        // console.log("WhatsAppData - ", WhatsAppData);
         const notificationSettings = schoolDataRes.Items[0].notification_settings;
 
         console.log("notificationSettings - ", notificationSettings);
+        // console.log(notificationSettings?.paperEvaluationOTP?.isActive &&notificationSettings?.paperEvaluationOTP?.mode?.whatsapp);
+
 
         const response = {
             statusCode: 200,
