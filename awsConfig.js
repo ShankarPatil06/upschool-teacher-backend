@@ -38,7 +38,9 @@ exports.sns = new SNSClient({ region: process.env.REGION ,
 
 exports.snsPublish = new PublishCommand();
 
-
+console.log(process.env.ACCESS_KEY_ID)
+console.log(process.env.SECRET_ACCESS_KEY)
+console.log(process.env.REGION)
 exports.client = new DynamoDBClient({
     region: process.env.REGION, // You can use any region
     // endpoint: "http://localhost:8000",
