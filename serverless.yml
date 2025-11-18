@@ -20,6 +20,7 @@ provider:
     WHATSAPP_ACCESS_TOKEN: ${file(config/${self:provider.stage}-config.yml):data.whatsappAccessToken}
     WHATSAPP_PHONE_NUMBER_ID: ${file(config/${self:provider.stage}-config.yml):data.whatsappPhoneNumberId}
     S3_BUCKET_URL: ${file(config/${self:provider.stage}-config.yml):data.s3Url}  
+    OPENAI_API_KEY: ${file(config/${self:provider.stage}-config.yml):data.OPENAI_API_KEY}
   iam:
     role:
       statements:
