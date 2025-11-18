@@ -24,4 +24,4 @@ data:
   whatsappPhoneNumberId: 722998727568720
   whatsappAccessToken: EAAR7DgndnwcBPBdVDJmVAc5xBGUXCZBHggnfqruVilzZCiel0Mdt1pSSZCLNKIUKbwqaFYLYcVGA65qmTbQuZCKeOd7G8ZAmpwOCNYtdIOklqBKDpBUI4re07AmpqeorYF18tvaoRZC1zVLRZBmsB0Yyu9wYQ4PNMRZCPhZA6v4cj9hQDjcJ1euDZAcuqNcSiVdwZDZD
   s3Url: https://testing-upschool.s3.ap-south-1.amazonaws.com/
-  OPENAI_API_KEY: sk-ZU62iQeULz9r_LmqL7-DhUIb_w-K1GpEatZ2CQQtZ8T3BlbkFJt6NYOehDGK4Vn5bn57dwRETlh9pSoxiS2Ahb94XQ4A
+  OPENAI_KEY: sk-ZU62iQeULz9r_LmqL7-DhUIb_w-K1GpEatZ2CQQtZ8T3BlbkFJt6NYOehDGK4Vn5bn57dwRETlh9pSoxiS2Ahb94XQ4A
